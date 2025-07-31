@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= product ? product.productName : 'Product Not Found' %> | Superkicks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .img-zoom { transition: transform 0.3s; cursor: zoom-in; }
+    .img-zoom:hover { transform: scale(1.18); z-index: 10; }
+    .thumb-active { border: 2px solid #3b82f6 !important; }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Navbar (copy from your public layout or use include/partial in big project) -->
+  <header class="bg-[#15172B] text-white p-4">
+    <nav class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="text-2xl font-black">SUPERKICKS</div>
+      <ul class="flex gap-6">
+        <li><a href="/" class="hover:text-blue-400">Home</a></li>
+        <li><a href="/user/product/list" class="hover:text-blue-400">Shop</a></li>
+        <li><a href="/categories" class="hover:text-blue-400">Categories</a></li>
+        <% if (user) { %>
+          <li class="font-semibold">Hi, <%= user.fullName || user.email %></li>
+          <li><a href="/user/logout" class="hover:text-red-500">Logout</a></li>
+        <% } else { %>
+          <li><a href="/user/login" class="hover:text-blue-400">Login</a></li>
+        <% } %>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+
+    <!-- Breadcrumbs -->
+    <nav class="mb-4 text-sm text-gray-700">
+      <ol class="list-reset flex gap-2">
+        <li><a href="/" class="hover:text-blue-700">Home</a> &gt;</li>
+        <li><a href="/user/product/list" class="hover:text-blue-700">Shop</a> &gt;</li>
+        <% if (product && product.categoryId) { %>
+          <li><a href="/categories/<%= product.categoryId._id %>" class="hover:text-blue-700"><%= product.categoryId.name %></a> &gt;</li>
+        <% } %>
+        <li class="text-gray-900 font-bold"><%= product.productName %></li>
+      </ol>
+    </nav>
+
+    <!-- IMAGE + DETAILS -->
+    <div class="flex flex-col lg:flex-row gap-8 bg-white rounded-lg shadow-md px-6 py-8">
+      <!-- Image gallery block -->
+      <div class="flex flex-col w-full lg:w-2/5">
+        <div class="w-full aspect-square bg-gray-100 flex items-center justify-center rounded-lg overflow-hidden mb-3 relative group">
+          <img id="mainProductImage" src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>" 
+               alt="<%= product.productName %>" 
+               class="w-full h-full object-contain img-zoom" />
+        </div>
+        <!-- Thumbnails -->
+        <div class="flex gap-2">
+          <% (product.images || []).forEach((img, i) => { %>
+            <img src="<%= img %>" class="w-16 h-16 object-contain bg-gray-50 rounded border cursor-pointer" 
+              onclick="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"
+              onmouseenter="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"/>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Product Info block -->
+      <div class="flex-1 flex flex-col justify-between">
+        <!-- Title, ratings, price -->
+        <div class="mb-3">
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3"><%= product.productName %></h1>
+          <h1 class="text-2xl sm:text-xl font-bold text-gray-700 mb-2"><%= product.brand %></h1>
+          <!-- Ratings -->
+          <div class="flex items-center gap-2 mb-3">
+            <%
+              const avgRating = reviews && reviews.length > 0 ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length).toFixed(1) : '0.0';
+            %>
+            <div>
+              <% for (let i = 1; i <= 5; i++) { %>
+                <i class="fa-star <%= i <= Math.round(avgRating) ? 'fas text-yellow-400' : 'far text-gray-300' %>"></i>
+              <% } %>
+            </div>
+            <span class="text-xs text-gray-600">(<%= reviews.length %> reviews, <%= avgRating %> avg)</span>
+          </div>
+          <div class="mb-1 flex items-baseline gap-2">
+            <%
+              // Support for regular/discount price
+              let prices = product.variants ? product.variants.map(v => v.salePrice && v.salePrice > 0 ? v.salePrice : v.regularPrice).filter(p => typeof p === 'number') : [];
+              const stock = product.variants ? product.variants.reduce((tot, v) => tot + (v.stock || 0), 0) : 0;
+              const hasOffer = product.offer && product.offer > 0;
+              const mrp = (prices.length > 0) ? Math.min(...prices) : null;
+              const discounted = hasOffer && typeof mrp === 'number' ? (mrp - (mrp * (product.offer / 100))) : mrp;
+            %>
+            <% if (hasOffer) { %>
+              <span class="text-2xl font-bold text-red-600">₹<%= (typeof discounted === 'number' ? discounted.toFixed(2) : '—') %></span>
+              <span class="line-through text-gray-400 text-xl font-semibold">₹<%= (typeof mrp === 'number') ? mrp.toFixed(2) : '—' %></span>
+              <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold"><%= product.offer %>% OFF</span>
+            <% } else { %>
+              <span class="text-2xl font-bold text-gray-900">₹<%= (typeof mrp === 'number') ? mrp.toFixed(2) : '—' %></span>
+            <% } %>
+          </div>
+          <div class="mb-2 flex flex-wrap gap-3">
+            <!-- Coupon or discount code area (optional) -->
+            <% if (product.coupon) { %>
+              <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                Coupon: <%= product.coupon.code %> - <%= product.coupon.offer %>%
+              </span>
+            <% } %>
+            <!-- Stock status -->
+            <% if (stock > 0) { %>
+              <span class="text-green-700 font-semibold"><i class="fas fa-check-circle"></i> In stock: <%= stock %></span>
+            <% } else { %>
+              <span class="text-red-600 font-bold"><i class="fas fa-times-circle"></i> Out of Stock</span>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Description -->
+<div class="mb-6">
+  <h3 class="text-lg font-semibold text-gray-800 mb-2">Description</h3>
+  <p class="text-gray-700 whitespace-pre-line leading-relaxed">
+    <%= product.description %>
+  </p>
+</div>
+
+
+        <!-- Add To Cart / Sold Out -->
+        <div class="mb-5">
+          <% if (errorMessage) { %>
+            <div class="bg-red-100 text-red-700 border border-red-300 rounded px-4 py-2 mb-3"><%= errorMessage %></div>
+          <% } %>
+          <% if (product.isListed && stock > 0) { %>
+            <form action="/cart/add" method="POST" class="flex gap-4 items-center">
+              <input type="hidden" name="productId" value="<%= product._id %>"/>
+              <!-- Optional: select size from variants -->
+              <% if (product.variants && product.variants.length > 1) { %>
+                <select name="variantId" required class="border rounded px-2 py-1">
+                  <% product.variants.forEach(variant => { %>
+                    <option value="<%= variant._id %>" <%= variant.stock > 0 ? '' : 'disabled' %>>
+                      Size: <%= variant.size %> &mdash;
+                      ₹<%= variant.salePrice && typeof variant.salePrice === 'number'
+                              ? variant.salePrice.toFixed(2)
+                              : (typeof variant.regularPrice === 'number' ? variant.regularPrice.toFixed(2) : '—') %>
+                      <% if (variant.stock === 0) { %> (Out of stock) <% } %>
+                    </option>
+                  <% }) %>
+                </select>
+              <% } %>
+              <button type="submit" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-lg font-semibold shadow">
+                Add to Cart
+              </button>
+            </form>
+          <% } else if (!product.isListed) { %>
+            <div class="bg-red-50 text-red-700 font-semibold rounded px-4 py-2">This product is no longer available.</div>
+          <% } else { %>
+            <div class="bg-red-50 text-red-700 font-semibold rounded px-4 py-2">SOLD OUT</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <section class="mt-10">
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Customer Reviews</h3>
+      <% if (reviews.length === 0) { %>
+        <p class="text-gray-500 mb-4">No reviews yet.</p>
+      <% } else { %>
+        <ul class="mb-4">
+          <% reviews.forEach(review => { %>
+            <li class="mb-2 bg-gray-50 p-3 rounded shadow flex">
+              <span class="font-semibold text-gray-700 mr-3"><%= review.user.fullName || "User" %></span>
+              <span class="mr-2 text-yellow-500">
+                <% for (let i = 0; i < review.rating; i++) { %>
+                  <i class="fas fa-star"></i>
+                <% } %>
+                <% for (let i = review.rating; i < 5; i++) { %>
+                  <i class="far fa-star"></i>
+                <% } %>
+              </span>
+              <span class="text-gray-700"><%= review.review %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+      <% if (user) { %>
+        <form action="/products/<%= product._id %>/review" method="POST" class="flex gap-3 items-center">
+          <label class="font-semibold mr-2">Add Review:</label>
+          <select name="rating" required class="border rounded px-1 py-1">
+            <% [1,2,3,4,5].forEach(r => { %>
+              <option value="<%= r %>"><%= r %> &#9733;</option>
+            <% }) %>
+          </select>
+          <input type="text" name="review" placeholder="Your review" required class="border rounded px-2 py-1 w-72">
+          <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Submit</button>
+        </form>
+      <% } else { %>
+        <div class="text-gray-500 mt-2">Sign in to leave a review.</div>
+      <% } %>
+    </section>
+
+    <!-- Related Products -->
+    <% if (relatedProducts && relatedProducts.length > 0) { %>
+      <section class="mt-14">
+        <h3 class="text-xl font-bold text-gray-900 mb-5">You may also like</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-7">
+          <% relatedProducts.forEach(rp => { %>
+            <a href="/products/<%= rp._id %>" class="bg-white rounded shadow hover:shadow-lg transition flex flex-col items-center p-3">
+              <img src="<%= rp.images && rp.images[0] ? rp.images[0] : '/assets/placeholder.jpg' %>" 
+                   alt="<%= rp.productName %>"
+                   class="w-full h-32 object-contain mb-2 rounded" />
+              <div class="text-center">
+                <div class="font-semibold text-gray-800 truncate"><%= rp.productName %></div>
+                <div class="text-blue-600 font-bold">
+                  ₹<%= (rp.variants && rp.variants[0] && typeof rp.variants[0].regularPrice === 'number')
+                        ? (rp.variants[0].salePrice && rp.variants[0].salePrice < rp.variants[0].regularPrice
+                            ? rp.variants[0].salePrice.toFixed(2)
+                            : rp.variants[0].regularPrice.toFixed(2))
+                        : '0.00' %>
+                </div>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
+
+  </main>
+
+  <script>
+    // Image zoom+thumb active effect
+    function setActiveThumb(img) {
+        document.querySelectorAll('.thumb-active').forEach(t => t.classList.remove('thumb-active'));
+        img.classList.add('thumb-active');
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      const thumbs = document.querySelectorAll('.flex.gap-2 img');
+      if (thumbs.length) thumbs[0].classList.add('thumb-active');
+    });
+  </script>
+</body>
+</html>

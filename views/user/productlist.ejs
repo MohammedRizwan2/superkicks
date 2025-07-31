@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <title>Shop - Superkicks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Navbar -->
+  <header class="bg-[#15172B] text-white p-4">
+    <nav class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="text-2xl font-black">SUPERKICKS</div>
+      <ul class="flex gap-6">
+        <li><a href="/" class="hover:text-blue-400">Home</a></li>
+        <li><a href="/user/product/list" class="text-blue-400 font-semibold">Shop</a></li>
+        <li><a href="/categories" class="hover:text-blue-400">Categories</a></li>
+        <% if (user) { %>
+          <li class="font-semibold">Hi, <%= user.fullName || user.email %></li>
+          <li><a href="/user/logout" class="hover:text-red-500">Logout</a></li>
+        <% } else { %>
+          <li><a href="/user/login" class="hover:text-blue-400">Login</a></li>
+        <% } %>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">Shop Products</h1>
+
+    <!-- Search & Filter Form -->
+    <form method="GET" action="/user/product/list" class="mb-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+      <!-- Search -->
+      <div class="sm:col-span-2">
+        <label for="q" class="block text-sm font-medium text-gray-700">Search</label>
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            name="q" 
+            id="q" 
+            placeholder="Search products..." 
+            value="<%= typeof q !== 'undefined' ? q : '' %>"
+            class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <% if (q && q.trim() !== '') { %>
+            <a href="/user/product/list" class="inline-flex items-center justify-center px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-700">Clear</a>
+          <% } else { %>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Category Filter -->
+      <div>
+        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+        <select
+          name="category"
+          id="category"
+          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Categories</option>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat._id %>" <%= category === cat._id.toString() ? 'selected' : '' %>>
+              <%= cat.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Price Range Min -->
+      <div>
+        <label for="priceMin" class="block text-sm font-medium text-gray-700">Price Min</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          name="priceMin"
+          id="priceMin"
+          value="<%= typeof priceMin !== 'undefined' ? priceMin : '' %>"
+          placeholder="0"
+          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Price Range Max -->
+      <div>
+        <label for="priceMax" class="block text-sm font-medium text-gray-700">Price Max</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          name="priceMax"
+          id="priceMax"
+          value="<%= typeof priceMax !== 'undefined' ? priceMax : '' %>"
+          placeholder="Any"
+          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Sorting -->
+      <div>
+        <label for="sort" class="block text-sm font-medium text-gray-700">Sort By</label>
+        <select
+          name="sort"
+          id="sort"
+          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onchange="this.form.submit()"
+        >
+          <option value="">Default</option>
+          <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
+          <option value="priceDesc" <%= sort === 'priceDesc' ? 'selected' : '' %>>Price: High to Low</option>
+          <option value="nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A to Z</option>
+          <option value="nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z to A</option>
+          <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>New Arrivals</option>
+        </select>
+      </div>
+
+      <div class="sm:col-span-full lg:col-span-1">
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">
+          Filter
+        </button>
+      </div>
+    </form>
+
+    <!-- Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <% if (products.length === 0) { %>
+        <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
+      <% } %>
+
+      <% products.forEach(product => { %>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+          <a href="/user/products/<%= product._id %>" class="block">
+            <img
+              src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
+              alt="<%= product.productName %>"
+              class="w-full h-48 object-cover"
+            />
+            <div class="p-4 flex flex-col flex-grow">
+              <h3 class="text-lg font-semibold truncate mb-1"><%= product.productName %></h3>
+
+              <p class="text-sm text-gray-600 mb-2">
+                Category: <%= product.categoryId ? product.categoryId.name : 'Uncategorized' %>
+              </p>
+
+              <% 
+                let prices = [];
+                if (product.variants && product.variants.length > 0) {
+                  prices = product.variants
+                    .map(v => (typeof v.regularPrice === 'number' ? v.regularPrice : NaN))
+                    .filter(p => !isNaN(p));
+                }
+                const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
+              %>
+
+              <% if (lowestPrice !== null) { %>
+                <p class="text-xl font-bold text-gray-900">₹<%= lowestPrice.toFixed(2) %></p>
+              <% } else { %>
+                <p class="text-xl font-bold text-gray-900">Price not available</p>
+              <% } %>
+
+              <% if (product.offer && product.offer > 0) { %>
+                <p class="text-xs text-green-600 font-semibold mt-1"><%= product.offer %>% OFF</p>
+              <% } %>
+            </div>
+          </a>
+        </div>
+      <% }); %>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-8 flex justify-center gap-2 text-gray-700">
+      <% if (currentPage > 1) { %>
+        <a href="<%= buildPageUrl(currentPage - 1) %>" class="px-4 py-2 border rounded hover:bg-gray-200">Previous</a>
+      <% } %>
+      <span class="px-4 py-2 border rounded bg-gray-200"><%= currentPage %> / <%= totalPages %></span>
+      <% if (currentPage < totalPages) { %>
+        <a href="<%= buildPageUrl(currentPage + 1) %>" class="px-4 py-2 border rounded hover:bg-gray-200">Next</a>
+      <% } %>
+    </div>
+  </main>
+
+  <script>
+    // Inject the query parameters for pagination URLs
+    function buildPageUrl(page) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', page);
+      return `${window.location.pathname}?${params.toString()}`;
+    }
+  </script>
+</body>
+</html>

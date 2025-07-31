@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Login | SuperKicks</title>
+  <link href="/css/output.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white shadow-xl rounded-2xl flex max-w-5xl w-full overflow-hidden">
+    <!-- Left: Image -->
+    <div class="hidden md:flex w-1/2 bg-black items-center justify-center p-6">
+      <img src="/images/admin-shoe.png" alt="Admin Image" class="w-[80%] drop-shadow-2xl" />
+    </div>
+
+    <!-- Right: Login Form -->
+    <div class="w-full md:w-1/2 p-10">
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Admin Login</h2>
+
+      <!-- Error Message Display -->
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        <div class="bg-red-100 text-red-700 border border-red-400 px-4 py-3 rounded mb-4">
+          <p><%= errorMessage %></p>
+        </div>
+      <% } %>
+
+      <form action="/admin/login" method="POST" class="space-y-5" novalidate>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" for="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            value="<%= typeof oldInput !== 'undefined' && oldInput.email ? oldInput.email : '' %>"
+            class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-black"
+            autofocus
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1" for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-black"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full py-2 bg-black text-white font-semibold rounded hover:bg-gray-800 transition"
+        >
+          Log In
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-500 mt-6">Only authorized admins can log in.</p>
+    </div>
+  </div>
+</body>
+</html>

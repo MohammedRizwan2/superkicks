@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Superkicks | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+
+  <body class="min-h-screen bg-white flex items-center justify-center">
+    <div class="w-full max-w-6xl mx-auto flex flex-col lg:flex-row shadow-lg rounded-xl overflow-hidden">
+      
+      <!-- Left Side: Login Form -->
+      <div class="w-full lg:w-1/2 p-10">
+        <h1 class="text-4xl font-extrabold text-black mb-2">SUPERKICKS</h1>
+        <h2 class="text-2xl font-semibold text-black mb-6">LOGIN</h2>
+        <p class="text-sm text-gray-500 mb-8">Login with your email and password</p>
+
+        <% if (message) { %>
+          <div class="mb-4 p-3 rounded text-white <%= isError ? 'bg-red-500' : 'bg-green-500' %>">
+            <%= message %>
+          </div>
+        <% } %>
+
+        <!-- ✅ Login Form -->
+        <form action="/user/login" method="POST">
+          <!-- Email Input -->
+          <div class="mb-5">
+            <label class="block text-gray-600 mb-2" for="email">Email</label>
+            <div class="flex items-center bg-gray-100 p-3 rounded-md">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="bg-transparent w-full outline-none text-gray-700"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Password Input -->
+          <div class="mb-3">
+            <label class="block text-gray-600 mb-2" for="password">Password</label>
+            <div class="flex items-center bg-gray-100 p-3 rounded-md">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="bg-transparent w-full outline-none text-gray-700"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="mb-6 text-sm text-blue-600 cursor-pointer hover:underline">
+            <a href="/user/forgot-password">Forgot password?</a>
+          </div>
+
+          <!-- Login and Signup Buttons -->
+          <div class="flex gap-4 mb-6">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md font-semibold">
+              Login Now
+            </button>
+            <a href="/user/signup" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-md font-semibold">
+              Signup
+            </a>
+          </div>
+        </form>
+
+        <!-- Divider -->
+        <div class="border-t pt-4 mb-4 text-center text-gray-600 font-semibold">Login with google</div>
+
+        <!-- Google Login -->
+        <div class="flex justify-center">
+          <a href="/user/auth/google" class="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 px-4 rounded mb-4">
+           <img src="https://www.google.com/favicon.ico" alt="Google" class="w-5 h-5" />
+                     <span class="text-sm">login up with Google</span>
+              </a>
+
+          </div>
+      </div>
+
+      <!-- Right Side: Image -->
+      <div class="w-full lg:w-1/2 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center p-10">
+        <img src="https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png" alt="Shoe" class="w-80 h-auto object-contain rounded-xl shadow-lg" />
+      </div>
+    </div>
+  </body>
+</html>

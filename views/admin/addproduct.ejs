@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Product - Superkicks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-[#15172B] text-white flex flex-col justify-between">
+      <div>
+        <h2 class="text-center text-2xl font-bold py-6">SUPERKICKS</h2>
+        <ul class="space-y-2 px-4">
+          <li><a href="/admin/dashboard" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-tachometer-alt mr-2"></i> Dashboard</a></li>
+          <li><a href="/admin/customers" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-users mr-2"></i> Customers</a></li>
+          <li><a href="/admin/products" class="flex items-center p-2 bg-blue-600 rounded"><i class="fas fa-box mr-2"></i> Products</a></li>
+          <li><a href="/admin/orders" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-shopping-cart mr-2"></i> Orders</a></li>
+          <li><a href="/admin/banners" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-image mr-2"></i> Banner Management</a></li>
+          <li><a href="/admin/coupons" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-tags mr-2"></i> Coupon Management</a></li>
+          <li><a href="/admin/sales-report" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-chart-line mr-2"></i> Sales Report</a></li>
+          <li><a href="/admin/category" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-layer-group mr-2"></i> Category</a></li>
+        </ul>
+      </div>
+      <div class="px-4 py-4 space-y-2">
+        <a href="/admin/settings" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-cog mr-2"></i> Settings</a>
+        <a href="/admin/logout" class="flex items-center p-2 hover:bg-red-600 rounded"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
+      </div>
+    </aside>
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+      <header class="flex justify-end mb-4">
+        <div class="flex items-center gap-2 text-gray-700">
+          <i class="fas fa-user"></i>
+          <span class="font-semibold">ADMIN</span>
+        </div>
+      </header>
+
+      <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
+          <i class="fas fa-plus text-green-600"></i> Add New Product
+        </h2>
+
+        <% if (typeof errors !== "undefined" && errors.length > 0) { %>
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+            <ul class="list-disc ml-5">
+              <% errors.forEach(function(msg) { %>
+                <li><%= msg %></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+
+        <form action="/admin/products/add" method="POST" enctype="multipart/form-data" class="space-y-5">
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Product Name <span class="text-red-500">*</span></label>
+            <input type="text" name="productName" required
+              value="<%= old && old.productName ? old.productName : '' %>"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Brand <span class="text-red-500">*</span></label>
+            <input type="text" name="brand" required
+              value="<%= old && old.brand ? old.brand : '' %>"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Category <span class="text-red-500">*</span></label>
+            <select name="categoryId" required class="w-full px-3 py-2 border rounded">
+              <option value="">-- Select Category --</option>
+              <% categories.forEach(cat => { %>
+                <option value="<%= cat._id %>"
+                  <%= old && old.categoryId == cat._id ? 'selected' : '' %>>
+                  <%= cat.name %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Description <span class="text-red-500">*</span></label>
+            <textarea name="description" rows="3" required
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"><%= old && old.description ? old.description : '' %></textarea>
+          </div>
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Offer (%)</label>
+            <input type="number" min="0" max="100" name="offer"
+              value="<%= old && old.offer ? old.offer : 0 %>"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+          <div>
+            <label class="block text-gray-600 font-medium mb-1">Upload Images <span class="text-red-500">*</span></label>
+            <input type="file" name="images"class="w-full px-3 py-2 rounded border bg-gray-50" accept="image/*" multiple required ... />
+                    <small class="text-gray-500">Hold CTRL (or CMD on Mac) to select 3 or more images in one go.</small>
+              
+            <% // Optionally, show image preview upon replacement or error %>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" id="isListed" name="isListed"
+              class="mr-2 h-5 w-5 text-blue-600 border-gray-300 rounded"
+              <%= !old || typeof old.isListed === 'undefined' || old.isListed === "on" ? 'checked' : '' %> />
+            <label for="isListed" class="text-gray-700">Listed (Show Product to Users)</label>
+          </div>
+          <!-- Variants Section -->
+          <div>
+            <label class="block text-gray-600 font-medium mb-2">Variants (Size, Price, Stock)</label>
+            <div id="variants-area">
+              <% let variants = (old && old.variants) ? old.variants : [{ size: '', price: '', stock: '' }]; %>
+              <% variants.forEach(function(variant, i) { %>
+                <div class="flex gap-2 mb-2 variant-row">
+                  <input type="text" name="variants[<%= i %>][size]" placeholder="Size" required
+                    value="<%= variant.size || '' %>"
+                    class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>
+                  <input type="number" min="0" name="variants[<%= i %>][price]" placeholder="Price" required
+                    value="<%= variant.price || '' %>"
+                    class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>
+                  <input type="number" min="0" name="variants[<%= i %>][stock]" placeholder="Stock"
+                    value="<%= variant.stock || '' %>"
+                    class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>
+                  <button type="button" onclick="removeVariantRow(this)" class="bg-red-500 text-white px-2 rounded hover:bg-red-700 font-bold">-</button>
+                </div>
+              <% }) %>
+            </div>
+            <button type="button" id="add-variant-btn" class="mt-1 px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Variant</button>
+          </div>
+          <div class="flex justify-between items-center mt-8">
+            <a href="/admin/products" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded font-semibold">Back</a>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold">
+              <i class="fas fa-save mr-2"></i>Save Product
+            </button>
+          </div>
+        </form>
+      </div>
+      <!-- Variants Dynamic Script -->
+      <script>
+        document.getElementById('add-variant-btn').addEventListener('click', function() {
+          const area = document.getElementById('variants-area');
+          const index = area.querySelectorAll('.variant-row').length;
+          const row = document.createElement('div');
+          row.className = 'flex gap-2 mb-2 variant-row';
+          row.innerHTML =
+            '<input type="text" name="variants[' + index + '][size]" placeholder="Size" required class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>' +
+            '<input type="number" min="0" name="variants[' + index + '][price]" placeholder="Price" required class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>' +
+            '<input type="number" min="0" name="variants[' + index + '][stock]" placeholder="Stock" class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"/>' +
+            '<button type="button" onclick="removeVariantRow(this)" class="bg-red-500 text-white px-2 rounded hover:bg-red-700 font-bold">-</button>';
+          area.appendChild(row);
+        });
+        function removeVariantRow(btn) {
+          btn.closest('.variant-row').remove();
+        }
+      </script>
+    </main>
+  </div>
+</body>
+</html>

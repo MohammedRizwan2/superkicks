@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Category - Superkicks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-[#15172B] text-white flex flex-col justify-between">
+      <div>
+        <h2 class="text-center text-2xl font-bold py-6">SUPERKICKS</h2>
+        <ul class="space-y-2 px-4">
+          <li><a href="/admin/dashboard" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-tachometer-alt mr-2"></i> Dashboard</a></li>
+          <li><a href="/admin/customers" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-users mr-2"></i> Customers</a></li>
+          <li><a href="/admin/products" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-box mr-2"></i> Products</a></li>
+          <li><a href="/admin/orders" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-shopping-cart mr-2"></i> Orders</a></li>
+          <li><a href="/admin/banners" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-image mr-2"></i> Banner Management</a></li>
+          <li><a href="/admin/coupons" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-tags mr-2"></i> Coupon Management</a></li>
+          <li><a href="/admin/sales-report" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-chart-line mr-2"></i> Sales Report</a></li>
+          <li><a href="/admin/category" class="flex items-center p-2 bg-blue-600 rounded"><i class="fas fa-layer-group mr-2"></i> Category</a></li>
+        </ul>
+      </div>
+      <div class="px-4 py-4 space-y-2">
+        <a href="/admin/settings" class="flex items-center p-2 hover:bg-blue-600 rounded"><i class="fas fa-cog mr-2"></i> Settings</a>
+        <a href="/admin/logout" class="flex items-center p-2 hover:bg-red-600 rounded"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+      <header class="flex justify-end mb-4">
+        <div class="flex items-center gap-2 text-gray-700">
+          <i class="fas fa-user"></i>
+          <span class="font-semibold">ADMIN</span>
+        </div>
+      </header>
+
+      <div class="max-w-xl mx-auto bg-white shadow-lg rounded-lg p-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
+          <i class="fas fa-edit text-yellow-500"></i> Edit Category
+        </h2>
+
+        <% if (typeof errors !== "undefined" && errors.length > 0) { %>
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+            <ul class="list-disc ml-5">
+              <% errors.forEach(function(msg) { %>
+                <li><%= msg %></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+
+        <form action="/admin/category/<%= category._id %>/edit" method="POST" class="space-y-5">
+          <div>
+            <label for="name" class="block text-gray-600 font-medium mb-1">Category Name <span class="text-red-500">*</span></label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              value="<%= typeof old !== 'undefined' && old.name !== undefined ? old.name : category.name %>"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label for="description" class="block text-gray-600 font-medium mb-1">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="3"><%= typeof old !== 'undefined' && old.description !== undefined ? old.description : category.description %></textarea>
+          </div>
+
+          <div>
+            <label for="offer" class="block text-gray-600 font-medium mb-1">Offer (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              id="offer"
+              name="offer"
+              value="<%= typeof old !== 'undefined' && old.offer !== undefined ? old.offer : (category.offer || 0) %>"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div class="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="isListed"
+              name="isListed"
+              class="mr-2 h-5 w-5 text-blue-600 border-gray-300 rounded"
+              <%= (typeof old !== 'undefined'
+                    ? old.isListed === "on"
+                    : category.isListed) ? 'checked' : '' %>
+            />
+            <label for="isListed" class="text-gray-700">Listed (Show Category to Users)</label>
+          </div>
+
+          <div class="flex justify-between items-center mt-8">
+            <a href="/admin/category" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded font-semibold">Back</a>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold">
+              <i class="fas fa-save mr-2"></i>Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
