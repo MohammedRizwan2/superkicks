@@ -126,49 +126,44 @@
 
     <!-- Products Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      <% if (products.length === 0) { %>
-        <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
-      <% } %>
-
-      <% products.forEach(product => { %>
-        <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
-          <a href="/user/products/<%= product._id %>" class="block">
+  <% if (!products || products.length === 0) { %>
+    <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
+  <% } else { %>
+    <% products.forEach(product => { %>
+       <a href="/user/products/<%= product._id %>" class="block">
             <img
               src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
               alt="<%= product.productName %>"
               class="w-full h-48 object-cover"
             />
-            <div class="p-4 flex flex-col flex-grow">
-              <h3 class="text-lg font-semibold truncate mb-1"><%= product.productName %></h3>
+      <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4">
+        <!-- Product Name -->
+        <h3 class="text-lg font-semibold truncate mb-1 text-gray-800"><%= product.productName %></h3>
 
-              <p class="text-sm text-gray-600 mb-2">
-                Category: <%= product.categoryId ? product.categoryId.name : 'Uncategorized' %>
-              </p>
+        <!-- Brand -->
+        <p class="text-sm text-gray-600 mb-2">Brand: <%= product.brand %></p>
 
-              <% 
-                let prices = [];
-                if (product.variants && product.variants.length > 0) {
-                  prices = product.variants
-                    .map(v => (typeof v.regularPrice === 'number' ? v.regularPrice : NaN))
-                    .filter(p => !isNaN(p));
-                }
-                const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
-              %>
+        <!-- Category -->
+        <p class="text-sm text-gray-600 mb-2">
+          Category: <%= product.categoryInfo && product.categoryInfo.name ? product.categoryInfo.name : 'Uncategorized' %>
+        </p>
 
-              <% if (lowestPrice !== null) { %>
-                <p class="text-xl font-bold text-gray-900">₹<%= lowestPrice.toFixed(2) %></p>
-              <% } else { %>
-                <p class="text-xl font-bold text-gray-900">Price not available</p>
-              <% } %>
+        <!-- Price (lowestPrice from aggregation) -->
+        <% if (typeof product.lowestPrice === 'number' && !isNaN(product.lowestPrice)) { %>
+          <p class="text-xl font-bold text-gray-900 mb-1">₹<%= product.lowestPrice.toFixed(2) %></p>
+        <% } else { %>
+          <p class="text-xl font-bold text-gray-900 mb-1">Price not available</p>
+        <% } %>
 
-              <% if (product.offer && product.offer > 0) { %>
-                <p class="text-xs text-green-600 font-semibold mt-1"><%= product.offer %>% OFF</p>
-              <% } %>
-            </div>
-          </a>
-        </div>
-      <% }); %>
-    </div>
+        <!-- Offer -->
+        <% if (product.offer && product.offer > 0) { %>
+          <p class="text-xs text-green-600 font-semibold"><%= product.offer %>% OFF</p>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+</div>
+
 
     <!-- Pagination -->
     <div class="mt-8 flex justify-center gap-2 text-gray-700">

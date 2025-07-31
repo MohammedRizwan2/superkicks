@@ -1,43 +1,72 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.querySelector('form');
-  form.addEventListener('submit', (e) => {
-    const fullName = form.querySelector('input[name="fullName"]').value.trim();
-    const email = form.querySelector('input[name="email"]').value.trim();
-    const phone = form.querySelector('input[name="phone"]').value.trim();
-    const password = form.querySelector('input[name="password"]').value;
-    const confirmPass = form.querySelector('input[name="Confirmpass"]').value;
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\d{10}$/;
-    
-    if (!fullName || !email || !phone || !password || !confirmPass) {
-      e.preventDefault();
-      alert('All fields are required');
-      return;
+  const fullNameInput = form.querySelector('input[name="fullName"]');
+  const emailInput = form.querySelector('input[name="email"]');
+  const phoneInput = form.querySelector('input[name="phone"]');
+  const passwordInput = form.querySelector('input[name="password"]');
+  const confirmPassInput = form.querySelector('input[name="Confirmpass"]');
+
+  form.addEventListener('submit', (event) => {
+    // Remove previous error messages
+    const previousErrors = document.querySelectorAll('.client-error');
+    previousErrors.forEach(error => error.remove());
+
+    let isValid = true;
+
+    function showError(input, message) {
+      isValid = false;
+      const errorEl = document.createElement('p');
+      errorEl.className = 'client-error text-red-600 text-sm mt-1';
+      errorEl.textContent = message;
+      input.parentNode.appendChild(errorEl);
     }
-    
-    if (!emailRegex.test(email)) {
-      e.preventDefault();
-      alert('Please enter a valid email address');
-      return;
+
+    // Validate full name
+    if (!fullNameInput.value.trim()) {
+      showError(fullNameInput, 'Full Name is required');
+    } else if (fullNameInput.value.trim().length < 2) {
+      showError(fullNameInput, 'Full Name must be at least 2 characters');
     }
-    
-    if (!phoneRegex.test(phone)) {
-      e.preventDefault();
-      alert('Please enter a valid 10-digit phone number');
-      return;
+
+    // Validate email format (basic check)
+    if (!emailInput.value.trim()) {
+      showError(emailInput, 'Email is required');
+    } else {
+      const emailPattern = /^\S+@\S+\.\S+$/;
+      if (!emailPattern.test(emailInput.value.trim())) {
+        showError(emailInput, 'Invalid email format');
+      }
     }
-    
-    if (password.length < 6) {
-      e.preventDefault();
-      alert('Password must be at least 6 characters');
-      return;
+
+    // Validate phone number (digits only, 7-15 length)
+    if (!phoneInput.value.trim()) {
+      showError(phoneInput, 'Phone number is required');
+    } else {
+      const phonePattern = /^\d{7,15}$/;
+      if (!phonePattern.test(phoneInput.value.trim())) {
+        showError(phoneInput, 'Phone number must be 7 to 15 digits');
+      }
     }
-    
-    if (password !== confirmPass) {
-      e.preventDefault();
-      alert('Passwords do not match');
-      return;
+
+    // Validate password length and special character
+    if (!passwordInput.value) {
+      showError(passwordInput, 'Password is required');
+    } else if (passwordInput.value.length < 6) {
+      showError(passwordInput, 'Password must be at least 6 characters');
+    } else {
+      const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+      if (!specialCharPattern.test(passwordInput.value)) {
+        showError(passwordInput, 'Password must include at least one special character');
+      }
+    }
+
+    // Confirm password match
+    if (confirmPassInput.value !== passwordInput.value) {
+      showError(confirmPassInput, 'Passwords do not match');
+    }
+
+    if (!isValid) {
+      event.preventDefault(); // Prevent form submission if validation fails
     }
   });
 });

@@ -1,4 +1,4 @@
-const User = require('../../models/User');
+const User = require('../../models/userSchema');
 
 // routes/admin.js or your relevant file
 
@@ -44,11 +44,10 @@ exports.getUsers = async (req, res) => {
 
 exports.toggleBlockStatus = async (req, res) => {
   try {
-   console.log("Requested ID:", req.params.id);
+   
 
     const userId = req.params.id;
 
-   
     const user = await User.findById(userId);
     
     if (!user) {

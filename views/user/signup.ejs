@@ -1,59 +1,118 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign Up</title>
+  <title>Sign Up | Superkicks</title>
   <link rel="stylesheet" href="/css/output.css" />
-   <script src="https://cdn.tailwindcss.com"></script>
-  
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-white font-sans">
 
-  <div class="min-h-screen flex items-center justify-center">
+  <main class="min-h-screen flex items-center justify-center">
     <div class="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
 
       <!-- Left side (Image + Logo) -->
-      <div class="relative flex items-center justify-center bg-gray-100 p-6">
-        <div class="absolute top-6 left-6 text-3xl font-bold">SUPERKICKS</div>
-        <img src="https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png" alt="Nike Shoe" class="w-3/4 md:w-[80%] object-contain rotate-[10deg]" />
-      </div>
+      <section class="relative flex items-center justify-center bg-gray-100 p-6" aria-label="Superkicks branding">
+        <div class="absolute top-6 left-6 text-3xl font-bold select-none" aria-hidden="true">SUPERKICKS</div>
+        <img
+          src="https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png"
+          alt="Nike Shoe"
+          class="w-3/4 md:w-[80%] object-contain rotate-[10deg]"
+          loading="lazy"
+        />
+      </section>
 
       <!-- Right side (Form) -->
-      <div class="p-8">
-       <% if (error) { %>
-  <p class="text-red-600 text-center mb-2"><%= error %></p>
-<% } %>
+      <section class="p-8" aria-label="Create account form">
 
-<% if (message) { %>
-  <p class="text-green-600 text-center mb-2"><%= message %></p>
-<% } %>
         <h2 class="text-2xl font-semibold mb-4 text-center">Create Account</h2>
 
-        <a href="/user/auth/google" class="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 px-4 rounded mb-4">
-  <img src="https://www.google.com/favicon.ico" alt="Google" class="w-5 h-5" />
-  <span class="text-sm">Sign up with Google</span>
-</a>
+        <!-- Message Display -->
+        <% if (message) { %>
+          <p class="text-center mb-4 px-4 py-2 rounded font-medium <%= isError ? 'text-red-600 bg-red-100' : 'text-green-600 bg-green-100' %>" role="alert" aria-live="assertive">
+            <%= message %>
+          </p>
+        <% } %>
 
+        <!-- Google Signup Button -->
+        <a href="/user/auth/google" class="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 px-4 rounded mb-5 hover:bg-gray-100 transition" aria-label="Sign up with Google">
+          <img src="https://www.google.com/favicon.ico" alt="Google logo" class="w-5 h-5" />
+          <span class="text-sm">Sign up with Google</span>
+        </a>
 
-        <div class="text-center text-gray-400 mb-4">- OR -</div>
+        <div class="text-center text-gray-400 mb-6 select-none">- OR -</div>
 
-        <form class="space-y-3" method="POST"action="/user/signup">
-          <input name="fullName"type="text" placeholder="Full Name" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black" />
-          <input name="email" type="email" placeholder="Email Address" class="w-full border border-gray-300 rounded px-3 py-2" />
-          <input  name="phone"type="text" placeholder="Phone Number" class="w-full border border-gray-300 rounded px-3 py-2" />
-          <input name="password"type="password" placeholder="Password" class="w-full border border-gray-300 rounded px-3 py-2" />
-          <input name="Confirmpass"type="password" placeholder="Confirm Password" class="w-full border border-gray-300 rounded px-3 py-2" />
-          <button type="submit" class="w-full bg-black text-white py-2 rounded hover:bg-gray-800 transition">Create Account</button>
+        <!-- Signup Form -->
+        <form class="space-y-4" method="POST" action="/user/signup" novalidate>
+
+          <input
+            name="fullName"
+            type="text"
+            placeholder="Full Name"
+            value="<%= oldInput && oldInput.fullName ? oldInput.fullName : '' %>"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Full Name"
+            required
+          />
+
+          <input
+            name="email"
+            type="email"
+            placeholder="Email Address"
+            value="<%= oldInput && oldInput.email ? oldInput.email : '' %>"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Email Address"
+            required
+          />
+
+          <input
+            name="phone"
+            type="text"
+            placeholder="Phone Number"
+            value="<%= oldInput && oldInput.phone ? oldInput.phone : '' %>"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Phone Number"
+            required
+          />
+
+          <input
+            name="password"
+            type="password"
+            placeholder="Password"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Password"
+            autocomplete="new-password"
+            required
+          />
+
+          <input
+            name="confirmPass"
+            type="password"
+            placeholder="Confirm Password"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Confirm Password"
+            autocomplete="new-password"
+            required
+          />
+
+          <button
+            type="submit"
+            class="w-full bg-black text-white py-2 rounded hover:bg-gray-800 transition disabled:opacity-50"
+          >
+            Create Account
+          </button>
         </form>
 
-        <p class="text-sm text-center mt-4 text-gray-500">
+        <p class="text-sm text-center mt-6 text-gray-500">
           Already have an account?
-          <a href="/user/login" class="text-black font-medium hover:underline">Log in</a>
+          <a href="/user/login" class="text-black font-medium hover:underline" aria-label="Go to login page">Log in</a>
         </p>
-      </div>
+      </section>
     </div>
-  </div>
-<script src="../public/js/signupValidation.js"></script>
+  </main>
+
+  
+  <script src="../../public/js/signupValidation.js"></script>
 </body>
 </html>

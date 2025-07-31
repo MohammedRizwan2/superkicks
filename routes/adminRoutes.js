@@ -12,8 +12,9 @@ const adminAuth = require('../middleware/adminAuth');
 router.get('/login', adminController.getAdminLogin);
 router.post('/login', adminController.postLogin);
 
-router.use(adminAuth);
 
+
+router.use(adminAuth)
 router.get('/dashboard', adminController.getDashboard);
 
 // Customers
@@ -34,5 +35,7 @@ router.post('/category/add', categoryController.postAddCategory);
 router.get('/category/:id/edit', categoryController.getEditCategory);
 router.post('/category/:id/edit', categoryController.postEditCategory);
 
+
+router.get('/logout',adminController.logout)
 
 module.exports = router;

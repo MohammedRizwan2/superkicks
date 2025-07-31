@@ -34,20 +34,26 @@
     </nav>
   </header>
 
-  <!-- Hero Section -->
-  <section class="relative bg-gradient-to-tr from-gray-900 via-gray-700 to-blue-800 text-white overflow-hidden py-20">
-    <div class="max-w-7xl mx-auto px-6 relative z-10">
-      <h1 class="text-4xl sm:text-5xl font-extrabold mb-6">Level Up Your Kicks</h1>
-      <p class="text-lg max-w-xl mb-8">Shop the hottest sneakers, limited editions, and essential accessories for every step of your journey.</p>
-      <% if (isLoggedIn) { %>
-        <a href="/user/product/list" class="bg-blue-600 hover:bg-blue-700 rounded px-6 py-3 text-lg font-semibold shadow">Shop Now <i class="fas fa-arrow-right ml-2"></i></a>
-      <% } else { %>
-        <a href="/user/login" class="bg-blue-600 hover:bg-blue-700 rounded px-6 py-3 text-lg font-semibold shadow">Sign in to Shop <i class="fas fa-arrow-right ml-2"></i></a>
-      <% } %>
-    </div>
-    <img src="/assets/banner-shoe.png" alt="Banner Shoe" class="hidden sm:block absolute right-12 top-8 w-80 opacity-80 z-0">
-    <!-- Replace /assets/banner-shoe.png with your hero image -->
-  </section>
+ <section
+  class="relative overflow-hidden py-20 bg-cover bg-center bg-no-repeat min-h-screen"
+  style="background-image: url('/img/home.webp');"
+>
+  <!-- Light overlay for better contrast -->
+  <div class="absolute inset-0"></div>
+</section>
+
+<!-- Text content below the image section -->
+<div class="max-w-4xl mx-auto px-6 py-12">
+  <h1 class="text-4xl font-bold text-gray-900 mb-6 text-center">
+    Welcome to Superkicks
+  </h1>
+  <p class="text-lg text-gray-800 leading-relaxed mx-auto max-w-3xl text-center">
+    Discover the latest and greatest sneakers, exclusive limited editions, and must-have accessories.
+    Shop with confidence and step up your style game with Superkicks – your ultimate sneaker destination.
+  </p>
+</div>
+
+
 
   <!-- Featured Categories -->
   <section class="max-w-7xl mx-auto px-6 py-12">

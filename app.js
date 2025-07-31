@@ -9,7 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 dotenv.config();
-console.log('SESSION_SECRET:', process.env.SESSION_SECRET || 'undefined');
+
 
 // Initialize Express
 const app = express();
@@ -61,6 +61,12 @@ try {
 } catch (err) {
   console.error('Error loading passport config:', err);
 }
+
+// app.use((req,res,next)=>{
+//   console.log(req.method);
+//   console.log(req.url);
+//   next();
+// })
 
 // Routes
 app.use('/user', userRoutes);

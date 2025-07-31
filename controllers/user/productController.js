@@ -1,6 +1,122 @@
 const Product = require('../../models/product');
 const Category = require('../../models/category');
 const Review = require('../../models/reviews');
+const mongoose = require('mongoose')
+// exports.getShop = async (req, res) => {
+//   try {
+//     // --- 1. Parse query params ---
+//     const q = req.query.q ? req.query.q.trim() : '';
+//     const category = req.query.category || '';
+//     const priceMin = req.query.priceMin !== undefined && req.query.priceMin !== '' ? Number(req.query.priceMin) : undefined;
+//     const priceMax = req.query.priceMax !== undefined && req.query.priceMax !== '' ? Number(req.query.priceMax) : undefined;
+//     const sort = req.query.sort || '';
+//     const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
+//     const limit = 12; // Products per page
+
+//     // --- 2. Build Mongo filter ---
+//     const filter = {
+//       isListed: true, // Hide blocked/unlisted products
+//     };
+
+//     // Search (name/brand/case-insensitive)
+//     if (q) {
+//       filter.$or = [
+//         { productName: { $regex: q, $options: 'i' } },
+//         { brand: { $regex: q, $options: 'i' } }
+//       ];
+//     }
+
+//     // Category filter
+//     if (category) {
+//       filter.categoryId = category;
+//     }
+
+//     // We'll need price range filter based on lowest variant price:
+//     // To keep it efficient, filter products by variant price only after fetching, or precompute in aggregation if needed.
+//     // For moderate product counts, post-filtering is fine.
+
+//     // --- 3. Find all listed categories for filter dropdown ---
+//     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+
+//     // --- 4. Build sort option ---
+//     let sortCondition = {};
+//     if (sort === 'priceAsc') {
+//       sortCondition = { 'variants.regularPrice': 1 };
+//     } else if (sort === 'priceDesc') {
+//       sortCondition = { 'variants.regularPrice': -1 };
+//     } else if (sort === 'nameAsc') {
+//       sortCondition = { productName: 1 };
+//     } else if (sort === 'nameDesc') {
+//       sortCondition = { productName: -1 };
+//     } else if (sort === 'newest') {
+//       sortCondition = { createdAt: -1 };
+//     } else {
+//       sortCondition = { createdAt: -1 }; // default: newest first
+//     }
+
+//     // --- 5. Fetch Products (with population) & filter variants ---
+//     let productQuery = Product.find(filter)
+//       .populate('categoryId', 'name')
+//       .populate('variants')
+//       .sort(sortCondition);
+
+//     // Pagination
+//     productQuery = productQuery.skip((page - 1) * limit).limit(limit);
+
+//     let products = await productQuery.exec();
+
+//     // --- 6. Further filter by price range (if set) on variant prices ---
+//     if (priceMin !== undefined || priceMax !== undefined) {
+//       products = products.filter(product => {
+//         if (!product.variants || product.variants.length === 0) return false;
+//         // Find lowest variant price per product
+//         const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
+//         if (prices.length === 0) return false;
+//         const lowest = Math.min(...prices);
+//         if (priceMin !== undefined && lowest < priceMin) return false;
+//         if (priceMax !== undefined && lowest > priceMax) return false;
+//         return true;
+//       });
+//     }
+
+//     // --- 7. Count total matching documents for pagination ---
+//     // Best accuracy: repeat the filter steps without pagination
+//     const fullProductQuery = Product.find(filter).populate('variants');
+//     let allMatchingProducts = await fullProductQuery.exec();
+//     if (priceMin !== undefined || priceMax !== undefined) {
+//       allMatchingProducts = allMatchingProducts.filter(product => {
+//         if (!product.variants || product.variants.length === 0) return false;
+//         const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
+//         if (prices.length === 0) return false;
+//         const lowest = Math.min(...prices);
+//         if (priceMin !== undefined && lowest < priceMin) return false;
+//         if (priceMax !== undefined && lowest > priceMax) return false;
+//         return true;
+//       });
+//     }
+//     const totalProducts = allMatchingProducts.length;
+//     const totalPages = Math.ceil(totalProducts / limit);
+
+//     // --- 8. Render the page ---
+//     res.render('user/productlist', {
+//       products,
+//       categories,
+//       user: req.session.user || null,
+//       q,
+//       category,
+//       priceMin,
+//       priceMax,
+//       sort,
+//       currentPage: page,
+//       totalPages
+//     });
+//   } catch (err) {
+//     console.error('Error fetching products:', err);
+//     res.status(500).render('error/500', { title: 'Server Error' });
+//   }
+// };
+
+
 
 exports.getShop = async (req, res) => {
   try {
@@ -11,93 +127,136 @@ exports.getShop = async (req, res) => {
     const priceMax = req.query.priceMax !== undefined && req.query.priceMax !== '' ? Number(req.query.priceMax) : undefined;
     const sort = req.query.sort || '';
     const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
-    const limit = 12; // Products per page
+    const limit = 12;
+    const skip = (page - 1) * limit;
 
-    // --- 2. Build Mongo filter ---
-    const filter = {
-      isListed: true, // Hide blocked/unlisted products
-    };
-
-    // Search (name/brand/case-insensitive)
+    // --- 2. Build product filters ---
+    const matchStage = { isListed: true };
     if (q) {
-      filter.$or = [
+      matchStage.$or = [
         { productName: { $regex: q, $options: 'i' } },
         { brand: { $regex: q, $options: 'i' } }
       ];
     }
-
-    // Category filter
     if (category) {
-      filter.categoryId = category;
+      // convert to ObjectId if necessary
+      matchStage.categoryId = new mongoose.Types.ObjectId(category);
     }
 
-    // We'll need price range filter based on lowest variant price:
-    // To keep it efficient, filter products by variant price only after fetching, or precompute in aggregation if needed.
-    // For moderate product counts, post-filtering is fine.
+    // --- 3. Create aggregation pipeline ---
+    const pipeline = [
+      { $match: matchStage },
 
-    // --- 3. Find all listed categories for filter dropdown ---
-    const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+      // Lookup variants collection docs
+      {
+        $lookup: {
+          from: 'variants', // collection name (usually plural and lowercase)
+          localField: 'variants',
+          foreignField: '_id',
+          as: 'variantDocs'
+        }
+      },
 
-    // --- 4. Build sort option ---
+      // Add a field with the lowest variant price (regularPrice)
+      {
+        $addFields: {
+          lowestPrice: { $min: '$variantDocs.regularPrice' }
+        }
+      }
+    ];
+
+    // --- 4. Filter by price range on lowestPrice ---
+    if (priceMin !== undefined || priceMax !== undefined) {
+      const priceFilter = {};
+      if (priceMin !== undefined) priceFilter.$gte = priceMin;
+      if (priceMax !== undefined) priceFilter.$lte = priceMax;
+      pipeline.push({ $match: { lowestPrice: priceFilter } });
+    }
+
+    // --- 5. Apply sorting ---
     let sortCondition = {};
-    if (sort === 'priceAsc') {
-      sortCondition = { 'variants.price': 1 };
-    } else if (sort === 'priceDesc') {
-      sortCondition = { 'variants.price': -1 };
-    } else if (sort === 'nameAsc') {
-      sortCondition = { productName: 1 };
-    } else if (sort === 'nameDesc') {
-      sortCondition = { productName: -1 };
-    } else if (sort === 'newest') {
-      sortCondition = { createdAt: -1 };
-    } else {
-      sortCondition = { createdAt: -1 }; // default: newest first
+    switch (sort) {
+      case 'priceAsc':
+        sortCondition = { lowestPrice: 1 };
+        break;
+      case 'priceDesc':
+        sortCondition = { lowestPrice: -1 };
+        break;
+      case 'nameAsc':
+        sortCondition = { productName: 1 };
+        break;
+      case 'nameDesc':
+        sortCondition = { productName: -1 };
+        break;
+      case 'newest':
+        sortCondition = { createdAt: -1 };
+        break;
+      default:
+        sortCondition = { createdAt: -1 };
     }
+    pipeline.push({ $sort: sortCondition });
 
-    // --- 5. Fetch Products (with population) & filter variants ---
-    let productQuery = Product.find(filter)
-      .populate('categoryId', 'name')
-      .populate('variants')
-      .sort(sortCondition);
+    // --- 6. Pagination ---
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
 
-    // Pagination
-    productQuery = productQuery.skip((page - 1) * limit).limit(limit);
+    // --- 7. Lookup category info (optional but recommended for dropdowns or display) ---
+    pipeline.push({
+      $lookup: {
+        from: 'categories',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'categoryInfo'
+      }
+    });
 
-    let products = await productQuery.exec();
+    // To unwind categoryInfo array (usually with single item)
+    pipeline.push({ $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } });
 
-    // --- 6. Further filter by price range (if set) on variant prices ---
+    // --- 8. Execute aggregation ---
+    const products = await Product.aggregate(pipeline).exec();
+
+    // --- 9. Get total count for pagination ---
+    // Rebuild pipeline without pagination, just counting
+    const countPipeline = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'variants',
+          localField: 'variants',
+          foreignField: '_id',
+          as: 'variantDocs'
+        }
+      },
+      {
+        $addFields: {
+          lowestPrice: { $min: '$variantDocs.regularPrice' }
+        }
+      }
+    ];
+
     if (priceMin !== undefined || priceMax !== undefined) {
-      products = products.filter(product => {
-        if (!product.variants || product.variants.length === 0) return false;
-        // Find lowest variant price per product
-        const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
-        if (prices.length === 0) return false;
-        const lowest = Math.min(...prices);
-        if (priceMin !== undefined && lowest < priceMin) return false;
-        if (priceMax !== undefined && lowest > priceMax) return false;
-        return true;
-      });
+      const priceFilter = {};
+      if (priceMin !== undefined) priceFilter.$gte = priceMin;
+      if (priceMax !== undefined) priceFilter.$lte = priceMax;
+      countPipeline.push({ $match: { lowestPrice: priceFilter } });
     }
 
-    // --- 7. Count total matching documents for pagination ---
-    // Best accuracy: repeat the filter steps without pagination
-    const fullProductQuery = Product.find(filter).populate('variants');
-    let allMatchingProducts = await fullProductQuery.exec();
-    if (priceMin !== undefined || priceMax !== undefined) {
-      allMatchingProducts = allMatchingProducts.filter(product => {
-        if (!product.variants || product.variants.length === 0) return false;
-        const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
-        if (prices.length === 0) return false;
-        const lowest = Math.min(...prices);
-        if (priceMin !== undefined && lowest < priceMin) return false;
-        if (priceMax !== undefined && lowest > priceMax) return false;
-        return true;
-      });
-    }
-    const totalProducts = allMatchingProducts.length;
+    countPipeline.push({ $count: 'totalCount' });
+
+    const countResult = await Product.aggregate(countPipeline).exec();
+    const totalProducts = countResult.length > 0 ? countResult[0].totalCount : 0;
     const totalPages = Math.ceil(totalProducts / limit);
 
-    // --- 8. Render the page ---
+    // --- 10. Fetch all categories for filter dropdown ---
+    const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+    
+    console.log("products-->",products);
+    console.log("products-->",priceMax);
+    console.log("products-->",priceMin);
+
+
+    // --- 11. Render the page ---
     res.render('user/productlist', {
       products,
       categories,
@@ -115,6 +274,7 @@ exports.getShop = async (req, res) => {
     res.status(500).render('error/500', { title: 'Server Error' });
   }
 };
+
 
 
 

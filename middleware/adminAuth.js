@@ -1,6 +1,6 @@
 
-module.exports = function adminAuth(req, res, next) {
-  if (req.session && req.session.user&& req.session.user.role=='admin') {
+module.exports = async function adminAuth(req, res, next) {
+  if (req.session.admin) {
     return next();
   }
 
