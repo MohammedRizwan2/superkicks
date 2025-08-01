@@ -62,11 +62,12 @@ try {
   console.error('Error loading passport config:', err);
 }
 
-// app.use((req,res,next)=>{
-//   console.log(req.method);
-//   console.log(req.url);
-//   next();
-// })
+app.use((req,res,next)=>{
+  console.log("---")
+  console.log(req.method);
+  console.log(req.url);
+  next();
+})
 
 // Routes
 app.use('/user', userRoutes);

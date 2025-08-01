@@ -62,7 +62,7 @@ exports.postLogin = async (req, res) => {
       });
     }
 
-    // Set user session only (keep admin untouched)
+    // Set user session data
     req.session.user = {
       id: user._id,
       fullName: user.fullName,
@@ -70,7 +70,19 @@ exports.postLogin = async (req, res) => {
       email: user.email,
     };
 
-    res.redirect('/');
+    // Save session explicitly and redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in login:', err);
+        return res.render('user/login', {
+          message: 'Server error. Please try again later.',
+          isError: true,
+          oldInput: { email },
+        });
+      }
+      res.redirect('/');
+    });
+
   } catch (err) {
     console.error('Error in postLogin:', err);
     res.render('user/login', {
@@ -125,10 +137,10 @@ exports.postSignup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate OTP for verification
+    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store signup data and OTP in session for verification
+    // Store signup data in session
     req.session.signupData = {
       fullName,
       email,
@@ -141,7 +153,7 @@ exports.postSignup = async (req, res) => {
     req.session.otp = {
       code: otp,
       email,
-      expires: Date.now() + 5 * 60 * 1000, // 5 minutes
+      expires: Date.now() + 5 * 60 * 1000,
     };
 
     if (!process.env.NODEMAILER_EMAIL || !process.env.NODEMAILER_PASS) {
@@ -152,19 +164,33 @@ exports.postSignup = async (req, res) => {
       });
     }
 
+    // Send OTP email
     await transporter.sendMail({
       to: email,
       subject: 'SuperKicks OTP Verification',
       text: `Your OTP is ${otp}. It expires in 5 minutes.`,
     });
 
-    res.render('user/otp', {
-      title: 'Verify OTP',
-      email,
-      message: 'OTP sent to your email.',
-      isError: false,
-      otpExpires: req.session.otp.expires,
+    // Save session before rendering OTP page
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in signup:', err);
+        return res.render('user/signup', {
+          message: 'Server error. Please try again later.',
+          isError: true,
+          oldInput: { fullName, email, phone },
+        });
+      }
+
+      res.render('user/otp', {
+        title: 'Verify OTP',
+        email,
+        message: 'OTP sent to your email.',
+        isError: false,
+        otpExpires: req.session.otp.expires,
+      });
     });
+
   } catch (err) {
     console.error('Error in postSignup:', err);
     res.render('user/signup', {
@@ -179,14 +205,16 @@ exports.postSignup = async (req, res) => {
   }
 };
 
-// Handle OTP verification
+// Handle OTP verification - FIXED VERSION
 exports.verifyOtp = async (req, res) => {
   try {
     let { email, otp } = req.body;
 
+    // Handle array inputs (in case form sends arrays)
     email = Array.isArray(email) ? email[0] : email;
     otp = Array.isArray(otp) ? otp.join('') : otp;
 
+    // Validate OTP session data
     if (
       !req.session.otp ||
       req.session.otp.email !== email ||
@@ -201,17 +229,20 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
+    // Validate signup data exists
     if (!req.session.signupData || req.session.signupData.email !== email) {
       return res.render('user/otp', {
         title: 'Verify OTP',
         email,
-        message: 'Signup data not found.',
+        message: 'Signup data not found. Please try signing up again.',
         isError: true,
       });
     }
 
+    // Extract signup data
     const { fullName, email: signupEmail, phone, password, role, isBlocked } = req.session.signupData;
 
+    // Create new user
     const user = new User({
       fullName,
       email: signupEmail,
@@ -221,37 +252,58 @@ exports.verifyOtp = async (req, res) => {
       isBlocked,
     });
 
+    // Save user to database
     await user.save();
 
-    req.session.regenerate((err) => {
+    // Set user session data
+    req.session.user = {
+      id: user._id,
+      fullName: user.fullName,
+      role: user.role,
+      email: user.email,
+    };
+
+    // Clean up temporary session data
+    delete req.session.otp;
+    delete req.session.signupData;
+
+    // Save session and redirect
+    req.session.save((err) => {
       if (err) {
+        console.error('Session save error in verifyOtp:', err);
         return res.render('user/otp', {
           title: 'Verify OTP',
           email,
-          message: 'Server error.',
+          message: 'Server error. Please try again.',
           isError: true,
         });
       }
 
-      req.session.user = {
-        id: user._id,
-        fullName: user.fullName,
-        role: user.role,
-        email: user.email,
-      };
-
-      // Clean up signup data and OTP from session after successful signup
-      delete req.session.otp;
-      delete req.session.signupData;
-
+      // Success - redirect to home page
       res.redirect('/');
     });
+
   } catch (err) {
     console.error('Error in verifyOtp:', err);
+    
+    // Handle duplicate key error (user already exists)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      const message = `${field === 'email' ? 'Email' : 'Phone number'} already exists.`;
+      
+      return res.render('user/otp', {
+        title: 'Verify OTP',
+        email: req.body.email || '',
+        message,
+        isError: true,
+      });
+    }
+
+    // General server error
     res.render('user/otp', {
       title: 'Verify OTP',
       email: req.body.email || '',
-      message: 'Server error.',
+      message: 'Server error. Please try again.',
       isError: true,
     });
   }
@@ -266,7 +318,7 @@ exports.resendOtp = async (req, res) => {
       return res.render('user/otp', {
         title: 'Verify OTP',
         email,
-        message: 'Signup data not found.',
+        message: 'Signup data not found. Please try signing up again.',
         isError: true,
       });
     }
@@ -294,19 +346,33 @@ exports.resendOtp = async (req, res) => {
       text: `Your new OTP is ${otp}. It expires in 5 minutes.`,
     });
 
-    res.render('user/otp', {
-      title: 'Verify OTP',
-      email,
-      message: 'OTP resent to your email.',
-      isError: false,
-      otpExpires: req.session.otp.expires,
+    // Save session before rendering
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in resendOtp:', err);
+        return res.render('user/otp', {
+          title: 'Verify OTP',
+          email,
+          message: 'Server error. Please try again.',
+          isError: true,
+        });
+      }
+
+      res.render('user/otp', {
+        title: 'Verify OTP',
+        email,
+        message: 'OTP resent to your email.',
+        isError: false,
+        otpExpires: req.session.otp.expires,
+      });
     });
+
   } catch (err) {
     console.error('Error in resendOtp:', err);
     res.render('user/otp', {
       title: 'Verify OTP',
       email: req.body.email || '',
-      message: 'Server error.',
+      message: 'Server error. Please try again.',
       isError: true,
     });
   }
@@ -340,7 +406,15 @@ exports.googleCallback = async (req, res) => {
       email: user.email,
     };
 
-    res.redirect('/');
+    // Save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in googleCallback:', err);
+        return res.render('error/500', { title: 'Server Error' });
+      }
+      res.redirect('/');
+    });
+
   } catch (err) {
     console.error('Error in googleCallback:', err);
     res.render('error/500', { title: 'Server Error' });
@@ -384,7 +458,7 @@ exports.postForgotPassword = async (req, res) => {
     req.session.resetToken = {
       token,
       email,
-      expires: Date.now() + 5 * 60 * 1000, // 5 minutes
+      expires: Date.now() + 5 * 60 * 1000, 
     };
 
     if (!process.env.NODEMAILER_EMAIL || !process.env.NODEMAILER_PASS) {
@@ -403,11 +477,24 @@ exports.postForgotPassword = async (req, res) => {
       text: `Reset your password here: ${resetUrl}. The link expires in 5 minutes.`,
     });
 
-    res.render('user/forgotPassword', {
-      message: 'Reset link sent to your email.',
-      isError: false,
-      oldInput: {},
+    // Save session before rendering
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in postForgotPassword:', err);
+        return res.render('user/forgotPassword', {
+          message: 'Server error. Please try again later.',
+          isError: true,
+          oldInput: { email },
+        });
+      }
+
+      res.render('user/forgotPassword', {
+        message: 'Reset link sent to your email.',
+        isError: false,
+        oldInput: {},
+      });
     });
+
   } catch (err) {
     console.error('Error in postForgotPassword:', err);
     res.render('user/forgotPassword', {
@@ -447,7 +534,7 @@ exports.getResetPassword = (req, res) => {
   }
 };
 
-// Handle reset password POST
+// Handle reset password POST - FIXED VERSION
 exports.postResetPassword = async (req, res) => {
   try {
     const { token } = req.params;
@@ -484,11 +571,17 @@ exports.postResetPassword = async (req, res) => {
       });
     }
 
+    // Update user password
     user.password = await bcrypt.hash(password, 10);
     await user.save();
 
-    req.session.regenerate((err) => {
+    // Clean up reset token
+    delete req.session.resetToken;
+
+    // Save session and redirect
+    req.session.save((err) => {
       if (err) {
+        console.error('Session save error in postResetPassword:', err);
         return res.render('user/forgotPassword', {
           message: 'Server error. Please try again later.',
           isError: true,
@@ -496,9 +589,9 @@ exports.postResetPassword = async (req, res) => {
         });
       }
 
-      delete req.session.resetToken;
       res.redirect('/user/login');
     });
+
   } catch (err) {
     console.error('Error in postResetPassword:', err);
     res.render('user/resetPassword', {
@@ -510,19 +603,33 @@ exports.postResetPassword = async (req, res) => {
   }
 };
 
-// Handle logout (clear only user session data, keep admin and others intact)
+
 exports.logout = (req, res) => {
   try {
-    req.session.user = null;
+    // Check if user is logged in
+    if (!req.session.user) {
+      return res.redirect('/user/login');
+    }
 
-    // Save session changes before redirecting
+    // Only clear user data, preserve admin and other session data
+    req.session.user = null;
+    delete req.session.user;
+
+    // Also clean up any user-related temporary data
+    delete req.session.otp;
+    delete req.session.signupData;
+    delete req.session.resetToken;
+
+    // Save session to persist the changes
     req.session.save((err) => {
       if (err) {
         console.error('Error saving session during logout:', err);
         return res.render('error/500', { title: 'Server Error' });
       }
+      
       res.redirect('/user/login');
     });
+
   } catch (err) {
     console.error('Error in logout:', err);
     res.render('error/500', { title: 'Server Error' });

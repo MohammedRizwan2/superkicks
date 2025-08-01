@@ -5,15 +5,28 @@
   <title><%= product ? product.productName : 'Product Not Found' %> | Superkicks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    .img-zoom { transition: transform 0.3s; cursor: zoom-in; }
-    .img-zoom:hover { transform: scale(1.18); z-index: 10; }
+    .img-magnifier-glass {
+  position: absolute;
+  border: 2px solid #3b82f6;
+  border-radius: 50%;
+  cursor: none;
+  width: 120px;
+  height: 120px;
+  opacity: 1;
+  background: none;   /* or adjust as you like */
+  box-shadow: 0 1px 10px rgba(59,130,246,0.18); /* subtle shadow */
+  display: none;
+  z-index: 30;
+}
+    .img-zoom { transition: transform 0.25s; }
     .thumb-active { border: 2px solid #3b82f6 !important; }
   </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
-  <!-- Navbar (copy from your public layout or use include/partial in big project) -->
+  <!-- Navbar -->
   <header class="bg-[#15172B] text-white p-4">
     <nav class="max-w-7xl mx-auto flex justify-between items-center">
       <div class="text-2xl font-black">SUPERKICKS</div>
@@ -32,7 +45,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 py-8">
-
     <!-- Breadcrumbs -->
     <nav class="mb-4 text-sm text-gray-700">
       <ol class="list-reset flex gap-2">
@@ -45,32 +57,36 @@
       </ol>
     </nav>
 
-    <!-- IMAGE + DETAILS -->
+    <!-- Main Product Section -->
     <div class="flex flex-col lg:flex-row gap-8 bg-white rounded-lg shadow-md px-6 py-8">
-      <!-- Image gallery block -->
+      <!-- Image gallery block with magnifier -->
       <div class="flex flex-col w-full lg:w-2/5">
-        <div class="w-full aspect-square bg-gray-100 flex items-center justify-center rounded-lg overflow-hidden mb-3 relative group">
-          <img id="mainProductImage" src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>" 
-               alt="<%= product.productName %>" 
-               class="w-full h-full object-contain img-zoom" />
+        <div class="w-full aspect-square bg-gray-100 flex items-center justify-center rounded-lg overflow-hidden mb-3 relative group img-magnifier-container">
+          <img
+            id="mainProductImage"
+            src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
+            alt="<%= product.productName %>"
+            class="w-full h-full object-contain img-zoom"
+          />
         </div>
         <!-- Thumbnails -->
         <div class="flex gap-2">
           <% (product.images || []).forEach((img, i) => { %>
-            <img src="<%= img %>" class="w-16 h-16 object-contain bg-gray-50 rounded border cursor-pointer" 
+            <img
+              src="<%= img %>"
+              class="w-16 h-16 object-contain bg-gray-50 rounded border cursor-pointer"
               onclick="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"
-              onmouseenter="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"/>
+              onmouseenter="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"
+            />
           <% }) %>
         </div>
       </div>
 
-      <!-- Product Info block -->
+      <!-- Product Info -->
       <div class="flex-1 flex flex-col justify-between">
-        <!-- Title, ratings, price -->
         <div class="mb-3">
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3"><%= product.productName %></h1>
           <h1 class="text-2xl sm:text-xl font-bold text-gray-700 mb-2"><%= product.brand %></h1>
-          <!-- Ratings -->
           <div class="flex items-center gap-2 mb-3">
             <%
               const avgRating = reviews && reviews.length > 0 ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length).toFixed(1) : '0.0';
@@ -84,7 +100,6 @@
           </div>
           <div class="mb-1 flex items-baseline gap-2">
             <%
-              // Support for regular/discount price
               let prices = product.variants ? product.variants.map(v => v.salePrice && v.salePrice > 0 ? v.salePrice : v.regularPrice).filter(p => typeof p === 'number') : [];
               const stock = product.variants ? product.variants.reduce((tot, v) => tot + (v.stock || 0), 0) : 0;
               const hasOffer = product.offer && product.offer > 0;
@@ -100,13 +115,11 @@
             <% } %>
           </div>
           <div class="mb-2 flex flex-wrap gap-3">
-            <!-- Coupon or discount code area (optional) -->
             <% if (product.coupon) { %>
               <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
                 Coupon: <%= product.coupon.code %> - <%= product.coupon.offer %>%
               </span>
             <% } %>
-            <!-- Stock status -->
             <% if (stock > 0) { %>
               <span class="text-green-700 font-semibold"><i class="fas fa-check-circle"></i> In stock: <%= stock %></span>
             <% } else { %>
@@ -115,16 +128,13 @@
           </div>
         </div>
 
-        <!-- Description -->
-<div class="mb-6">
-  <h3 class="text-lg font-semibold text-gray-800 mb-2">Description</h3>
-  <p class="text-gray-700 whitespace-pre-line leading-relaxed">
-    <%= product.description %>
-  </p>
-</div>
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Description</h3>
+          <p class="text-gray-700 whitespace-pre-line leading-relaxed">
+            <%= product.description %>
+          </p>
+        </div>
 
-
-        <!-- Add To Cart / Sold Out -->
         <div class="mb-5">
           <% if (errorMessage) { %>
             <div class="bg-red-100 text-red-700 border border-red-300 rounded px-4 py-2 mb-3"><%= errorMessage %></div>
@@ -132,15 +142,14 @@
           <% if (product.isListed && stock > 0) { %>
             <form action="/cart/add" method="POST" class="flex gap-4 items-center">
               <input type="hidden" name="productId" value="<%= product._id %>"/>
-              <!-- Optional: select size from variants -->
               <% if (product.variants && product.variants.length > 1) { %>
                 <select name="variantId" required class="border rounded px-2 py-1">
                   <% product.variants.forEach(variant => { %>
                     <option value="<%= variant._id %>" <%= variant.stock > 0 ? '' : 'disabled' %>>
                       Size: <%= variant.size %> &mdash;
                       ₹<%= variant.salePrice && typeof variant.salePrice === 'number'
-                              ? variant.salePrice.toFixed(2)
-                              : (typeof variant.regularPrice === 'number' ? variant.regularPrice.toFixed(2) : '—') %>
+                            ? variant.salePrice.toFixed(2)
+                            : (typeof variant.regularPrice === 'number' ? variant.regularPrice.toFixed(2) : '—') %>
                       <% if (variant.stock === 0) { %> (Out of stock) <% } %>
                     </option>
                   <% }) %>
@@ -204,8 +213,8 @@
         <h3 class="text-xl font-bold text-gray-900 mb-5">You may also like</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-7">
           <% relatedProducts.forEach(rp => { %>
-            <a href="/products/<%= rp._id %>" class="bg-white rounded shadow hover:shadow-lg transition flex flex-col items-center p-3">
-              <img src="<%= rp.images && rp.images[0] ? rp.images[0] : '/assets/placeholder.jpg' %>" 
+            <a href="/user/products/<%= rp._id %>" class="bg-white rounded shadow hover:shadow-lg transition flex flex-col items-center p-3">
+              <img src="<%= rp.images && rp.images[0] ? rp.images[0] : '/assets/placeholder.jpg' %>"
                    alt="<%= rp.productName %>"
                    class="w-full h-32 object-contain mb-2 rounded" />
               <div class="text-center">
@@ -223,18 +232,75 @@
         </div>
       </section>
     <% } %>
-
   </main>
 
+  <!-- Image magnifier and thumbs logic -->
   <script>
-    // Image zoom+thumb active effect
-    function setActiveThumb(img) {
-        document.querySelectorAll('.thumb-active').forEach(t => t.classList.remove('thumb-active'));
-        img.classList.add('thumb-active');
+    // Magnifier Glass Amazon-Style
+    function magnify(imgID, zoom = 2.5) {
+      let img = document.getElementById(imgID);
+      let glass = document.createElement("div");
+      glass.setAttribute("class", "img-magnifier-glass");
+      img.parentElement.appendChild(glass);
+
+      glass.style.backgroundImage = "url('" + img.src + "')";
+      glass.style.backgroundRepeat = "no-repeat";
+      glass.style.backgroundSize = (img.width * zoom) + "px " + (img.height * zoom) + "px";
+
+      let bw = 2;
+      let w = glass.offsetWidth / 2;
+      let h = glass.offsetHeight / 2;
+
+      function moveMagnifier(e) {
+        let pos = getCursorPos(e);
+        let x = pos.x, y = pos.y;
+        if (x > img.width - w / zoom) { x = img.width - w / zoom; }
+        if (x < w / zoom) { x = w / zoom; }
+        if (y > img.height - h / zoom) { y = img.height - h / zoom; }
+        if (y < h / zoom) { y = h / zoom; }
+        glass.style.left = (x - w) + "px";
+        glass.style.top = (y - h) + "px";
+        glass.style.backgroundPosition = "-" + ((x * zoom) - w + bw) + "px -" + ((y * zoom) - h + bw) + "px";
+      }
+
+      function getCursorPos(e) {
+        e = e || window.event;
+        let a = img.getBoundingClientRect();
+        let x = e.touches ? e.touches[0].pageX : e.pageX;
+        let y = e.touches ? e.touches[0].pageY : e.pageY;
+        x = x - a.left - window.pageXOffset;
+        y = y - a.top - window.pageYOffset;
+        return { x, y };
+      }
+
+      img.addEventListener("mouseenter", () => { glass.style.display = "block"; });
+      img.addEventListener("mouseleave", () => { glass.style.display = "none"; });
+      glass.addEventListener("mouseleave", () => { glass.style.display = "none"; });
+      img.addEventListener("mousemove", moveMagnifier);
+      glass.addEventListener("mousemove", moveMagnifier);
     }
-    window.addEventListener('DOMContentLoaded', () => {
+
+    function setActiveThumb(img) {
+      document.querySelectorAll('.thumb-active').forEach(t => t.classList.remove('thumb-active'));
+      img.classList.add('thumb-active');
+    }
+
+    // On page load & on image change
+    window.addEventListener('DOMContentLoaded', function() {
+      magnify("mainProductImage", 2.5);
       const thumbs = document.querySelectorAll('.flex.gap-2 img');
       if (thumbs.length) thumbs[0].classList.add('thumb-active');
+
+      thumbs.forEach(thumb => {
+        thumb.addEventListener('mouseenter', function() {
+          const mainImg = document.getElementById('mainProductImage');
+          mainImg.src = this.src;
+          // Remove old magnifiers and re-add for new image
+          const oldGlass = mainImg.parentElement.querySelector('.img-magnifier-glass');
+          if (oldGlass) oldGlass.remove();
+          magnify("mainProductImage", 2.5);
+        });
+      });
     });
   </script>
 </body>

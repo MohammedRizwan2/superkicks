@@ -167,23 +167,18 @@
 
     <!-- Pagination -->
     <div class="mt-8 flex justify-center gap-2 text-gray-700">
-      <% if (currentPage > 1) { %>
-        <a href="<%= buildPageUrl(currentPage - 1) %>" class="px-4 py-2 border rounded hover:bg-gray-200">Previous</a>
-      <% } %>
-      <span class="px-4 py-2 border rounded bg-gray-200"><%= currentPage %> / <%= totalPages %></span>
-      <% if (currentPage < totalPages) { %>
-        <a href="<%= buildPageUrl(currentPage + 1) %>" class="px-4 py-2 border rounded hover:bg-gray-200">Next</a>
-      <% } %>
-    </div>
+  <% if (prevPageUrl) { %>
+    <a href="<%= prevPageUrl %>" class="px-4 py-2 border rounded hover:bg-gray-200">Previous</a>
+  <% } %>
+  <span class="px-4 py-2 border rounded bg-gray-200"><%= currentPage %> / <%= totalPages %></span>
+  <% if (nextPageUrl) { %>
+    <a href="<%= nextPageUrl %>" class="px-4 py-2 border rounded hover:bg-gray-200">Next</a>
+  <% } %>
+</div>
+
+
   </main>
 
-  <script>
-    // Inject the query parameters for pagination URLs
-    function buildPageUrl(page) {
-      const params = new URLSearchParams(window.location.search);
-      params.set('page', page);
-      return `${window.location.pathname}?${params.toString()}`;
-    }
-  </script>
+
 </body>
 </html>

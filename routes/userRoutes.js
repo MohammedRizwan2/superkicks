@@ -9,10 +9,10 @@ const productController = require('../controllers/user/productController'); // F
 const isAuthenticated = (req, res, next) => {
   try {
     if (req.session && req.session.user) {
-      // User is authenticated, continue
+      
       return next();
     } else {
-      // Not authenticated, redirect to login
+      
       return res.redirect('/user/login');
     }
   } catch (err) {
@@ -24,11 +24,12 @@ const isAuthenticated = (req, res, next) => {
 // Middleware to check if user is NOT authenticated
 const isNotAuthenticated = (req, res, next) => {
   try {
+   
     if (!req.session.user) {
-      // Not logged in, continue
+
       return next();
     }
-    // Logged in users should not access these routes
+
     res.redirect('/');
   } catch (err) {
     console.error('Error in isNotAuthenticated middleware:', err);
@@ -72,11 +73,11 @@ router.post('/resend-otp', isNotAuthenticated, userController.resendOtp);
 
 // Google OAuth routes (SSO)
 router.get(
-  '/auth/google',
+  '/auth/google',isNotAuthenticated,
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 router.get(
-  '/auth/google/callback',
+  '/auth/google/callback',isNotAuthenticated,
   passport.authenticate('google', { failureRedirect: '/user/login' }),
   userController.googleCallback
 );
@@ -87,7 +88,7 @@ router.post('/forgot-password', isNotAuthenticated, userController.postForgotPas
 router.get('/reset-password/:token', isNotAuthenticated, userController.getResetPassword);
 router.post('/reset-password/:token', isNotAuthenticated, userController.postResetPassword);
 
-// Protected product routes (requires authenticated and not blocked)
+// Protected product routes 
 router.get('/product/list', isAuthenticated, checkUserBlocked, productController.getShop);
 router.get('/products/:id', isAuthenticated, checkUserBlocked, productController.getProductDetails);
 

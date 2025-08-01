@@ -10,12 +10,12 @@ const Variant = require('../../models/variant');
 
 exports.getProducts = async (req, res) => {
   try {
-    // Extract query parameters
+    
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
-    const limit = 10; // Number of products per page
+    const limit = 1; 
 
-    // Build filter for search
+    
     const filter = {};
     if (query) {
       filter.$or = [
@@ -24,19 +24,19 @@ exports.getProducts = async (req, res) => {
       ];
     }
 
-    // Count total matching products for pagination
+    
     const totalProducts = await Product.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / limit);
 
-    // Fetch products + populate category and variants, apply sort and paging
+    
     const products = await Product.find(filter)
-      .sort({ createdAt: -1 }) // newest first
+      .sort({ createdAt: -1 }) 
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate('categoryId', 'name') // populate only category name
-      .populate('variants');          // populate variant details
+      .populate('categoryId', 'name') 
+      .populate('variants');          
 
-    // Render your EJS template with products and paging info
+    
     res.render('admin/products', {
       products,
       query,
@@ -54,14 +54,14 @@ exports.getProducts = async (req, res) => {
 
 
 
-// GET: Render Add Product page
+
 exports.getAddProduct = async (req, res) => {
   try {
     const categories = await Category.find({ isListed: true }).sort({ name: 1 }); // Only show listed/active categories, sorted by name (optional)
     res.render('admin/addproduct', {
       categories,
       errors: [],
-      old: {} // For form repopulation on error (empty on first load)
+      old: {} 
     });
   } catch (error) {
     console.error('Error loading add product page:', error);
@@ -96,17 +96,17 @@ exports.postAddProduct = async (req, res) => {
   let { variants } = req.body;
   let errors = [];
 
-  // Flatten variants if user enters just one variant row
+  
   if (variants && !Array.isArray(variants)) variants = [variants];
 
-  // --- VALIDATION ---
+  
   if (!productName || !productName.trim()) errors.push('Product name is required.');
   if (!brand || !brand.trim()) errors.push('Brand is required.');
   if (!categoryId) errors.push('Category is required.');
   if (!description || !description.trim()) errors.push('Description is required.');
   if (!req.files || req.files.length < 3) errors.push('Please upload at least 3 images.');
 
-  // Validate variants (min one)
+  
   if (!variants || variants.length === 0 || !variants.some(v => v.size && v.price))
     errors.push('At least one variant (with size & price) is required.');
   else {
@@ -134,10 +134,10 @@ exports.postAddProduct = async (req, res) => {
   }
 
   try {
-    // Process images
+    
     const imagePaths = await processAndSaveImages(req.files, path.join(__dirname, '../../public/uploads/products'));
 
-    // Create product (variants filled after variant docs are made)
+    
     const product = new Product({
       productName: productName.trim(),
       description: description.trim(),
@@ -150,7 +150,7 @@ exports.postAddProduct = async (req, res) => {
     });
     await product.save();
 
-    // Create & link variants (each linked to product)
+    
     const createdVariants = [];
     for (const v of variants) {
       const variantDoc = new Variant({
@@ -163,7 +163,7 @@ exports.postAddProduct = async (req, res) => {
       await variantDoc.save();
       createdVariants.push(variantDoc._id);
     }
-    // Link created variants to product, then save
+    
     product.variants = createdVariants;
     await product.save();
 
@@ -189,7 +189,7 @@ exports.getEditProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate('categoryId', 'name')
-      .populate('variants'); // Get all variant info
+      .populate('variants'); 
 
     if (!product) {
       return res.status(404).render('error/404', { title: 'Product Not Found' });
@@ -220,23 +220,23 @@ exports.postEditProduct = async (req, res) => {
   let { variants } = req.body;
   let errors = [];
 
-  // Normalize variants for single/multiple
+  
   if (variants && !Array.isArray(variants)) variants = [variants];
 
-  // --- VALIDATION ---
+  
   if (!productName || !productName.trim()) errors.push('Product name is required.');
   if (!brand || !brand.trim()) errors.push('Brand is required.');
   if (!categoryId) errors.push('Category is required.');
   if (!description || !description.trim()) errors.push('Description is required.');
 
-  // Validate offer
+  
   if (offer !== '' && offer !== undefined && offer !== null) {
     const numOffer = Number(offer);
     if (isNaN(numOffer) || numOffer < 0 || numOffer > 100)
       errors.push("Offer must be a number between 0 and 100.");
   }
 
-  // Validate variants
+  
   if (!variants || variants.length === 0 || !variants.some(v => v.size && v.price))
     errors.push('At least one variant (with size & price) is required.');
   else {
@@ -248,13 +248,13 @@ exports.postEditProduct = async (req, res) => {
     });
   }
 
-  // If user is replacing images, require at least 3
+  
   const uploadingNewImages = req.files && req.files.length > 0;
   if (uploadingNewImages && req.files.length < 3) {
     errors.push('Please upload at least 3 images if replacing product images.');
   }
 
-  // If validation fails, re-render with entered data
+  
   if (errors.length > 0) {
     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
     const product = await Product.findById(req.params.id)
@@ -269,13 +269,13 @@ exports.postEditProduct = async (req, res) => {
   }
 
   try {
-    // --- Update images if new ones were uploaded ---
+    
     let imagePaths = undefined;
     if (uploadingNewImages) {
       imagePaths = await processAndSaveImages(req.files, path.join(__dirname, '../public/uploads/products'));
     }
 
-    // --- Update product (all updatable fields) ---
+
     const updateFields = {
       productName: productName.trim(),
       brand: brand.trim(),
@@ -292,9 +292,7 @@ exports.postEditProduct = async (req, res) => {
       { new: true }
     );
 
-    // --- Update variants ---
-    // For simplicity, we'll delete all old variants and add new ones from form.
-    // Alternative: update existing ones by _id if your form sends them.
+    
     await Variant.deleteMany({ productId: product._id });
 
     const newVariantIds = [];
