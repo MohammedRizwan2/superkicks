@@ -1,11 +1,22 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Shop - Superkicks</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          backgroundImage: {
+            'hero-pattern': "url('/images/hero-banner.jpg')",
+          }
+        }
+      }
+    }
+  </script>
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -27,11 +38,26 @@
     </nav>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Hero Banner -->
+  <section class="relative overflow-hidden py-20 bg-cover bg-center bg-no-repeat h-auto"  style="background-image: url('/img/home.webp')">
+
+    <div class="relative z-10 max-w-7xl mx-auto h-full flex items-center px-4 sm:px-6 lg:px-8">
+      <div class="text-center mx-auto text-white">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-black">Discover Your Perfect Kicks</h1>
+        <p class="text-xl mb-8 max-w-2xl mx-auto text-black">Premium sneakers for every occasion, curated for comfort and style</p>
+        <a href="#products" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full inline-block transition duration-300 transform hover:scale-105">
+          Shop Collection
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main id="products" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <h1 class="text-3xl font-bold mb-6 text-gray-800">Shop Products</h1>
 
     <!-- Search & Filter Form -->
-    <form method="GET" action="/user/product/list" class="mb-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+    <form id="filterForm" class="mb-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
       <!-- Search -->
       <div class="sm:col-span-2">
         <label for="q" class="block text-sm font-medium text-gray-700">Search</label>
@@ -44,11 +70,13 @@
             value="<%= typeof q !== 'undefined' ? q : '' %>"
             class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <% if (q && q.trim() !== '') { %>
-            <a href="/user/product/list" class="inline-flex items-center justify-center px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-700">Clear</a>
-          <% } else { %>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
-          <% } %>
+          <button 
+            type="button" 
+            onclick="clearFilters()" 
+            class="inline-flex items-center justify-center px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-700"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
@@ -106,7 +134,6 @@
           name="sort"
           id="sort"
           class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onchange="this.form.submit()"
         >
           <option value="">Default</option>
           <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
@@ -118,67 +145,152 @@
       </div>
 
       <div class="sm:col-span-full lg:col-span-1">
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">
+        <button 
+          type="button" 
+          onclick="applyFilters()" 
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition duration-300"
+        >
           Filter
         </button>
       </div>
     </form>
 
     <!-- Products Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
   <% if (!products || products.length === 0) { %>
     <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
   <% } else { %>
     <% products.forEach(product => { %>
-       <a href="/user/products/<%= product._id %>" class="block">
-            <img
-              src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
-              alt="<%= product.productName %>"
-              class="w-full h-48 object-cover"
-            />
-      <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4">
-        <!-- Product Name -->
-        <h3 class="text-lg font-semibold truncate mb-1 text-gray-800"><%= product.productName %></h3>
-
-        <!-- Brand -->
-        <p class="text-sm text-gray-600 mb-2">Brand: <%= product.brand %></p>
-
-        <!-- Category -->
-        <p class="text-sm text-gray-600 mb-2">
-          Category: <%= product.categoryInfo && product.categoryInfo.name ? product.categoryInfo.name : 'Uncategorized' %>
-        </p>
-
-        <!-- Price (lowestPrice from aggregation) -->
-        <% if (typeof product.lowestPrice === 'number' && !isNaN(product.lowestPrice)) { %>
-          <p class="text-xl font-bold text-gray-900 mb-1">₹<%= product.lowestPrice.toFixed(2) %></p>
-        <% } else { %>
-          <p class="text-xl font-bold text-gray-900 mb-1">Price not available</p>
-        <% } %>
-
-        <!-- Offer -->
-        <% if (product.offer && product.offer > 0) { %>
-          <p class="text-xs text-green-600 font-semibold"><%= product.offer %>% OFF</p>
-        <% } %>
-      </div>
+      <a href="/user/products/<%= product._id %>" class="block group">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+          <img
+            src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
+            alt="<%= product.productName %>"
+            class="w-full h-48 object-cover"
+          />
+          <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600"><%= product.productName %></h3>
+          <p class="text-sm text-gray-600 mb-2">Brand: <%= product.brand %></p>
+          
+          <% if (product.offer && product.offer > 0) { %>
+            <div class="flex items-center gap-2">
+              <p class="text-xl font-bold text-gray-900">₹<%= (product.lowestPrice * (1 - product.offer/100)).toFixed(2) %></p>
+              <p class="text-sm text-gray-500 line-through">₹<%= product.lowestPrice?.toFixed(2) %></p>
+              <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto"><%= product.offer %>% OFF</span>
+            </div>
+          <% } else { %>
+            <p class="text-xl font-bold text-gray-900">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></p>
+          <% } %>
+        </div>
+      </a>
     <% }) %>
   <% } %>
 </div>
-
-
     <!-- Pagination -->
-    <div class="mt-8 flex justify-center gap-2 text-gray-700">
+    <div id="paginationContainer" class="mt-8 flex justify-center gap-2 text-gray-700">
   <% if (prevPageUrl) { %>
-    <a href="<%= prevPageUrl %>" class="px-4 py-2 border rounded hover:bg-gray-200">Previous</a>
+    <a href="#" data-page="<%= currentPage - 1 %>" class="page-link px-4 py-2 border rounded hover:bg-gray-200 transition">Previous</a>
   <% } %>
   <span class="px-4 py-2 border rounded bg-gray-200"><%= currentPage %> / <%= totalPages %></span>
   <% if (nextPageUrl) { %>
-    <a href="<%= nextPageUrl %>" class="px-4 py-2 border rounded hover:bg-gray-200">Next</a>
+    <a href="#" data-page="<%= currentPage + 1 %>" class="page-link px-4 py-2 border rounded hover:bg-gray-200 transition">Next</a>
   <% } %>
 </div>
-
-
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+  
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('page-link')) {
+    e.preventDefault();
+    const page = e.target.getAttribute('data-page');
+    applyFilters(parseInt(page));
+  }
+});
+    // Apply filters without page reload
+    async function applyFilters(page = 1) {
+      try {
+        // Show loading state
+        document.getElementById('productsContainer').innerHTML = `
+          <div class="col-span-full text-center py-8">
+            <i class="fas fa-spinner fa-spin text-blue-500 text-4xl"></i>
+            <p class="mt-4 text-gray-600">Loading products...</p>
+          </div>
+        `;
 
+        const formData = new FormData(document.getElementById('filterForm'));
+        formData.set('page', page);
+        const params = new URLSearchParams(formData);
+
+        const response = await axios.get(`/user/product/list?${params.toString()}`);
+        const { products, totalPages, currentPage } = response.data;
+
+        // Update products grid
+        if (!products || products.length === 0) {
+          document.getElementById('productsContainer').innerHTML = `
+            <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
+          `;
+        } else {
+          document.getElementById('productsContainer').innerHTML = products.map(product => `
+            <a href="/user/products/${product._id}" class="block group">
+              <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+                <img
+                  src="${product.images?.[0] || '/assets/placeholder.jpg'}"
+                  alt="${product.productName}"
+                  class="w-full h-48 object-cover"
+                />
+                <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600">${product.productName}</h3>
+                <p class="text-sm text-gray-600 mb-2">Brand: ${product.brand}</p>
+                <p class="text-xl font-bold text-gray-900 mb-1">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
+                ${product.offer ? `<p class="text-xs text-green-600 font-semibold">${product.offer}% OFF</p>` : ''}
+              </div>
+            </a>
+          `).join('');
+        }
+
+        // Update pagination
+        updatePagination(currentPage, totalPages);
+
+        // Update URL without reload
+        window.history.pushState({}, '', `/user/product/list?${params.toString()}`);
+
+      } catch (error) {
+        console.error('Error applying filters:', error);
+        document.getElementById('productsContainer').innerHTML = `
+          <p class="col-span-full text-center text-red-500">Error loading products. Please try again.</p>
+        `;
+      }
+    }
+
+    // Clear all filters
+    function clearFilters() {
+      document.getElementById('filterForm').reset();
+      applyFilters(1);
+      window.history.pushState({}, '', '/user/product/list');
+    }
+
+    // Update pagination controls
+    function updatePagination(currentPage, totalPages) {
+      const prevBtn = currentPage > 1 ? 
+        `<a href="#" onclick="applyFilters(${currentPage - 1}); return false;" class="px-4 py-2 border rounded hover:bg-gray-200 transition">Previous</a>` : '';
+      
+      const nextBtn = currentPage < totalPages ? 
+        `<a href="#" onclick="applyFilters(${currentPage + 1}); return false;" class="px-4 py-2 border rounded hover:bg-gray-200 transition">Next</a>` : '';
+      
+      document.getElementById('paginationContainer').innerHTML = `
+        ${prevBtn}
+        <span class="px-4 py-2 border rounded bg-gray-200">${currentPage} / ${totalPages}</span>
+        ${nextBtn}
+      `;
+    }
+
+    // Initialize with current filters
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.toString()) {
+        applyFilters(parseInt(urlParams.get('page')) || 1);
+      }
+    });
+  </script>
 </body>
 </html>

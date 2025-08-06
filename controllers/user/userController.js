@@ -149,7 +149,7 @@ exports.postSignup = async (req, res) => {
       role: 'user',
       isBlocked: false,
     };
-
+     
     req.session.otp = {
       code: otp,
       email,
@@ -164,12 +164,40 @@ exports.postSignup = async (req, res) => {
       });
     }
 
-    // Send OTP email
     await transporter.sendMail({
-      to: email,
-      subject: 'SuperKicks OTP Verification',
-      text: `Your OTP is ${otp}. It expires in 5 minutes.`,
-    });
+  to: email,
+  subject: 'SuperKicks OTP Verification',
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+      <div style="background: #000; padding: 20px; text-align: center;">
+        <h1 style="color: #fff; margin: 0;">SuperKicks</h1>
+      </div>
+      
+      <div style="padding: 30px;">
+        <h2 style="color: #333; margin-top: 0;">OTP Verification</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #555;">
+          Your one-time password for SuperKicks account verification is:
+        </p>
+        
+        <div style="background: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 4px;">
+          <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #000;">${otp}</span>
+        </div>
+        
+        <p style="font-size: 14px; color: #888;">
+          <strong>Note:</strong> This OTP will expire in 5 minutes. Please do not share it with anyone.
+        </p>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            If you didn't request this, please ignore this email.
+          </p>
+        </div>
+      </div>
+    </div>
+  `,
+
+  text: `Your SuperKicks OTP is ${otp}. It expires in 5 minutes.`
+});
 
     // Save session before rendering OTP page
     req.session.save((err) => {
@@ -213,7 +241,8 @@ exports.verifyOtp = async (req, res) => {
     // Handle array inputs (in case form sends arrays)
     email = Array.isArray(email) ? email[0] : email;
     otp = Array.isArray(otp) ? otp.join('') : otp;
-
+   console.log(otp)
+   console.log(req.session.otp.code+" =====")
     // Validate OTP session data
     if (
       !req.session.otp ||
@@ -234,7 +263,7 @@ exports.verifyOtp = async (req, res) => {
       return res.render('user/otp', {
         title: 'Verify OTP',
         email,
-        message: 'Signup data not found. Please try signing up again.',
+        message: 'Signup data not found. Please try signing up again .',
         isError: true,
       });
     }
@@ -266,7 +295,7 @@ exports.verifyOtp = async (req, res) => {
     // Clean up temporary session data
     delete req.session.otp;
     delete req.session.signupData;
-
+console.log()
     // Save session and redirect
     req.session.save((err) => {
       if (err) {
@@ -539,6 +568,7 @@ exports.postResetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
+    console.log(password)
 
     if (
       !req.session.resetToken ||

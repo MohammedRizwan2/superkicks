@@ -12,7 +12,42 @@ const productSchema = new mongoose.Schema({
 
 
    variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }],
+
 }, { timestamps: true });
+
+
+productSchema.pre('save', async function(next) {
+  if (this.isModified('offer')) {
+    const Variant = mongoose.model('Variant');
+    
+    // First get all variants with their regular prices
+    const variants = await Variant.find({ _id: { $in: this.variants } });
+    
+    // Calculate new sale prices
+    const updateOperations = variants.map(variant => {
+      const effectiveDiscount = this.category 
+        ? this.category.getEffectiveDiscount(this.offer)
+        : this.offer;
+      
+      const salePrice = effectiveDiscount > 0
+        ? variant.regularPrice * (1 - (effectiveDiscount / 100))
+        : null;
+      
+      return {
+        updateOne: {
+          filter: { _id: variant._id },
+          update: { $set: { salePrice } }
+        }
+      };
+    });
+    
+    // Bulk write the updates
+    if (updateOperations.length > 0) {
+      await Variant.bulkWrite(updateOperations);
+    }
+  }
+  next();
+});
 
 const Product = mongoose.model('Product', productSchema);
 

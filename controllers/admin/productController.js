@@ -13,7 +13,7 @@ exports.getProducts = async (req, res) => {
     
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
-    const limit = 1; 
+    const limit = 5; 
 
     
     const filter = {};

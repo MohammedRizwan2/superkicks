@@ -91,6 +91,7 @@ router.post('/reset-password/:token', isNotAuthenticated, userController.postRes
 // Protected product routes 
 router.get('/product/list', isAuthenticated, checkUserBlocked, productController.getShop);
 router.get('/products/:id', isAuthenticated, checkUserBlocked, productController.getProductDetails);
+router.get('/products/variants/:variantId',isAuthenticated,checkUserBlocked, productController.getVariantDetails);
 
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);
