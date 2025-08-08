@@ -4,11 +4,7 @@ const Review = require('../../models/reviews');
 const Variant = require('../../models/variant');
 const mongoose = require('mongoose')
 
-function buildPageUrl(basePath, queryParams, page) {
-  const params = new URLSearchParams(queryParams);
-  params.set('page', page);
-  return `${basePath}?${params.toString()}`;
-}
+
 
 exports.getShop = async (req, res) => {
   try {
@@ -45,19 +41,38 @@ exports.getShop = async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: 'categories',
+          localField: 'categoryId',
+          foreignField: '_id',
+          as: 'categoryInfo'
+        }
+      },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      {
         $addFields: {
-          lowestPrice: { $min: '$variantDocs.regularPrice' }
+          // Get the best offer (product or category)
+          bestOffer: {
+            $max: [
+              { $ifNull: ["$offer", 0] },
+              { $ifNull: ["$categoryInfo.offer", 0] }
+            ]
+          },
+          // Get lowest regular price
+          lowestPrice: { $min: "$variantDocs.regularPrice" },
+          // Get lowest sale price (already calculated in variant schema)
+          lowestSalePrice: { $min: "$variantDocs.salePrice" }
         }
       }
     ];
 
-    // Price filtering
+
     if (priceMin !== undefined || priceMax !== undefined) {
       const priceFilter = {};
       if (priceMin !== undefined) priceFilter.$gte = priceMin;
       if (priceMax !== undefined) priceFilter.$lte = priceMax;
       if (Object.keys(priceFilter).length > 0) {
-        pipeline.push({ $match: { lowestPrice: priceFilter } });
+        pipeline.push({ $match: { lowestSalePrice: priceFilter } });
       }
     }
 
@@ -104,7 +119,7 @@ exports.getShop = async (req, res) => {
       },
       {
         $addFields: {
-          lowestPrice: { $min: '$variantDocs.regularPrice' }
+          lowestPrice: { $min: '$variantDocs.salePrice' }
         }
       }
     ];
@@ -136,6 +151,7 @@ exports.getShop = async (req, res) => {
 
     const prevPageUrl = page > 1 ? buildPageUrl(page - 1) : null;
     const nextPageUrl = page < totalPages ? buildPageUrl(page + 1) : null;
+    
 
     // Prepare response
     const responseData = {
@@ -149,7 +165,8 @@ exports.getShop = async (req, res) => {
       currentPage: page,
       totalPages,
       prevPageUrl,
-      nextPageUrl
+      nextPageUrl,
+  
     };
 
     // Return JSON for Axios or render EJS
@@ -177,11 +194,10 @@ exports.getProductDetails = async (req, res) => {
   try {
     const productId = req.params.id;
 
-    // Get product with populated category and variants
     const product = await Product.findById(productId)
       .populate('categoryId', 'name')
       .populate('variants');
-
+    console.log(product)
     if (!product || !product.isListed) {
       return res.redirect('/user/product/list');
     }
@@ -200,29 +216,18 @@ exports.getProductDetails = async (req, res) => {
       .limit(4)
       .populate('variants');
 
-    // Calculate initial pricing and stock
-    const prices = product.variants 
-      ? product.variants.map(v => v.salePrice > 0 ? v.salePrice : v.regularPrice)
-      : [];
-    const stock = product.variants 
-      ? product.variants.reduce((tot, v) => tot + (v.stock || 0), 0)
-      : 0;
-    const hasOffer = product.offer > 0;
-    const mrp = prices.length > 0 ? Math.min(...prices) : null;
-    const discounted = hasOffer && mrp ? (mrp - (mrp * (product.offer / 100))) : mrp;
+   
+    
 
     res.render('user/productdetail', {
       product,
+      stock:product.stock,
       reviews,
       relatedProducts,
       user: req.session.user || null,
       categories: [product.categoryId],
       errorMessage: req.query.error || null,
-      // Pass calculated values to template
-      stock,
-      hasOffer,
-      mrp,
-      discounted
+      
     });
 
   } catch (error) {
@@ -259,7 +264,7 @@ exports.getVariantDetails = async (req, res) => {
     const categoryOffer = variant.productId?.categoryId?.offer || 0;
     const bestOffer = Math.max(productOffer, categoryOffer);
 
-    ;
+    
 
     res.json({
       success: true,

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const productSchema = new mongoose.Schema({
   productName: { type: String, required: true },
   description: { type: String, required: true },
@@ -9,46 +8,40 @@ const productSchema = new mongoose.Schema({
   offer: { type: Number, default: 0, min: 0, max: 100 },
   images: [{ type: String, required: true }],
   isListed: { type: Boolean, default: true },
-
-
-   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }],
-
+  variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }]
 }, { timestamps: true });
 
+// Updates variant prices but doesn't store on product
+productSchema.methods.updateVariantPrices = async function() {
+  const product = this.populated('categoryId') || await this.populate('categoryId');
+  const Variant = mongoose.model('Variant');
+  
+  const variants = await Variant.find({ productId: product._id });
+  
+  await Promise.all(
+    variants.map(async variant => {
+      const effectiveDiscount = product.categoryId?.getEffectiveDiscount?.(product.offer) || product.offer;
+      const salePrice = parseFloat(
+        (variant.regularPrice * (1 - (Math.min(effectiveDiscount, 100) / 100))).toFixed(2)
+      );
+      
+      if (variant.salePrice !== salePrice) {
+        variant.salePrice = salePrice;
+        await variant.save();
+      }
+    })
+  );
+};
 
 productSchema.pre('save', async function(next) {
-  if (this.isModified('offer')) {
-    const Variant = mongoose.model('Variant');
-    
-    // First get all variants with their regular prices
-    const variants = await Variant.find({ _id: { $in: this.variants } });
-    
-    // Calculate new sale prices
-    const updateOperations = variants.map(variant => {
-      const effectiveDiscount = this.category 
-        ? this.category.getEffectiveDiscount(this.offer)
-        : this.offer;
-      
-      const salePrice = effectiveDiscount > 0
-        ? variant.regularPrice * (1 - (effectiveDiscount / 100))
-        : null;
-      
-      return {
-        updateOne: {
-          filter: { _id: variant._id },
-          update: { $set: { salePrice } }
-        }
-      };
-    });
-    
-    // Bulk write the updates
-    if (updateOperations.length > 0) {
-      await Variant.bulkWrite(updateOperations);
+  if (this.variants?.length > 0 || this.isModified("offer")) {
+    try {
+      await this.updateVariantPrices();
+    } catch (err) {
+      console.error('Variant price update failed:', err);
     }
   }
   next();
 });
 
-const Product = mongoose.model('Product', productSchema);
-
-module.exports = Product;
+module.exports = mongoose.model('Product', productSchema);

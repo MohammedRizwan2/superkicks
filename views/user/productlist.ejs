@@ -155,8 +155,7 @@
       </div>
     </form>
 
-    <!-- Products Grid -->
-    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+   <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
   <% if (!products || products.length === 0) { %>
     <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
   <% } else { %>
@@ -171,14 +170,17 @@
           <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600"><%= product.productName %></h3>
           <p class="text-sm text-gray-600 mb-2">Brand: <%= product.brand %></p>
           
-          <% if (product.offer && product.offer > 0) { %>
+          <% if (product.bestOffer > 0) { %>
             <div class="flex items-center gap-2">
-              <p class="text-xl font-bold text-gray-900">₹<%= (product.lowestPrice * (1 - product.offer/100)).toFixed(2) %></p>
-              <p class="text-sm text-gray-500 line-through">₹<%= product.lowestPrice?.toFixed(2) %></p>
-              <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto"><%= product.offer %>% OFF</span>
+              <p class="text-xl font-bold text-gray-900">₹<%= product.lowestSalePrice.toFixed(2) %></p>
+              <p class="text-sm text-gray-500 line-through">₹<%= product.lowestPrice.toFixed(2) %></p>
+              <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto">
+                <%= product.bestOffer %>% OFF
+              </span>
             </div>
+            <p class="text-xs text-green-600 mt-1">You save ₹<%= (product.lowestPrice - product.lowestSalePrice).toFixed(2) %></p>
           <% } else { %>
-            <p class="text-xl font-bold text-gray-900">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></p>
+            <p class="text-xl font-bold text-gray-900">₹<%= product.lowestPrice.toFixed(2) %></p>
           <% } %>
         </div>
       </a>
@@ -225,29 +227,41 @@ document.addEventListener('click', function(e) {
         const response = await axios.get(`/user/product/list?${params.toString()}`);
         const { products, totalPages, currentPage } = response.data;
 
-        // Update products grid
-        if (!products || products.length === 0) {
-          document.getElementById('productsContainer').innerHTML = `
-            <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
-          `;
-        } else {
-          document.getElementById('productsContainer').innerHTML = products.map(product => `
-            <a href="/user/products/${product._id}" class="block group">
-              <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
-                <img
-                  src="${product.images?.[0] || '/assets/placeholder.jpg'}"
-                  alt="${product.productName}"
-                  class="w-full h-48 object-cover"
-                />
-                <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600">${product.productName}</h3>
-                <p class="text-sm text-gray-600 mb-2">Brand: ${product.brand}</p>
-                <p class="text-xl font-bold text-gray-900 mb-1">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
-                ${product.offer ? `<p class="text-xs text-green-600 font-semibold">${product.offer}% OFF</p>` : ''}
-              </div>
-            </a>
-          `).join('');
-        }
-
+       // Update products grid
+if (!products || products.length === 0) {
+  document.getElementById('productsContainer').innerHTML = `
+    <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
+  `;
+} else {
+  document.getElementById('productsContainer').innerHTML = products.map(product => `
+    <a href="/user/products/${product._id}" class="block group">
+      <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+        <img
+          src="${product.images?.[0] || '/assets/placeholder.jpg'}"
+          alt="${product.productName}"
+          class="w-full h-48 object-cover"
+        />
+        <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600">${product.productName}</h3>
+        <p class="text-sm text-gray-600 mb-2">Brand: ${product.brand}</p>
+        
+        ${product.bestOffer > 0 ? `
+          <div class="flex items-center gap-2">
+            <p class="text-xl font-bold text-gray-900">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</p>
+            <p class="text-sm text-gray-500 line-through">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
+            <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto">
+              ${product.bestOffer}% OFF
+            </span>
+          </div>
+          <p class="text-xs text-green-600 mt-1">
+            You save ₹${(product.lowestPrice - product.lowestSalePrice).toFixed(2)}
+          </p>
+        ` : `
+          <p class="text-xl font-bold text-gray-900">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
+        `}
+      </div>
+    </a>
+  `).join('');
+}
         // Update pagination
         updatePagination(currentPage, totalPages);
 

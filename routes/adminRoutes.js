@@ -4,8 +4,7 @@ const adminController= require ('../controllers/admin/adminController');
 const customerController= require('../controllers/admin/customerController')
 const productController = require('../controllers/admin/productController');
 const categoryController = require('../controllers/admin/categoryController');
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+const { uploadProductImages } = require('../config/multer');
 
 const adminAuth = require('../middleware/adminAuth');
 // Login routes
@@ -24,9 +23,14 @@ router.post('/customers/:id/toggle', customerController.toggleBlockStatus);
 // Products
 router.get('/products', productController.getProducts);
 router.get('/products/add', productController.getAddProduct);
-router.post('/products/add', upload.array('images', 10), productController.postAddProduct);
+router.post('/products/add',uploadProductImages.array('images'), productController.postAddProduct);
 router.get('/products/:id/edit', productController.getEditProduct);
-router.post('/products/:id/edit', upload.array('images', 10), productController.postEditProduct);
+router.post('/products/:id/edit',uploadProductImages.array('images'), productController.postEditProduct);
+router.post('/products/:id/edit-image', 
+  uploadProductImages.single('image'),
+  productController.uploadProductImage
+);
+
 
 // Category
 router.get('/category', categoryController.getCategories);
