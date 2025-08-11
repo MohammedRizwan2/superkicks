@@ -14,17 +14,23 @@ const transporter = nodemailer.createTransport({
 
 // Render login page
 exports.getLogin = (req, res) => {
+  const justRegistered=!!req.session.justRegistered;
+  delete req.session.justRegistered;
   res.render('user/login', {
-    message: 'Account created. Please login.',
+    message:null,
     isError: false,
     oldInput: {},
+    justRegistered,
   });
 };
 
 // Handle login POST
 exports.postLogin = async (req, res) => {
+
+  
   try {
     const { email, password } = req.body;
+
 
     if (!email || !password) {
       return res.render('user/login', {
@@ -69,7 +75,8 @@ exports.postLogin = async (req, res) => {
       role: user.role,
       email: user.email,
     };
-
+   
+ req.session.justLoggedIn= true;
     // Save session explicitly and redirect
     req.session.save((err) => {
       if (err) {
@@ -291,7 +298,7 @@ exports.verifyOtp = async (req, res) => {
       role: user.role,
       email: user.email,
     };
-
+    req.session.justRegistered=true;
     // Clean up temporary session data
     delete req.session.otp;
     delete req.session.signupData;
@@ -340,6 +347,7 @@ console.log()
 
 // Handle OTP resend
 exports.resendOtp = async (req, res) => {
+  console.log("resend otp clicked");
   try {
     const { email } = req.body;
 
@@ -434,8 +442,8 @@ exports.googleCallback = async (req, res) => {
       role: user.role,
       email: user.email,
     };
-
-    // Save session before redirect
+   
+  req.session.justLoggedIn=true;
     req.session.save((err) => {
       if (err) {
         console.error('Session save error in googleCallback:', err);

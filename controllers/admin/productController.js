@@ -92,7 +92,7 @@ async function saveImageFiles(files, destFolder) {
     await fs.promises.writeFile(file.path,filepath);
     imagePaths.push(`/uploads/products/${filename}`);
   }
-  
+
 
   return imagePaths;
 }
@@ -212,6 +212,7 @@ console.log(imagePaths,"---->images paths")
 };
 exports.getEditProduct = async (req, res) => {
   try {
+
     const product = await Product.findById(req.params.id)
       .populate('categoryId', 'name')
       .populate('variants'); 
@@ -221,7 +222,7 @@ exports.getEditProduct = async (req, res) => {
     }
 
     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
-
+console.log(product.categoryId);
     res.render('admin/editproduct', {
       product,
       categories,

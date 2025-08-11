@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans" data-just-logged-in= <%= justLoggedIn %> >
 
   <!-- Header/Nav -->
   <header class="bg-[#15172B] text-white">
@@ -128,5 +128,21 @@
       </div>
     </div>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    const justLoggedIn = document.body.dataset.justLoggedIn === 'true';
+
+    if (justLoggedIn) {
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: 'Logged in successfully',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+  });
+}
+  </script>
 </body>
 </html>

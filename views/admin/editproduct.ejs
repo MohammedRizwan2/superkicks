@@ -52,7 +52,7 @@
 
       <form id="edit-product-form" action="/admin/products/<%= product._id %>/edit" method="POST" enctype="multipart/form-data" class="space-y-5">
         <!-- Product Details -->
-         <input type="text" type="hidden"name="._id" value="<%= product._id%>">
+         <input type="text" type="hidden" name="_id" value="<%= product._id%>">
         <div>
           <label class="block text-gray-600 font-medium mb-1">Product Name <span class="text-red-500">*</span></label>
           <input type="text" name="productName" required
@@ -67,18 +67,23 @@
             class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div>
-          <label class="block text-gray-600 font-medium mb-1">Category <span class="text-red-500">*</span></label>
-          <select name="categoryId" required class="w-full px-3 py-2 border rounded">
-            <option value="">-- Select Category --</option>
-            <% categories.forEach(cat => { %>
-              <option value="<%= cat._id %>"
-                <%= (old && old.categoryId == cat._id) || (!old && product.categoryId == cat._id) ? 'selected' : '' %>>
-                <%= cat.name %>
-              </option>
-            <% }) %>
-          </select>
-        </div>
+<div>
+  <label class="block text-gray-600 font-medium mb-1">Category <span class="text-red-500">*</span></label>
+  <select name="categoryId" required class="w-full px-3 py-2 border rounded">
+    <% categories.forEach(cat => { %>
+      <option value="<%= cat._id %>"
+        <%= 
+          (old && old.categoryId == cat._id.toString()) ||
+          (!old && product.categoryId && product.categoryId._id && product.categoryId._id.toString() == cat._id.toString()) 
+            ? 'selected' 
+            : '' 
+        %>>
+        <%= cat.name %>
+      </option>
+    <% }) %>
+  </select>
+</div>
+
 
         <div>
           <label class="block text-gray-600 font-medium mb-1">Description <span class="text-red-500">*</span></label>

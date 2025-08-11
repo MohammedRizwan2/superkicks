@@ -173,14 +173,14 @@
         reverseButtons: true
       }).then((result) => {
         if (result.isConfirmed) {
-          checkbox.checked = !checkbox.checked; // Now toggle
+          checkbox.checked = !checkbox.checked;
           console.log(checkbox.form)
           checkbox.form.submit();
         }
-        // If cancelled, do nothing
+        
       });
 
-      return false; // Always prevent the default form/checkbox action here
+      return false; 
     }
   </script>
 

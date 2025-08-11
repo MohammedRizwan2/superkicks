@@ -10,6 +10,7 @@ async function checkUserBlocked(req, res, next) {
   try {
     console.log("heeee")
     
+    
 
     if (req.session && req.session.user) {
     const email = req.session.user.email;
@@ -40,12 +41,6 @@ router.get('/',checkUserBlocked, async (req, res) => {
     const categories = await Category.find({ isListed: true })
       .sort({ createdAt: -1 })
       .limit(4);
-
-    // // Fetch up to 4 listed products, including variants for price display
-    // const products = await Product.find({ isListed: true })
-    //   .sort({ createdAt: -1 })
-    //   .limit(4)
-    //   .populate('variants');
 
 
     const products = await Product.aggregate([
@@ -92,12 +87,14 @@ router.get('/',checkUserBlocked, async (req, res) => {
     // Prepare login state from the session
     const user = req.session && req.session.user ? req.session.user : null;
     const isLoggedIn = !!user;
-
+    const justLoggedIn= !!req.session.justLoggedIn;
+    delete req.session.justLoggedIn;
     res.render('home', {
       categories,
       products,
       user,
-      isLoggedIn
+      isLoggedIn,
+      justLoggedIn
     });
   } catch (error) {
     console.error('Error loading home page:', error);
