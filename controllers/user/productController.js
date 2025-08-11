@@ -2,7 +2,8 @@ const Product = require('../../models/product');
 const Category = require('../../models/category');
 const Review = require('../../models/reviews');
 const Variant = require('../../models/variant');
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const category = require('../../models/category');
 
 
 
@@ -18,7 +19,7 @@ exports.getShop = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build match stage
-    const matchStage = { isListed: true };
+    const matchStage = { isListed: true ,};
     if (q) {
       matchStage.$or = [
         { productName: { $regex: q, $options: 'i' } },
@@ -32,15 +33,8 @@ exports.getShop = async (req, res) => {
     // Main aggregation pipeline
     const pipeline = [
       { $match: matchStage },
-      {
-        $lookup: {
-          from: 'variants',
-          localField: 'variants',
-          foreignField: '_id',
-          as: 'variantDocs'
-        }
-      },
-      {
+
+            {
         $lookup: {
           from: 'categories',
           localField: 'categoryId',
@@ -49,6 +43,16 @@ exports.getShop = async (req, res) => {
         }
       },
       { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      {$match:{'categoryInfo.isListed':true}},
+      {
+        $lookup: {
+          from: 'variants',
+          localField: 'variants',
+          foreignField: '_id',
+          as: 'variantDocs'
+        }
+      },
+
       {
         $addFields: {
           // Get the best offer (product or category)
@@ -101,7 +105,9 @@ exports.getShop = async (req, res) => {
         as: 'categoryInfo'
       }
     });
-    pipeline.push({ $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } });
+    pipeline.push({ $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      {$match:{'categoryInfo.isListed':true}}
+    );
 
     // Execute query
     const products = await Product.aggregate(pipeline).exec();
@@ -109,6 +115,17 @@ exports.getShop = async (req, res) => {
     // Count total products for pagination
     const countPipeline = [
       { $match: matchStage },
+      {
+        $lookup:{
+          from:'categories',
+          localField:'categoryId',
+          foreignField:'_id',
+          as:'categoryInfo'
+
+        }
+      },
+      {$unwind:{path:'$categoryInfo',preserveNullAndEmptyArrays:true}},
+      {$match:{'categoryInfo.isListed':true}},
       {
         $lookup: {
           from: 'variants',
@@ -119,7 +136,7 @@ exports.getShop = async (req, res) => {
       },
       {
         $addFields: {
-          lowestPrice: { $min: '$variantDocs.salePrice' }
+          lowestPrice: { $min: '$variantDocs.regularPrice' }
         }
       }
     ];
@@ -195,12 +212,13 @@ exports.getProductDetails = async (req, res) => {
     const productId = req.params.id;
 
     const product = await Product.findById(productId)
-      .populate('categoryId', 'name')
+      .populate({path:'categoryId',select:'name isListed'})
       .populate('variants');
     console.log(product)
-    if (!product || !product.isListed) {
+    if (!product || !product.categoryId||!product.isListed||!product.categoryId.isListed) {
       return res.redirect('/user/product/list');
     }
+    
 
     // Get reviews with user info
     const reviews = await Review.find({ productId })

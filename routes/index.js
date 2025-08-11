@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Product= require('../models/product')
 const Category = require('../models/category')
-const User = require('../models/userSchema')
+const User = require('../models/userSchema');
+const product = require('../models/product');
 
 // Middleware to check if user is blocked
 async function checkUserBlocked(req, res, next) {
@@ -35,16 +36,58 @@ async function checkUserBlocked(req, res, next) {
 
 router.get('/',checkUserBlocked, async (req, res) => {
   try {
-    // Fetch up to 4 listed categories
+   // Fetch up to 4 listed categories
     const categories = await Category.find({ isListed: true })
       .sort({ createdAt: -1 })
       .limit(4);
 
-    // Fetch up to 4 listed products, including variants for price display
-    const products = await Product.find({ isListed: true })
-      .sort({ createdAt: -1 })
-      .limit(4)
-      .populate('variants');
+    // // Fetch up to 4 listed products, including variants for price display
+    // const products = await Product.find({ isListed: true })
+    //   .sort({ createdAt: -1 })
+    //   .limit(4)
+    //   .populate('variants');
+
+
+    const products = await Product.aggregate([
+      {$match:{isListed:true}},
+      {
+        $lookup:{
+          from:'categories',
+          localField:'categoryId',
+          foreignField:'_id',
+          as:'categoryInfo'
+
+        }
+      }
+      ,{$unwind:{path:'$categoryInfo',preserveNullAndEmptyArrays:true}},
+      {$match:{'categoryInfo.isListed':true}},
+      {$sort:{'createdAt':-1}},
+
+      
+      {$lookup:{
+        from:'variants',
+        localField:'variants',
+        foreignField:'_id',
+        as:'variantDoc'
+
+      }},
+
+      {$addFields:{
+    
+          bestOffer: {
+            $max: [
+              { $ifNull: ["$offer", 0] },
+              { $ifNull: ["$categoryInfo.offer", 0] }
+            ]
+          },
+        
+          lowestPrice: { $min: "$variantDoc.regularPrice" },
+    
+          lowestSalePrice: { $min: "$variantDoc.salePrice" }
+      }}
+
+
+    ])
 
     // Prepare login state from the session
     const user = req.session && req.session.user ? req.session.user : null;
