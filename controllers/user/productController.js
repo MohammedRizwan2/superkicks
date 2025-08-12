@@ -236,10 +236,9 @@ exports.getProductDetails = async (req, res) => {
 
    
     
-
     res.render('user/productdetail', {
       product,
-      stock:product.stock,
+      stock:product.variants[0].stock,
       reviews,
       relatedProducts,
       user: req.session.user || null,

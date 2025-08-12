@@ -14,7 +14,9 @@ const transporter = nodemailer.createTransport({
 
 // Render login page
 exports.getLogin = (req, res) => {
+  console.log(req.session.justRegistered)
   const justRegistered=!!req.session.justRegistered;
+  console.log(justRegistered)
   delete req.session.justRegistered;
   res.render('user/login', {
     message:null,
@@ -378,10 +380,40 @@ exports.resendOtp = async (req, res) => {
     }
 
     await transporter.sendMail({
-      to: email,
-      subject: 'SuperKicks OTP Verification',
-      text: `Your new OTP is ${otp}. It expires in 5 minutes.`,
-    });
+  to: email,
+  subject: 'SuperKicks OTP Verification',
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+      <div style="background: #000; padding: 20px; text-align: center;">
+        <h1 style="color: #fff; margin: 0;">SuperKicks</h1>
+      </div>
+      
+      <div style="padding: 30px;">
+        <h2 style="color: #333; margin-top: 0;">OTP Verification</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #555;">
+          Your one-time password for SuperKicks account verification is:
+        </p>
+        
+        <div style="background: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 4px;">
+          <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #000;">${otp}</span>
+        </div>
+        
+        <p style="font-size: 14px; color: #888;">
+          <strong>Note:</strong> This OTP will expire in 5 minutes. Please do not share it with anyone.
+        </p>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            If you didn't request this, please ignore this email.
+          </p>
+        </div>
+      </div>
+    </div>
+  `,
+
+  text: `Your SuperKicks OTP is ${otp}. It expires in 5 minutes.`
+});
+
 
     // Save session before rendering
     req.session.save((err) => {
@@ -415,7 +447,7 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// Handle Google/Facebook SSO callback
+// Handle Google/ SSO callback
 exports.googleCallback = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.user.email });
@@ -508,12 +540,58 @@ exports.postForgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.APP_BASE_URL || 'http://localhost:3000'}/user/reset-password/${token}`;
 
-    await transporter.sendMail({
-      to: email,
-      subject: 'SuperKicks Password Reset',
-      text: `Reset your password here: ${resetUrl}. The link expires in 5 minutes.`,
-    });
-
+   await transporter.sendMail({
+  to: email,
+  subject: 'SuperKicks Password Reset',
+  html: `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperKicks Password Reset</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @media only screen and (max-width: 600px) {
+        .container {
+          width: 100% !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <div class="max-w-2xl mx-auto my-8">
+      <div class="bg-black text-white py-5 text-center">
+        <h1 class="text-2xl font-bold">SuperKicks</h1>
+      </div>
+      
+      <div class="bg-white p-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Password Reset Request</h2>
+        <p class="text-gray-600 mb-6">
+          We received a request to reset your SuperKicks account password. Click the button below to proceed:
+        </p>
+        
+        <div class="text-center my-6">
+          <a href="${resetUrl}" class="inline-block bg-black hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+            Reset Password
+          </a>
+        </div>
+        
+        <p class="text-sm text-gray-500 mb-4">
+          <strong class="font-semibold">Note:</strong> This link will expire in 5 minutes. If you didn't request this, please ignore this email.
+        </p>
+        
+        <p class="text-gray-600 text-sm mt-8 pt-4 border-t border-gray-200">
+          Can't click the button? Copy and paste this link into your browser:<br>
+          <span class="text-blue-600 break-all">${resetUrl}</span>
+        </p>
+      </div>
+    </div>
+  </body>
+  </html>
+  `,
+  text: `Reset your SuperKicks password here: ${resetUrl}\n\nThis link will expire in 5 minutes.`
+});
     // Save session before rendering
     req.session.save((err) => {
       if (err) {

@@ -1,221 +1,262 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth antialiased">
 <head>
   <meta charset="UTF-8">
   <title>Shop - Superkicks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          backgroundImage: {
-            'hero-pattern': "url('/images/hero-banner.jpg')",
-          }
-        }
-      }
-    }
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-white text-gray-900 font-sans">
 
-  <!-- Navbar -->
-  <header class="bg-[#15172B] text-white p-4">
-    <nav class="max-w-7xl mx-auto flex justify-between items-center">
-      <div class="text-2xl font-black">SUPERKICKS</div>
-      <ul class="flex gap-6">
-        <li><a href="/" class="hover:text-blue-400">Home</a></li>
-        <li><a href="/user/product/list" class="text-blue-400 font-semibold">Shop</a></li>
-        <li><a href="/categories" class="hover:text-blue-400">Categories</a></li>
+  <!-- ░░ MODERN BLACK NAVBAR ░░ -->
+  <header class="sticky top-0 z-50 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/70">
+    <nav class="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-2xl font-extrabold tracking-[0.15em] text-white hover:text-gray-300 transition">
+        SUPERKICKS
+      </a>
+
+      <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
+        <li><a href="/" class="text-white hover:text-gray-300">Home</a></li>
+        <li><a href="/user/product/list" class="text-gray-300 border-b border-gray-300">Shop</a></li>
+        <li><a href="/categories" class="text-white hover:text-gray-300">Categories</a></li>
+
         <% if (user) { %>
-          <li class="font-semibold">Hi, <%= user.fullName || user.email %></li>
-          <li><a href="/user/logout" class="hover:text-red-500">Logout</a></li>
+          <li class="flex items-center gap-4">
+            <span class="text-white/80"><i class="fa-solid fa-user mr-1"></i><%= user.fullName || user.email %></span>
+            <a href="/user/logout" class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
+              Logout
+            </a>
+          </li>
         <% } else { %>
-          <li><a href="/user/login" class="hover:text-blue-400">Login</a></li>
+          <li class="space-x-2">
+            <a href="/user/login" class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
+              Login
+            </a>
+          </li>
         <% } %>
       </ul>
+
+      <button id="mobileBtn" class="md:hidden text-white text-2xl focus:outline-none">
+        <i class="fa-solid fa-bars"></i>
+      </button>
     </nav>
-  </header>
 
-  <!-- Hero Banner -->
-  <section class="relative overflow-hidden py-20 bg-cover bg-center bg-no-repeat h-auto"  style="background-image: url('/img/home.webp')">
-
-    <div class="relative z-10 max-w-7xl mx-auto h-full flex items-center px-4 sm:px-6 lg:px-8">
-      <div class="text-center mx-auto text-white">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-black">Discover Your Perfect Kicks</h1>
-        <p class="text-xl mb-8 max-w-2xl mx-auto text-black">Premium sneakers for every occasion, curated for comfort and style</p>
-        <a href="#products" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full inline-block transition duration-300 transform hover:scale-105">
-          Shop Collection
-        </a>
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="fixed inset-0 z-40 bg-black/90 backdrop-blur-md translate-x-full transition-transform duration-300 md:hidden">
+      <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
+        <a href="/" class="text-white hover:text-gray-300">Home</a>
+        <a href="/user/product/list" class="text-gray-300">Shop</a>
+        <a href="/categories" class="text-white hover:text-gray-300">Categories</a>
+        <% if (user) { %>
+          <span class="text-white/80"><%= user.fullName || user.email %></span>
+          <a href="/user/logout" class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">Logout</a>
+        <% } else { %>
+          <a href="/user/login" class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">Login</a>
+        <% } %>
       </div>
     </div>
-  </section>
+  </header>
 
-  <!-- Main Content -->
-  <main id="products" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">Shop Products</h1>
+  <!-- ░░ FEATURED PRODUCT HERO ░░ -->
+  <% if (products && products.length > 0) { 
+       const featuredProduct = products[0]; %>
+    <section class="relative bg-gray-900 text-white overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent"></div>
+      <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 px-6 py-20">
+        <div class="space-y-6 z-10 relative">
+          <div class="text-sm uppercase tracking-widest opacity-80">Featured Product</div>
+          <h1 class="text-4xl lg:text-5xl font-bold leading-tight"><%= featuredProduct.productName %></h1>
+          <p class="text-lg opacity-90">Brand: <%= featuredProduct.brand %></p>
+          
+          <div class="space-y-2">
+            <% if (featuredProduct.bestOffer > 0) { %>
+              <div class="flex items-center gap-4">
+                <span class="text-3xl font-bold">₹<%= featuredProduct.lowestSalePrice?.toFixed(2) || 'N/A' %></span>
+                <span class="text-xl line-through opacity-60">₹<%= featuredProduct.lowestPrice?.toFixed(2) || 'N/A' %></span>
+                <span class="bg-white text-gray-900 px-3 py-1 rounded-full text-sm font-semibold"><%= featuredProduct.bestOffer %>% OFF</span>
+              </div>
+            <% } else { %>
+              <span class="text-3xl font-bold">₹<%= featuredProduct.lowestPrice?.toFixed(2) || 'N/A' %></span>
+            <% } %>
+          </div>
+          
+          <a href="/user/products/<%= featuredProduct._id %>" 
+             class="inline-block mt-8 px-8 py-3 rounded bg-white text-gray-900 hover:bg-transparent hover:text-white border border-white transition font-semibold uppercase tracking-wide">
+            View Details
+          </a>
+        </div>
+        <div class="relative">
+          <img src="<%= featuredProduct.images?.[0] || '/assets/placeholder.jpg' %>" 
+               alt="<%= featuredProduct.productName %>" 
+               class="w-full max-w-lg mx-auto drop-shadow-2xl rounded-lg">
+        </div>
+      </div>
+    </section>
+  <% } %>
 
-    <!-- Search & Filter Form -->
-    <form id="filterForm" class="mb-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-      <!-- Search -->
-      <div class="sm:col-span-2">
-        <label for="q" class="block text-sm font-medium text-gray-700">Search</label>
-        <div class="flex gap-2">
-          <input 
-            type="text" 
-            name="q" 
-            id="q" 
-            placeholder="Search products..." 
-            value="<%= typeof q !== 'undefined' ? q : '' %>"
-            class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button 
-            type="button" 
-            onclick="clearFilters()" 
-            class="inline-flex items-center justify-center px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-700"
-          >
-            Clear
-          </button>
+  <!-- ░░ FILTERS & SEARCH ░░ -->
+  <main class="max-w-7xl mx-auto px-6 py-16">
+    <div class="mb-12">
+      <h2 class="text-3xl font-bold mb-2">All Products</h2>
+      <p class="text-gray-600">Discover our complete collection</p>
+    </div>
+
+    <!-- Filter Form -->
+    <form id="filterForm" class="mb-12 bg-gray-50 rounded-lg p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        
+        <!-- Search -->
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium mb-2">Search Products</label>
+          <div class="flex gap-2">
+            <input type="text" name="q" id="q" 
+                   placeholder="Search..." 
+                   value="<%= typeof q !== 'undefined' ? q : '' %>"
+                   class="flex-1 rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
+            <button type="button" onclick="clearFilters()" 
+                    class="px-4 py-3 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Category</label>
+          <select name="category" id="category" 
+                  class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
+            <option value="">All Categories</option>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat._id %>" <%= category === cat._id.toString() ? 'selected' : '' %>>
+                <%= cat.name %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Price Min -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Min Price</label>
+          <input type="number" name="priceMin" id="priceMin"
+                 value="<%= typeof priceMin !== 'undefined' ? priceMin : '' %>"
+                 placeholder="₹0"
+                 class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
+        </div>
+
+        <!-- Price Max -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Max Price</label>
+          <input type="number" name="priceMax" id="priceMax"
+                 value="<%= typeof priceMax !== 'undefined' ? priceMax : '' %>"
+                 placeholder="Any"
+                 class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
+        </div>
+
+        <!-- Sort -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Sort By</label>
+          <select name="sort" id="sort" 
+                  class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
+            <option value="">Default</option>
+            <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
+            <option value="priceDesc" <%= sort === 'priceDesc' ? 'selected' : '' %>>Price: High to Low</option>
+            <option value="nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A to Z</option>
+            <option value="nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z to A</option>
+            <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>New Arrivals</option>
+          </select>
         </div>
       </div>
 
-      <!-- Category Filter -->
-      <div>
-        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
-        <select
-          name="category"
-          id="category"
-          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Categories</option>
-          <% categories.forEach(cat => { %>
-            <option value="<%= cat._id %>" <%= category === cat._id.toString() ? 'selected' : '' %>>
-              <%= cat.name %>
-            </option>
-          <% }) %>
-        </select>
-      </div>
-
-      <!-- Price Range Min -->
-      <div>
-        <label for="priceMin" class="block text-sm font-medium text-gray-700">Price Min</label>
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          name="priceMin"
-          id="priceMin"
-          value="<%= typeof priceMin !== 'undefined' ? priceMin : '' %>"
-          placeholder="0"
-          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <!-- Price Range Max -->
-      <div>
-        <label for="priceMax" class="block text-sm font-medium text-gray-700">Price Max</label>
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          name="priceMax"
-          id="priceMax"
-          value="<%= typeof priceMax !== 'undefined' ? priceMax : '' %>"
-          placeholder="Any"
-          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <!-- Sorting -->
-      <div>
-        <label for="sort" class="block text-sm font-medium text-gray-700">Sort By</label>
-        <select
-          name="sort"
-          id="sort"
-          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Default</option>
-          <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
-          <option value="priceDesc" <%= sort === 'priceDesc' ? 'selected' : '' %>>Price: High to Low</option>
-          <option value="nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A to Z</option>
-          <option value="nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z to A</option>
-          <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>New Arrivals</option>
-        </select>
-      </div>
-
-      <div class="sm:col-span-full lg:col-span-1">
-        <button 
-          type="button" 
-          onclick="applyFilters()" 
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition duration-300"
-        >
-          Filter
+      <div class="mt-6 flex justify-center">
+        <button type="button" onclick="applyFilters()" 
+                class="px-8 py-3 bg-gray-900 text-white rounded hover:bg-transparent hover:text-gray-900 border border-gray-900 transition font-semibold uppercase tracking-wide">
+          Apply Filters
         </button>
       </div>
     </form>
 
-   <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-  <% if (!products || products.length === 0) { %>
-    <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
-  <% } else { %>
-    <% products.forEach(product => { %>
-      <a href="/user/products/<%= product._id %>" class="block group">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
-          <img
-            src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
-            alt="<%= product.productName %>"
-            class="w-full h-48 object-cover"
-          />
-          <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600"><%= product.productName %></h3>
-          <p class="text-sm text-gray-600 mb-2">Brand: <%= product.brand %></p>
-          
-          <% if (product.bestOffer > 0) { %>
-            <div class="flex items-center gap-2">
-              <p class="text-xl font-bold text-gray-900">₹<%= product.lowestSalePrice.toFixed(2) %></p>
-              <p class="text-sm text-gray-500 line-through">₹<%= product.lowestPrice.toFixed(2) %></p>
-              <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto">
-                <%= product.bestOffer %>% OFF
-              </span>
+    <!-- ░░ PRODUCTS GRID ░░ -->
+    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      <% if (!products || products.length === 0) { %>
+        <p class="col-span-full text-center text-gray-500 py-12">No products found matching your criteria.</p>
+      <% } else { %>
+        <% products.forEach(product => { %>
+          <a href="/user/products/<%= product._id %>" class="group block">
+            <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
+              <div class="aspect-square overflow-hidden">
+                <img src="<%= product.images?.[0] || '/assets/placeholder.jpg' %>"
+                     alt="<%= product.productName %>"
+                     class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              </div>
+              <div class="p-6">
+                <h3 class="font-semibold mb-1 truncate group-hover:text-gray-600"><%= product.productName %></h3>
+                <p class="text-sm text-gray-600 mb-3 uppercase tracking-wide"><%= product.brand %></p>
+                
+                <% if (product.bestOffer > 0) { %>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg font-bold">₹<%= product.lowestSalePrice?.toFixed(2) || 'N/A' %></span>
+                      <span class="text-sm line-through text-gray-400">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
+                    </div>
+                    <span class="inline-block bg-gray-900 text-white px-2 py-1 rounded text-xs font-semibold">
+                      <%= product.bestOffer %>% OFF
+                    </span>
+                  </div>
+                <% } else { %>
+                  <span class="text-lg font-bold">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
+                <% } %>
+              </div>
             </div>
-            <p class="text-xs text-green-600 mt-1">You save ₹<%= (product.lowestPrice - product.lowestSalePrice).toFixed(2) %></p>
-          <% } else { %>
-            <p class="text-xl font-bold text-gray-900">₹<%= product.lowestPrice.toFixed(2) %></p>
-          <% } %>
-        </div>
-      </a>
-    <% }) %>
-  <% } %>
-</div>
-    <!-- Pagination -->
-    <div id="paginationContainer" class="mt-8 flex justify-center gap-2 text-gray-700">
-  <% if (prevPageUrl) { %>
-    <a href="#" data-page="<%= currentPage - 1 %>" class="page-link px-4 py-2 border rounded hover:bg-gray-200 transition">Previous</a>
-  <% } %>
-  <span class="px-4 py-2 border rounded bg-gray-200"><%= currentPage %> / <%= totalPages %></span>
-  <% if (nextPageUrl) { %>
-    <a href="#" data-page="<%= currentPage + 1 %>" class="page-link px-4 py-2 border rounded hover:bg-gray-200 transition">Next</a>
-  <% } %>
-</div>
+          </a>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <!-- ░░ PAGINATION ░░ -->
+    <div id="paginationContainer" class="mt-12 flex justify-center items-center gap-4">
+      <% if (prevPageUrl) { %>
+        <a href="#" data-page="<%= currentPage - 1 %>" class="page-link px-6 py-3 rounded border hover:bg-gray-50 transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i>Previous
+        </a>
+      <% } %>
+      <span class="px-6 py-3 bg-gray-900 text-white rounded font-semibold">
+        <%= currentPage %> / <%= totalPages %>
+      </span>
+      <% if (nextPageUrl) { %>
+        <a href="#" data-page="<%= currentPage + 1 %>" class="page-link px-6 py-3 rounded border hover:bg-gray-50 transition">
+          Next<i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+      <% } %>
+    </div>
   </main>
 
+  <!-- ░░ SCRIPTS ░░ -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script>
-  
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('page-link')) {
-    e.preventDefault();
-    const page = e.target.getAttribute('data-page');
-    applyFilters(parseInt(page));
-  }
-});
-    // Apply filters without page reload
+    // Mobile menu toggle
+    const btn = document.getElementById('mobileBtn');
+    const menu = document.getElementById('mobileMenu');
+    btn?.addEventListener('click', () => {
+      menu.classList.toggle('translate-x-full');
+    });
+
+    // Page link handling
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('page-link')) {
+        e.preventDefault();
+        const page = e.target.getAttribute('data-page');
+        applyFilters(parseInt(page));
+      }
+    });
+
+    // Apply filters function
     async function applyFilters(page = 1) {
       try {
-        // Show loading state
         document.getElementById('productsContainer').innerHTML = `
-          <div class="col-span-full text-center py-8">
-            <i class="fas fa-spinner fa-spin text-blue-500 text-4xl"></i>
+          <div class="col-span-full text-center py-16">
+            <i class="fas fa-spinner fa-spin text-gray-900 text-4xl"></i>
             <p class="mt-4 text-gray-600">Loading products...</p>
           </div>
         `;
@@ -223,87 +264,90 @@ document.addEventListener('click', function(e) {
         const formData = new FormData(document.getElementById('filterForm'));
         formData.set('page', page);
         const params = new URLSearchParams(formData);
-
         const response = await axios.get(`/user/product/list?${params.toString()}`);
         const { products, totalPages, currentPage } = response.data;
 
-       // Update products grid
-if (!products || products.length === 0) {
-  document.getElementById('productsContainer').innerHTML = `
-    <p class="col-span-full text-center text-gray-500">No products found matching your criteria.</p>
-  `;
-} else {
-  document.getElementById('productsContainer').innerHTML = products.map(product => `
-    <a href="/user/products/${product._id}" class="block group">
-      <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col p-4 h-full transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
-        <img
-          src="${product.images?.[0] || '/assets/placeholder.jpg'}"
-          alt="${product.productName}"
-          class="w-full h-48 object-cover"
-        />
-        <h3 class="text-lg font-semibold truncate mb-1 text-gray-800 group-hover:text-blue-600">${product.productName}</h3>
-        <p class="text-sm text-gray-600 mb-2">Brand: ${product.brand}</p>
-        
-        ${product.bestOffer > 0 ? `
-          <div class="flex items-center gap-2">
-            <p class="text-xl font-bold text-gray-900">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</p>
-            <p class="text-sm text-gray-500 line-through">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
-            <span class="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded ml-auto">
-              ${product.bestOffer}% OFF
-            </span>
-          </div>
-          <p class="text-xs text-green-600 mt-1">
-            You save ₹${(product.lowestPrice - product.lowestSalePrice).toFixed(2)}
-          </p>
-        ` : `
-          <p class="text-xl font-bold text-gray-900">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</p>
-        `}
-      </div>
-    </a>
-  `).join('');
-}
-        // Update pagination
-        updatePagination(currentPage, totalPages);
+        // Update products
+        if (!products || products.length === 0) {
+          document.getElementById('productsContainer').innerHTML = `
+            <p class="col-span-full text-center text-gray-500 py-16">No products found matching your criteria.</p>
+          `;
+        } else {
+          document.getElementById('productsContainer').innerHTML = products.map(product => `
+            <a href="/user/products/${product._id}" class="group block">
+              <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
+                <div class="aspect-square overflow-hidden">
+                  <img src="${product.images?.[0] || '/assets/placeholder.jpg'}"
+                       alt="${product.productName}"
+                       class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                </div>
+                <div class="p-6">
+                  <h3 class="font-semibold mb-1 truncate group-hover:text-gray-600">${product.productName}</h3>
+                  <p class="text-sm text-gray-600 mb-3 uppercase tracking-wide">${product.brand}</p>
+                  
+                  ${product.bestOffer > 0 ? `
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</span>
+                        <span class="text-sm line-through text-gray-400">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <span class="inline-block bg-gray-900 text-white px-2 py-1 rounded text-xs font-semibold">
+                        ${product.bestOffer}% OFF
+                      </span>
+                    </div>
+                  ` : `
+                    <span class="text-lg font-bold">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+                  `}
+                </div>
+              </div>
+            </a>
+          `).join('');
+        }
 
-        // Update URL without reload
+        updatePagination(currentPage, totalPages);
         window.history.pushState({}, '', `/user/product/list?${params.toString()}`);
 
       } catch (error) {
         console.error('Error applying filters:', error);
         document.getElementById('productsContainer').innerHTML = `
-          <p class="col-span-full text-center text-red-500">Error loading products. Please try again.</p>
+          <p class="col-span-full text-center text-red-500 py-16">Error loading products. Please try again.</p>
         `;
       }
     }
 
-    // Clear all filters
     function clearFilters() {
       document.getElementById('filterForm').reset();
       applyFilters(1);
       window.history.pushState({}, '', '/user/product/list');
     }
 
-    // Update pagination controls
     function updatePagination(currentPage, totalPages) {
       const prevBtn = currentPage > 1 ? 
-        `<a href="#" onclick="applyFilters(${currentPage - 1}); return false;" class="px-4 py-2 border rounded hover:bg-gray-200 transition">Previous</a>` : '';
+        `<a href="#" onclick="applyFilters(${currentPage - 1}); return false;" class="px-6 py-3 rounded border hover:bg-gray-50 transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i>Previous
+         </a>` : '';
       
       const nextBtn = currentPage < totalPages ? 
-        `<a href="#" onclick="applyFilters(${currentPage + 1}); return false;" class="px-4 py-2 border rounded hover:bg-gray-200 transition">Next</a>` : '';
+        `<a href="#" onclick="applyFilters(${currentPage + 1}); return false;" class="px-6 py-3 rounded border hover:bg-gray-50 transition">
+          Next<i class="fa-solid fa-arrow-right ml-2"></i>
+         </a>` : '';
       
       document.getElementById('paginationContainer').innerHTML = `
         ${prevBtn}
-        <span class="px-4 py-2 border rounded bg-gray-200">${currentPage} / ${totalPages}</span>
+        <span class="px-6 py-3 bg-gray-900 text-white rounded font-semibold">${currentPage} / ${totalPages}</span>
         ${nextBtn}
       `;
     }
 
-    // Initialize with current filters
+    // GSAP animations
     document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.toString()) {
-        applyFilters(parseInt(urlParams.get('page')) || 1);
-      }
+      gsap.from('.grid > a', {
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        stagger: 0.1
+      });
     });
   </script>
 </body>
