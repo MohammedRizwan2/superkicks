@@ -5,7 +5,6 @@ const fs = require('fs');
 const sharp = require('sharp');
 const Variant = require('../../models/variant');
 const { promisify } = require('util');
-const { uploadProductImages } = require('../../config/multer');
 const unlinkAsync = promisify(fs.unlink);
 
 
@@ -15,7 +14,12 @@ const unlinkAsync = promisify(fs.unlink);
 
 exports.getProducts = async (req, res) => {
   try {
-    
+    const productJustAdded = req.session.productAdded?req.session.productAdded:false;
+   
+    delete req.session.productAdded;
+    const productJustEditted = req.session.productEddited?req.session.productEddited:false;
+  
+    delete req.session.productEddited;
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
     const limit = 5; 
@@ -46,7 +50,9 @@ exports.getProducts = async (req, res) => {
       products,
       query,
       currentPage: page,
-      totalPages
+      totalPages,
+      productJustEditted,
+      productJustAdded
     });
 
   } catch (error) {
@@ -62,7 +68,7 @@ exports.getProducts = async (req, res) => {
 
 exports.getAddProduct = async (req, res) => {
   try {
-    const categories = await Category.find({ isListed: true }).sort({ name: 1 }); // Only show listed/active categories, sorted by name (optional)
+    const categories = await Category.find({ isListed: true }).sort({ name: 1 }); 
     res.render('admin/addproduct', {
       categories,
       errors: [],
@@ -76,8 +82,7 @@ exports.getAddProduct = async (req, res) => {
 
 
 
-// Helper function to save image blobs
-// Helper function to save uploaded image files (buffers)
+
 async function saveImageFiles(files, destFolder) {
   if (!fs.existsSync(destFolder)) {
     fs.mkdirSync(destFolder, { recursive: true });
@@ -88,7 +93,7 @@ async function saveImageFiles(files, destFolder) {
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
     const filepath = path.join(destFolder, filename);
 
-    // Write the buffer to disk
+  
     await fs.promises.writeFile(file.path,filepath);
     imagePaths.push(`/uploads/products/${filename}`);
   }
@@ -105,7 +110,6 @@ exports.postAddProduct = async (req, res) => {
   console.log("variants--->",variants);
   let errors = [];
 
-  // Convert variants to array if it's not
   if (variants && !Array.isArray(variants)) {
     if (typeof variants === 'object' && variants !== null) {
       variants = [variants];
@@ -114,7 +118,7 @@ exports.postAddProduct = async (req, res) => {
     }
   }
 
-  // Basic validation
+ 
   if (!productName || !productName.trim()) errors.push('Product name is required.');
   if (!brand || !brand.trim()) errors.push('Brand is required.');
   if (!categoryId) errors.push('Category is required.');
@@ -124,7 +128,7 @@ exports.postAddProduct = async (req, res) => {
   errors.push('Please upload at least 3 images.');
 }
 
-  // Rest of your validation and logic remains the same...
+  
   if (!variants || variants.length === 0 || !variants.some(v => v.size && v.price)) {
     errors.push('At least one variant (with size & price) is required.');
   } else {
@@ -141,7 +145,7 @@ exports.postAddProduct = async (req, res) => {
     });
   }
 
-  // Offer validation
+ 
   if (offer !== '' && offer !== undefined && offer !== null) {
     const numOffer = Number(offer);
     if (isNaN(numOffer)) {
@@ -166,7 +170,6 @@ exports.postAddProduct = async (req, res) => {
 const imagePaths = await saveImageFiles(images, path.join(__dirname, '../../public/uploads/products'));
 console.log(imagePaths,"---->images paths")
 
-    // Create product
     const product = new Product({
       productName: productName.trim(),
       description: description.trim(),
@@ -174,12 +177,11 @@ console.log(imagePaths,"---->images paths")
       categoryId,
       offer: offer ? Number(offer) : 0,
       images: imagePaths,
-      isListed: isListed === 'on',
+      isListed: true,
       variants: [],
     });
     await product.save();
 
-    // Create variants
     const createdVariants = [];
     for (const v of variants) {
       const variantDoc = new Variant({
@@ -195,10 +197,18 @@ console.log(imagePaths,"---->images paths")
 
     console.log("variants-->",createdVariants)
     
-    // Update product with variant IDs
+    
     product.variants = createdVariants;
     await product.save();
 
+
+  req.session.productAdded = true;
+  req.session.save((err)=>{
+    if(err){
+      console.log("server error while add product",err)
+    }
+    console.log("addProduct session saved")
+  })
     res.redirect('/admin/products');
   } catch (error) {
     console.error('Error adding product:', error);
@@ -210,6 +220,11 @@ console.log(imagePaths,"---->images paths")
     });
   }
 };
+
+
+
+
+
 exports.getEditProduct = async (req, res) => {
   try {
 
@@ -240,7 +255,6 @@ console.log(product.categoryId);
 exports.postEditProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(req.body,"--->files");
     const {
       productName,
       brand,
@@ -250,30 +264,26 @@ exports.postEditProduct = async (req, res) => {
       isListed,
       deletedImages = "[]",
       newImages,
-      variants
     } = req.body;
 
-    // Parse deleted images
+    
     const parsedDeletedImages = JSON.parse(deletedImages);
     
-    // Get current product
+    
     const currentProduct = await Product.findById(id);
     if (!currentProduct) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Process images - keep existing except deleted ones
+  
     let finalImages = currentProduct.images.filter(img => !parsedDeletedImages.includes(img));
-//uploadProductImages
-    // Add new uploaded images
+
     if (newImages && newImages.length > 0) {
-      // const newImagePaths = req.files.map(file => 
-      //   `/uploads/products/${file.filename}`
-      // );
+  
+    
       finalImages = [...finalImages, ...newImages];
     }
 
-    // Validate we have at least one image
     if (finalImages.length === 0) {
       return res.status(400).json({
         success: false,
@@ -287,7 +297,7 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-    // Clean up deleted images from server
+   
     await Promise.all(
       parsedDeletedImages.map(async (imgUrl) => {
         if (!imgUrl) return;
@@ -299,7 +309,7 @@ exports.postEditProduct = async (req, res) => {
       })
     );
 
-    // Rest of your update logic...
+    
     const updateData = {
       productName: productName.trim(),
       brand: brand.trim(),
@@ -309,9 +319,15 @@ exports.postEditProduct = async (req, res) => {
       isListed: isListed === 'true',
       images: finalImages
     };
-console.log(updateData.images,">>>>>>>")
-    // Update product and variants...
+
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
+    req.session.productEddited=true;
+    req.session.save((err)=>{
+      if(err){
+        console.log("server error while saving the product",err);
+      }
+      console.log("producteddit session addayy")
+    })
     
     return res.json({
       success: true,
@@ -336,7 +352,6 @@ exports.uploadProductImage = async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Return the image URL
     res.json({
       url: `/uploads/products/${req.file.filename}`
     });

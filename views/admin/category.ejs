@@ -8,7 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans"data-justedited="<%= justedited %>" 
+  data-justadded="<%= justAdded %>">
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="w-64 bg-[#15172B] text-white flex flex-col justify-between">
@@ -125,7 +126,37 @@
     </main>
   </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const body = document.body;
+    const justEdited = body.dataset.justedited === "true";
+    const justAdded = body.dataset.justadded === "true";
 
+    if (justEdited) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Category updated successfully',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+
+    if (justAdded) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Category added successfully',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+});
+
+</script>
 </body>
 </html>

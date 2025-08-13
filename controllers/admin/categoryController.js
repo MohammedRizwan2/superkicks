@@ -4,6 +4,11 @@ const Category = require('../../models/category');
 
 exports.getCategories = async (req, res) => {
   try {
+    const justedited = req.session.categoryEditted?req.session.categoryEditted:false
+    delete req.session.categoryEditted;
+    const justAdded= req.session.categoryAdded?req.session.categoryAdded:false
+    delete req.session.categoryAdded;
+    console.log(justAdded)
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
@@ -27,7 +32,10 @@ exports.getCategories = async (req, res) => {
       categories,
       query,
       currentPage: page,
-      totalPages
+      totalPages,
+      justedited,
+      justAdded
+
     });
   } catch (err) {
     console.error(err);
@@ -69,13 +77,17 @@ exports.postAddCategory = async (req, res) => {
 
   try {
    
-    const categoryExists = await Category.findOne({ name: name.trim() });
-    if (categoryExists) {
-      return res.render('admin/addcategory', {
-        errors: ['A category with this name already exists.'],
-        old: req.body
-      });
-    }
+const categoryExists = await Category.findOne({
+  name: { $regex: `^${name.trim()}$`, $options: 'i' } 
+});
+
+if (categoryExists) {
+  return res.render('admin/addcategory', {
+    errors: ['A category with this name already exists.'],
+    old: req.body
+  });
+}
+
 
     
     const categoryData = {
@@ -87,14 +99,26 @@ exports.postAddCategory = async (req, res) => {
 
     
     await Category.create(categoryData);
+   req.session.categoryAdded = true;
 
+
+req.session.save((err) => {
+    if (err) {
+        console.error('Session save error in category add:', err);
+
+    }
+    console.log("session saved")
     
+});
+
+
     res.redirect('/admin/category');
   } catch (error) {
     console.error(error);
     res.render('admin/addcategory', {
       errors: ['Server error, please try again later.'],
-      old: req.body
+      old: req.body,
+    
     });
   }
 };
@@ -105,6 +129,8 @@ exports.postAddCategory = async (req, res) => {
 
 exports.getEditCategory = async (req, res) => {
   try {
+
+   
     const category = await Category.findById(req.params.id);
     if (!category) {
       
@@ -150,7 +176,7 @@ exports.postEditCategory = async (req, res) => {
   try {
     
     const duplicate = await Category.findOne({ 
-      name: name.trim(), 
+      name: { $regex: `^${name.trim()}$`, $options: 'i' } ,
       _id: { $ne: categoryId } 
     });
     if (duplicate) {
@@ -170,7 +196,15 @@ exports.postEditCategory = async (req, res) => {
       isListed: isListed === 'on'
     };
 
-    
+    req.session.categoryEditted=true;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in category edit:', err);
+       
+      }
+      console.log("savesaveed")
+    });
+
     await Category.findByIdAndUpdate(categoryId, updatedFields, { new: true });
 
     return res.redirect('/admin/category');

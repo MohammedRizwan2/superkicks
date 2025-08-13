@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 // Render login page
 exports.getLogin = (req, res) => {
   console.log(req.session.justRegistered)
-  const justRegistered=!!req.session.justRegistered;
+  const justRegistered=req.session.justRegistered?req.session.justRegistered:false;
   console.log(justRegistered)
   delete req.session.justRegistered;
   res.render('user/login', {

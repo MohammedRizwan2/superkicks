@@ -6,7 +6,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans"data-justedited="<%= productJustEditted %>" 
+  data-justadded="<%= productJustAdded %>">
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="w-64 bg-[#15172B] text-white flex flex-col justify-between">
@@ -139,5 +140,39 @@
       </div>
     </main>
   </div>
+   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+
+    document.addEventListener('DOMContentLoaded', () => {
+    const body = document.body;
+    const justEdited =body.dataset.justedited==="true";
+   
+  
+    const justAdded = body.dataset.justadded==="true";
+
+    if (justEdited) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Product updated successfully',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+
+    if (justAdded) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Product added successfully',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+});
+  </script>
 </body>
 </html>

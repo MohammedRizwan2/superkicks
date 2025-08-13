@@ -1,94 +1,4 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth antialiased">
-<head>
-  <meta charset="UTF-8">
-  <title>Superkicks – Home</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-</head>
-
-<body class="bg-white text-gray-900 font-sans tracking-wide" data-just-logged-in="<%= justLoggedIn %>">
-  <!-- ░░ HEADER ░░ -->
-<header class="sticky top-0 z-50 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/70">
-  <nav class="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
-    <!-- Logo -->
-    <a href="/" class="text-2xl font-extrabold tracking-[0.15em] text-white hover:text-gray-300 transition">
-      SUPERKICKS
-    </a>
-
-    <!-- Desktop links -->
-    <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
-      <li><a href="/"                   class="text-white hover:text-gray-300">Home</a></li>
-      <li><a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a></li>
-      <li><a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a></li>
-
-      <% if (!isLoggedIn) { %>
-        <li class="space-x-2">
-          <a href="/user/login"
-             class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
-            Login
-          </a>
-          <a href="/user/signup"
-             class="px-4 py-1.5 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
-            Sign Up
-          </a>
-        </li>
-      <% } else { %>
-        <li class="flex items-center gap-4">
-          <span class="text-white/80"><i class="fa-solid fa-user mr-1"></i><%= user ? user.fullName : 'User' %></span>
-          <a href="/user/logout"
-             class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
-            Logout
-          </a>
-        </li>
-      <% } %>
-    </ul>
-
-    <!-- Mobile hamburger -->
-    <button id="mobileBtn"
-            class="md:hidden text-white text-2xl focus:outline-none">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-  </nav>
-
-  <!-- Mobile drawer -->
-  <div id="mobileMenu"
-       class="fixed inset-0 z-40 bg-black/90 backdrop-blur-md translate-x-full transition-transform duration-300 md:hidden">
-    <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
-      <a href="/"                   class="text-white hover:text-gray-300">Home</a>
-      <a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a>
-      <a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a>
-
-      <% if (!isLoggedIn) { %>
-        <a href="/user/login"
-           class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
-          Login
-        </a>
-        <a href="/user/signup"
-           class="px-6 py-2 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
-          Sign Up
-        </a>
-      <% } else { %>
-        <span class="text-white/80"><i class="fa-solid fa-user mr-1"></i><%= user ? user.fullName : 'User' %></span>
-        <a href="/user/logout"
-           class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
-          Logout
-        </a>
-      <% } %>
-    </div>
-  </div>
-</header>
-
-<!-- Mobile toggle script -->
-<script>
-  const btn   = document.getElementById('mobileBtn');
-  const menu  = document.getElementById('mobileMenu');
-  btn.addEventListener('click', () => {
-    menu.classList.toggle('translate-x-full');
-  });
-</script>
+<%- include('partials/header') %>
 
   <!-- ░░ HERO (3-D shoe tilt) ░░ -->
 <section class="relative isolate overflow-hidden select-none">
@@ -167,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <!-- ░░ CATEGORIES ░░ -->
   <section class="max-w-7xl mx-auto px-6 py-20">
     <h2 class="text-3xl font-bold mb-10 text-center">Shop by Category</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-8">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-8 gap-8 justify-center">
       <% if (categories?.length) { %>
         <% categories.forEach(ctg => { %>
           <a href="/user/categories/<%= ctg._id %>" class="group relative flex flex-col items-center gap-4 p-6 bg-gray-50 rounded hover:-translate-y-1 hover:shadow-lg transition">
@@ -184,30 +94,151 @@ document.addEventListener('DOMContentLoaded', () => {
   </section>
 
   <!-- ░░ FEATURED PRODUCT DISPLAY ░░ -->
-  <% if (products?.length) { 
-       const hero = products[0]; %>
-    <section class="relative bg-gray-900 text-white overflow-hidden">
-      <img src="<%= hero.images %>" alt="" class="absolute inset-0 -z-10 object-cover w-full h-full opacity-10">
-      <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 px-6 py-24">
-        <div data-gsap="fade-right" class="space-y-6">
-          <h3 class="text-4xl font-bold mb-2 leading-tight"><%= hero.productName %></h3>
-          <p class="opacity-80">Brand: <%= hero.brand %></p>
-          <p class="text-3xl font-semibold">₹<%= hero.lowestSalePrice.toFixed(2) %>
-            <% if (hero.bestOffer) { %>
-              <span class="ml-3 text-xl line-through opacity-60">₹<%= hero.lowestPrice.toFixed(2) %></span>
-            <% } %>
-          </p>
-          <% if (hero.bestOffer) { %>
-            <span class="inline-block bg-white text-gray-900 px-3 py-1 rounded-full text-sm font-semibold"><%= hero.bestOffer %>% OFF</span>
-          <% } %>
-          <a href="/user/products/<%= hero._id %>" class="inline-block mt-6 px-6 py-3 rounded bg-white text-gray-900 hover:bg-transparent hover:text-white border border-white transition">View Details</a>
+<% if (products && products.length) { 
+     const hero = products[0]; %>
+  <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <!-- Animated Background Elements -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style="animation-delay: 1s;"></div>
+      <div class="absolute top-40 left-1/2 w-60 h-60 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse" style="animation-delay: 2s;"></div>
+    </div>
+
+    <!-- Overlay for better text readability -->
+    <div class="absolute inset-0 bg-black/30"></div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 max-w-7xl mx-auto grid md:grid-cols-2 gap-16 px-6 py-24">
+      
+      <!-- Left Content with Glass Morphism -->
+      <div data-gsap="fade-right" class="space-y-8">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90">
+          <i class="fa-solid fa-star text-yellow-400"></i>
+          <span class="text-sm font-semibold uppercase tracking-wide">Featured Product</span>
         </div>
-        <div data-gsap="fade-left">
-          <img src="<%= hero.images[0] %>" alt="<%= hero.productName %>" class="w-full max-w-lg mx-auto drop-shadow-2xl">
+
+        <!-- Product Name with Gradient -->
+        <h3 class="text-4xl lg:text-5xl font-bold leading-tight">
+          <span class="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
+            <%= hero.productName %>
+          </span>
+        </h3>
+
+        <!-- Brand with Icon -->
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+            <i class="fa-solid fa-award text-white text-sm"></i>
+          </div>
+          <p class="text-xl text-white/80 font-medium">Brand: <span class="text-white"><%= hero.brand %></span></p>
+        </div>
+
+        <!-- Price Section with Enhanced Styling -->
+        <div class="space-y-3">
+          <div class="flex items-baseline gap-4">
+            <span class="text-4xl lg:text-5xl font-black bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              ₹<%= (typeof hero.lowestSalePrice === 'number' ? hero.lowestSalePrice : hero.lowestPrice || 0).toFixed(2) %>
+            </span>
+            <% if (hero.bestOffer && typeof hero.lowestPrice === 'number') { %>
+              <span class="text-2xl line-through text-white/40 font-semibold">
+                ₹<%= hero.lowestPrice.toFixed(2) %>
+              </span>
+            <% } %>
+          </div>
+          
+          <% if (hero.bestOffer && typeof hero.lowestPrice === 'number' && typeof hero.lowestSalePrice === 'number') { %>
+            <!-- Animated Offer Badge -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-red-500 to-pink-600 shadow-lg animate-pulse">
+              <i class="fa-solid fa-fire text-white"></i>
+              <span class="text-white font-bold text-sm uppercase tracking-wider">
+                <%= hero.bestOffer %>% OFF - Limited Time!
+              </span>
+            </div>
+            
+            <!-- Savings Display -->
+            <p class="text-green-300 text-lg font-semibold">
+              <i class="fa-solid fa-piggy-bank mr-2"></i>
+              You save ₹<%= Math.max(0, hero.lowestPrice - hero.lowestSalePrice).toFixed(2) %>
+            </p>
+          <% } %>
+        </div>
+
+        <!-- CTA Button with Hover Effects -->
+        <div class="pt-4">
+          <a href="/user/products/<%= hero._id %>" 
+             class="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-white to-gray-100 text-gray-900 font-bold text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10 flex items-center gap-3 group-hover:text-white transition-colors duration-300">
+              <i class="fa-solid fa-eye"></i>
+              <span>View Details</span>
+              <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform duration-300"></i>
+            </div>
+          </a>
+        </div>
+
+        <!-- Additional Info Cards -->
+        <div class="grid grid-cols-2 gap-4 pt-6">
+          <div class="p-4 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-truck text-green-400"></i>
+              <span class="text-white/90 font-semibold text-sm">Free Shipping</span>
+            </div>
+            <p class="text-white/60 text-xs">On orders above ₹999</p>
+          </div>
+          
+          <div class="p-4 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-shield-check text-blue-400"></i>
+              <span class="text-white/90 font-semibold text-sm">Authentic</span>
+            </div>
+            <p class="text-white/60 text-xs">100% Genuine product</p>
+          </div>
         </div>
       </div>
-    </section>
-  <% } %>
+
+      <!-- Right Side - Product Image with 3D Effects -->
+      <div data-gsap="fade-left" class="relative">
+        <!-- Glowing Background Circle -->
+        <div class="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl scale-110"></div>
+        
+        <!-- Image Container with Glass Effect -->
+        <div class="relative p-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl">
+          <!-- Floating Elements -->
+          <div class="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-bounce opacity-80"></div>
+          <div class="absolute -bottom-6 -left-6 w-6 h-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full animate-bounce opacity-60" style="animation-delay: 0.5s;"></div>
+          
+          <!-- Product Image -->
+          <img src="<%= (hero.images && hero.images.length ? hero.images[0] : '/assets/placeholder.jpg') %>" 
+               alt="<%= hero.productName %>" 
+               class="w-full max-w-lg mx-auto drop-shadow-2xl transform hover:scale-105 transition-transform duration-500 filter brightness-110">
+          
+          <!-- Reflection Effect -->
+          <div class="absolute bottom-0 left-8 right-8 h-32 bg-gradient-to-t from-white/10 to-transparent rounded-b-2xl blur-sm opacity-30"></div>
+        </div>
+
+        <!-- Floating Stats -->
+        <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
+          <div class="px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-center">
+            <div class="text-white font-bold">4.8★</div>
+            <div class="text-white/60 text-xs">Rating</div>
+          </div>
+          <div class="px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-center">
+            <div class="text-white font-bold">2.5K+</div>
+            <div class="text-white/60 text-xs">Reviews</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Wave Effect -->
+    <div class="absolute bottom-0 left-0 right-0">
+      <svg viewBox="0 0 1440 120" class="w-full h-16 text-white fill-current" aria-hidden="true" focusable="false">
+        <path d="M0,96L80,85.3C160,75,320,53,480,58.7C640,64,800,96,960,96C1120,96,1280,64,1360,48L1440,32L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
+      </svg>
+    </div>
+  </section>
+<% } %>
+
 
   <!-- ░░ NEW ARRIVALS GRID ░░ -->
   <section class="max-w-7xl mx-auto px-6 py-20">
@@ -241,29 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </section>
 
-  <!-- ░░ FOOTER ░░ -->
-  <footer class="bg-gray-900 text-gray-200 px-6 py-12">
-    <div class="max-w-7xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-10 text-sm">
-      <div>
-        <h4 class="font-semibold mb-3">SUPERKICKS</h4>
-        <p class="opacity-70">© <%= new Date().getFullYear() %>. All Rights Reserved.</p>
-      </div>
-      <div class="space-y-2">
-        <h4 class="font-semibold mb-3">Company</h4>
-        <a href="/privacy" class="block hover:opacity-80">Privacy Policy</a>
-        <a href="/terms"   class="block hover:opacity-80">Terms of Service</a>
-        <a href="/contact" class="block hover:opacity-80">Contact</a>
-      </div>
-      <div class="space-y-2">
-        <h4 class="font-semibold mb-3">Follow Us</h4>
-        <div class="flex gap-4 text-lg">
-          <a href="#" class="hover:text-white"><i class="fab fa-instagram"></i></a>
-          <a href="#" class="hover:text-white"><i class="fab fa-facebook-f"></i></a>
-          <a href="#" class="hover:text-white"><i class="fab fa-x-twitter"></i></a>
-        </div>
-      </div>
-    </div>
-  </footer>
+ <%- include('partials/footer') %>
+
 <!-- ░░ SWEETALERT LOGIN TOAST ░░ -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>

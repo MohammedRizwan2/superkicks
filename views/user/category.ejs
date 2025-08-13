@@ -20,7 +20,7 @@
       <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
         <li><a href="/" class="text-white hover:text-gray-300">Home</a></li>
         <li><a href="/user/product/list" class="text-white hover:text-gray-300">Shop</a></li>
-        <li><a href="/categories" class="text-gray-300 border-b border-gray-300">Categories</a></li>
+        <li><a href="/user/categories" class="text-gray-300 border-b border-gray-300">Categories</a></li>
 
         <% if (user) { %>
           <li class="flex items-center gap-4">
@@ -48,7 +48,7 @@
       <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
         <a href="/" class="text-white hover:text-gray-300">Home</a>
         <a href="/user/product/list" class="text-white hover:text-gray-300">Shop</a>
-        <a href="/categories" class="text-gray-300">Categories</a>
+        <a href="/user/categories" class="text-gray-300">Categories</a>
         <% if (user) { %>
           <span class="text-white/80"><%= user.fullName || user.email %></span>
           <a href="/user/logout" class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">Logout</a>
@@ -66,7 +66,7 @@
         <ol class="flex items-center justify-center gap-2 text-gray-300">
           <li><a href="/" class="hover:text-white transition">Home</a></li>
           <li><i class="fa-solid fa-chevron-right text-xs"></i></li>
-          <li><a href="/categories" class="hover:text-white transition">Categories</a></li>
+          <li><a href="/user/categories" class="hover:text-white transition">Categories</a></li>
           <li><i class="fa-solid fa-chevron-right text-xs"></i></li>
           <li class="text-white font-semibold"><%= category.name %></li>
         </ol>
