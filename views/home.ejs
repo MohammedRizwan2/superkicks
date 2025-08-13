@@ -22,7 +22,7 @@
     <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
       <li><a href="/"                   class="text-white hover:text-gray-300">Home</a></li>
       <li><a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a></li>
-      <li><a href="/categories"         class="text-white hover:text-gray-300">Categories</a></li>
+      <li><a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a></li>
 
       <% if (!isLoggedIn) { %>
         <li class="space-x-2">
@@ -59,7 +59,7 @@
     <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
       <a href="/"                   class="text-white hover:text-gray-300">Home</a>
       <a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a>
-      <a href="/categories"         class="text-white hover:text-gray-300">Categories</a>
+      <a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a>
 
       <% if (!isLoggedIn) { %>
         <a href="/user/login"
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-8">
       <% if (categories?.length) { %>
         <% categories.forEach(ctg => { %>
-          <a href="/categories/<%= ctg._id %>" class="group relative flex flex-col items-center gap-4 p-6 bg-gray-50 rounded hover:-translate-y-1 hover:shadow-lg transition">
+          <a href="/user/categories/<%= ctg._id %>" class="group relative flex flex-col items-center gap-4 p-6 bg-gray-50 rounded hover:-translate-y-1 hover:shadow-lg transition">
             <div class="w-20 h-20 rounded-full bg-gray-200 grid place-content-center text-2xl">
               <i class="fa-solid fa-shoe-prints"></i>
             </div>
@@ -264,38 +264,70 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
   </footer>
-
-  <!-- ░░ SWEETALERT LOGIN TOAST ░░ -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
-    if (document.body.dataset.justLoggedIn === 'true') {
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: 'Logged in successfully',
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true
-      });
-    }
-  </script>
-
-  <!-- ░░ GSAP ENTRANCE EFFECTS ░░ -->
-  <script>
-    
-    document.addEventListener('DOMContentLoaded', () => {
-      gsap.from('[data-gsap="fade-right"]', { x: -80, opacity: 0, duration: 1, ease: 'power2.out' });
-      gsap.from('[data-gsap="fade-left"]',  { x:  80, opacity: 0, duration: 1, ease: 'power2.out', delay: 0.3 });
-      gsap.from('[data-gsap="card"]', {
-        y: 40,
-        opacity: 0,
-        duration: 0.8,
-        ease: 'power3.out',
-        stagger: 0.1,
-        scrollTrigger: { trigger: '#productsContainer', start: 'top 90%' }
-      });
+<!-- ░░ SWEETALERT LOGIN TOAST ░░ -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  if (document.body.dataset.justLoggedIn === 'true') {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Logged in successfully',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
     });
-  </script>
+  }
+</script>
+
+<<!-- ░░ GSAP SCRIPTS ░░ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Hero section animations
+    gsap.from('[data-gsap="fade-right"]', { 
+      x: -80, 
+      opacity: 0, 
+      duration: 1, 
+      ease: 'power2.out' 
+    });
+    
+    gsap.from('[data-gsap="fade-left"]', { 
+      x: 80, 
+      opacity: 0, 
+      duration: 1, 
+      ease: 'power2.out', 
+      delay: 0.3 
+    });
+    
+    // Product cards with Intersection Observer
+    const cards = document.querySelectorAll('[data-gsap="card"]');
+    
+    // Set initial state
+    gsap.set(cards, { y: 40, opacity: 0 });
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          gsap.to(entry.target, {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power3.out',
+            delay: index * 0.1 // Stagger effect
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -100px 0px'
+    });
+    
+    cards.forEach(card => observer.observe(card));
+  });
+</script>
+
 </body>
 </html>

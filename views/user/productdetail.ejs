@@ -85,7 +85,7 @@
         <li><a href="/user/product/list" class="hover:text-gray-900 transition">Shop</a></li>
         <% if (product && product.categoryId) { %>
           <li><i class="fa-solid fa-chevron-right text-xs"></i></li>
-          <li><a href="/categories/<%= product.categoryId._id %>" class="hover:text-gray-900 transition"><%= product.categoryId.name %></a></li>
+          <li><a href="user/categories/<%= product.categoryId._id %>" class="hover:text-gray-900 transition"><%= product.categoryId.name %></a></li>
         <% } %>
         <li><i class="fa-solid fa-chevron-right text-xs"></i></li>
         <li class="text-gray-900 font-semibold"><%= product.productName %></li>

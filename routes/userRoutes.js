@@ -3,7 +3,8 @@ const router = express.Router();
 const passport = require('passport');
 const User = require('../models/userSchema'); // Capitalized model
 const userController = require('../controllers/user/userController');
-const productController = require('../controllers/user/productController'); // Fixed spelling
+const productController = require('../controllers/user/productController'); 
+const categoryController  = require('../controllers/user/categoryController')
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
@@ -93,6 +94,9 @@ router.get('/product/list', isAuthenticated, checkUserBlocked, productController
 router.get('/products/:id', isAuthenticated, checkUserBlocked, productController.getProductDetails);
 router.get('/products/variants/:variantId',isAuthenticated,checkUserBlocked, productController.getVariantDetails);
 
+//category
+router.get('/categories/:id',isAuthenticated,checkUserBlocked,categoryController.getCategoryPage);
+router.get('/categories',isAuthenticated,checkUserBlocked,categoryController.getCategoriesPage)
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);
 
