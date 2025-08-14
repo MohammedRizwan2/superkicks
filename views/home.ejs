@@ -208,8 +208,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="absolute -bottom-6 -left-6 w-6 h-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full animate-bounce opacity-60" style="animation-delay: 0.5s;"></div>
           
           <!-- Product Image -->
-          <img src="<%= (hero.images && hero.images.length ? hero.images[0] : '/assets/placeholder.jpg') %>" 
-               alt="<%= hero.productName %>" 
+          <img src="<%= getImageUrl(hero.images[0]) %>" 
+               alt="<%= hero.productName %>"
                class="w-full max-w-lg mx-auto drop-shadow-2xl transform hover:scale-105 transition-transform duration-500 filter brightness-110">
           
           <!-- Reflection Effect -->
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <% } else { 
            products.slice(0,8).forEach(prod => { %>
         <a href="/user/products/<%= prod._id %>" class="group relative bg-gray-50 rounded-lg overflow-hidden shadow transition hover:-translate-y-1 hover:shadow-lg" data-gsap="card">
-          <img src="<%= prod.images[0] ?? '/assets/placeholder.jpg' %>"
+          <img src="<%= getImageUrl(prod.images[0]) %>"
                alt="<%= prod.productName %>"
                class="w-full h-56 object-cover group-hover:scale-105 transition" />
           <div class="p-5">

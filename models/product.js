@@ -6,7 +6,11 @@ const productSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   brand: { type: String, required: true },
   offer: { type: Number, default: 0, min: 0, max: 100 },
-  images: [{ type: String, required: true }],
+    images: {
+    type: [mongoose.Schema.Types.Mixed], 
+    required: true
+  },
+
   isListed: { type: Boolean, default: true },
   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }]
 }, { timestamps: true });

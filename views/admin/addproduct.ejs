@@ -29,6 +29,7 @@
         <a href="/admin/logout" class="flex items-center p-2 hover:bg-red-600 rounded"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
       </div>
     </aside>
+
     <!-- Main Content -->
     <main class="flex-1 p-6">
       <header class="flex justify-end mb-4">
@@ -53,6 +54,26 @@
           </div>
         <% } %>
 
+        <!-- Show existing images if this is a validation error re-render -->
+        <% if (old && old.images && old.images.length > 0) { %>
+          <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-700 mb-3">Previously Selected Images</h3>
+            <div class="grid grid-cols-3 gap-4">
+              <% old.images.forEach(function(img, index) { %>
+                <div class="relative">
+                  <img src="<%= typeof img === 'string' ? img : img.url %>" 
+                       alt="Product image <%= index + 1 %>" 
+                       class="w-full h-32 object-cover rounded border">
+                  <div class="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                    <%= index + 1 %>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">Please re-select your images below to continue.</p>
+          </div>
+        <% } %>
+
         <form action="/admin/products/add" method="POST" enctype="multipart/form-data" class="space-y-5">
           <div>
             <label class="block text-gray-600 font-medium mb-1">Product Name <span class="text-red-500">*</span></label>
@@ -60,12 +81,14 @@
               value="<%= old && old.productName ? old.productName : '' %>"
               class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
           </div>
+
           <div>
             <label class="block text-gray-600 font-medium mb-1">Brand <span class="text-red-500">*</span></label>
             <input type="text" name="brand" required
               value="<%= old && old.brand ? old.brand : '' %>"
               class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
           </div>
+
           <div>
             <label class="block text-gray-600 font-medium mb-1">Category <span class="text-red-500">*</span></label>
             <select name="categoryId" required class="w-full px-3 py-2 border rounded">
@@ -78,11 +101,13 @@
               <% }) %>
             </select>
           </div>
+
           <div>
             <label class="block text-gray-600 font-medium mb-1">Description <span class="text-red-500">*</span></label>
             <textarea name="description" rows="3" required
               class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"><%= old && old.description ? old.description : '' %></textarea>
           </div>
+
           <div>
             <label class="block text-gray-600 font-medium mb-1">Offer (%)</label>
             <input type="number" min="0" max="100" name="offer"
@@ -93,6 +118,7 @@
           <!-- Image Upload Section -->
           <div>
             <label class="block text-gray-600 font-medium mb-1">Upload Images <span class="text-red-500">*</span></label>
+            <p class="text-sm text-gray-500 mb-3">Upload at least 3 high-quality images. Images will be automatically cropped to square format.</p>
             
             <!-- Hidden file input for raw files -->
             <input type="file" id="file-input" accept="image/*" style="display: none;" multiple>
@@ -102,12 +128,17 @@
               <i class="fas fa-plus mr-2"></i> Select Images
             </button>
             
+            <!-- Image counter -->
+            <div class="mb-4">
+              <span class="text-sm text-gray-600">Selected images: <span id="image-count">0</span> / Minimum required: 3</span>
+            </div>
+
             <!-- Cropper Modal -->
             <div id="cropper-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden">
-              <div class="bg-white p-4 rounded-lg max-w-4xl w-full">
+              <div class="bg-white p-4 rounded-lg max-w-4xl w-full mx-4">
                 <div class="flex justify-between items-center mb-4">
                   <h3 class="text-lg font-semibold">Crop Image</h3>
-                  <button onclick="closeCropper()" class="text-gray-500 hover:text-gray-700">&times;</button>
+                  <button type="button" onclick="closeCropper()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <div class="flex flex-col md:flex-row gap-4">
                   <div class="flex-1">
@@ -116,7 +147,7 @@
                   <div class="flex-1">
                     <div class="mb-4">
                       <h4 class="font-medium mb-2">Preview</h4>
-                      <div class="w-32 h-32 overflow-hidden border border-gray-300">
+                      <div class="w-32 h-32 overflow-hidden border border-gray-300 mx-auto">
                         <img id="cropper-preview" class="w-full h-full object-cover">
                       </div>
                     </div>
@@ -192,7 +223,7 @@
         cropper = new Cropper(image, {
           aspectRatio: 1,
           viewMode: 1,
-          autoCropArea: 1,
+          autoCropArea: 0.8,
           responsive: true,
           preview: '#cropper-preview'
         });
@@ -206,7 +237,10 @@
       document.getElementById('cropper-modal').classList.add('hidden');
       if (cropper) {
         cropper.destroy();
+        cropper = null;
       }
+      // Reset file input
+      document.getElementById('file-input').value = '';
     }
 
     function saveCroppedImage() {
@@ -219,38 +253,39 @@
       canvas.toBlob(blob => {
         croppedBlobs.push(blob);
         updateHiddenInput();
+        updateImageCount();
         
         // Add to preview
         const previewUrl = URL.createObjectURL(blob);
-        document.getElementById('image-previews').innerHTML += `
+        const previewHtml = `
           <div class="relative">
-            <img src="${previewUrl}" class="w-full h-32 object-cover rounded">
-            <button onclick="removeImage(this)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+            <img src="${previewUrl}" class="w-full h-32 object-cover rounded border">
+            <button type="button" onclick="removeImage(this)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
               &times;
             </button>
+            <div class="absolute bottom-1 left-1 bg-blue-500 text-white rounded px-2 py-1 text-xs">
+              ${croppedBlobs.length}
+            </div>
           </div>
         `;
+        document.getElementById('image-previews').insertAdjacentHTML('beforeend', previewHtml);
         
         closeCropper();
       }, 'image/jpeg', 0.8);
     }
 
-    // function updateHiddenInput() {
-    //   const dataTransfer = new DataTransfer();
-    //   croppedBlobs.forEach((blob, i) => {
-    //     dataTransfer.items.add(new File([blob], `product-image-${i}.jpg`) ,{ type: 'image/jpeg' });
-    //   });
-    //   document.getElementById('final-images').files = dataTransfer.files;
-    // }
-
     function updateHiddenInput() {
-  const dataTransfer = new DataTransfer();
-  croppedBlobs.forEach((blob, i) => {
-    const file = new File([blob], `product-image-${i}.jpg`, { type: 'image/jpeg' });
-    dataTransfer.items.add(file);
-  });
-  document.getElementById('final-images').files = dataTransfer.files;
-}
+      const dataTransfer = new DataTransfer();
+      croppedBlobs.forEach((blob, i) => {
+        const file = new File([blob], `product-image-${i}.jpg`, { type: 'image/jpeg' });
+        dataTransfer.items.add(file);
+      });
+      document.getElementById('final-images').files = dataTransfer.files;
+    }
+
+    function updateImageCount() {
+      document.getElementById('image-count').textContent = croppedBlobs.length;
+    }
 
     function removeImage(button) {
       const container = button.parentElement;
@@ -258,6 +293,12 @@
       croppedBlobs.splice(index, 1);
       container.remove();
       updateHiddenInput();
+      updateImageCount();
+      
+      // Update numbering on remaining images
+      document.querySelectorAll('#image-previews .absolute.bottom-1').forEach((el, i) => {
+        el.textContent = i + 1;
+      });
     }
 
     // Variant Handling
@@ -278,6 +319,19 @@
     function removeVariantRow(btn) {
       btn.closest('.variant-row').remove();
     }
+
+    // Form validation before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const imageCount = croppedBlobs.length;
+      if (imageCount < 3) {
+        e.preventDefault();
+        alert('Please upload at least 3 images before submitting.');
+        return false;
+      }
+    });
+
+    // Initialize image count
+    updateImageCount();
   </script>
 </body>
 </html>

@@ -1,25 +1,20 @@
+// middlewares/upload.js
 const multer = require('multer');
-const fs = require('fs')
-const path = require('path');
-// Consistent Multer configuration
-const productImageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../public/uploads/products');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, 'product-' + uniqueSuffix + ext);
+
+// ✅ Use memory storage so files are kept in RAM buffers
+const uploadProductImages = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const isValid = allowedTypes.test(file.mimetype.toLowerCase());
+    if (isValid) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, or WEBP images are allowed'));
+    }
   }
 });
-
-const uploadProductImages = multer({ 
-  storage: productImageStorage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
-});
-
 
 module.exports = {
   uploadProductImages

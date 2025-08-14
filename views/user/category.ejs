@@ -154,7 +154,7 @@
           <a href="/user/products/<%= product._id %>" class="group block" data-gsap="card">
             <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
               <div class="aspect-square overflow-hidden">
-                <img src="<%= product.images?.[0] || '/assets/placeholder.jpg' %>"
+                <img src="<%=getImageUrl(product.images[0]) %>"
                      alt="<%= product.productName %>"
                      class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
               </div>

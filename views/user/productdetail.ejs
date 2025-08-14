@@ -37,7 +37,7 @@
       <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
         <li><a href="/" class="text-white hover:text-gray-300">Home</a></li>
         <li><a href="/user/product/list" class="text-white hover:text-gray-300">Shop</a></li>
-        <li><a href="/categories" class="text-white hover:text-gray-300">Categories</a></li>
+        <li><a href="/user/categories" class="text-white hover:text-gray-300">Categories</a></li>
 
         <% if (user) { %>
           <li class="flex items-center gap-4">
@@ -65,7 +65,7 @@
       <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
         <a href="/" class="text-white hover:text-gray-300">Home</a>
         <a href="/user/product/list" class="text-white hover:text-gray-300">Shop</a>
-        <a href="/categories" class="text-white hover:text-gray-300">Categories</a>
+        <a href="/user/categories" class="text-white hover:text-gray-300">Categories</a>
         <% if (user) { %>
           <span class="text-white/80"><%= user.fullName || user.email %></span>
           <a href="/user/logout" class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">Logout</a>
@@ -100,7 +100,7 @@
         <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden relative group img-magnifier-container">
           <img
             id="mainProductImage"
-            src="<%= product.images && product.images[0] ? product.images[0] : '/assets/placeholder.jpg' %>"
+            src="<%=getImageUrl(product.images[0]) %>"
             alt="<%= product.productName %>"
             class="w-full h-full object-contain img-zoom"
           />
@@ -110,7 +110,7 @@
         <div class="flex gap-3 overflow-x-auto pb-2">
           <% (product.images || []).forEach((img, i) => { %>
             <img
-              src="<%= img %>"
+              src="<%= getImageUrl(img) %>"
               class="w-20 h-20 object-contain bg-gray-50 rounded border-2 border-transparent cursor-pointer hover:border-gray-300 transition flex-shrink-0"
               onclick="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"
               onmouseenter="document.getElementById('mainProductImage').src=this.src; setActiveThumb(this);"
@@ -296,7 +296,7 @@
             <a href="/user/products/<%= rp._id %>" class="group block">
               <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
                 <div class="aspect-square overflow-hidden">
-                  <img src="<%= rp.images && rp.images[0] ? rp.images[0] : '/assets/placeholder.jpg' %>"
+                  <img src="<%= getImageUrl(rp.images[0]) %>"
                        alt="<%= rp.productName %>"
                        class="w-full h-full object-contain group-hover:scale-105 transition duration-300" />
                 </div>
