@@ -83,24 +83,24 @@ exports.getAddProduct = async (req, res) => {
 
 
 
-async function saveImageFiles(files, destFolder) {
-  if (!fs.existsSync(destFolder)) {
-    fs.mkdirSync(destFolder, { recursive: true });
-  }
+// async function saveImageFiles(files, destFolder) {
+//   if (!fs.existsSync(destFolder)) {
+//     fs.mkdirSync(destFolder, { recursive: true });
+//   }
 
-  const imagePaths = [];
-  for (const file of files) {
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-    const filepath = path.join(destFolder, filename);
+//   const imagePaths = [];
+//   for (const file of files) {
+//     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+//     const filepath = path.join(destFolder, filename);
 
   
-    await fs.promises.writeFile(file.path,filepath);
-    imagePaths.push(`/uploads/products/${filename}`);
-  }
+//     await fs.promises.writeFile(file.path,filepath);
+//     imagePaths.push(`/uploads/products/${filename}`);
+//   }
 
 
-  return imagePaths;
-}
+//   return imagePaths;
+// }
 
 
 exports.postAddProduct = async (req, res) => {
@@ -167,8 +167,8 @@ exports.postAddProduct = async (req, res) => {
   try {
    const images = Array.isArray(req.files) ? req.files : [req.files];
    console.log(images,"----> images array")
-const imagePaths = await saveImageFiles(images, path.join(__dirname, '../../public/uploads/products'));
-console.log(imagePaths,"---->images paths")
+   const imagePaths = images.map(f =>` /uploads/products/${f.filename}`);
+    console.log(imagePaths,"---->images paths")
 
     const product = new Product({
       productName: productName.trim(),
@@ -303,6 +303,7 @@ exports.postEditProduct = async (req, res) => {
         if (!imgUrl) return;
         const filename = imgUrl.split('/').pop();
         const filepath = path.join(__dirname, '../../public/uploads/products', filename);
+        console.log(filepath);
         if (fs.existsSync(filepath)) {
           await unlinkAsync(filepath);
         }

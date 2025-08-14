@@ -235,13 +235,22 @@
       }, 'image/jpeg', 0.8);
     }
 
+    // function updateHiddenInput() {
+    //   const dataTransfer = new DataTransfer();
+    //   croppedBlobs.forEach((blob, i) => {
+    //     dataTransfer.items.add(new File([blob], `product-image-${i}.jpg`) ,{ type: 'image/jpeg' });
+    //   });
+    //   document.getElementById('final-images').files = dataTransfer.files;
+    // }
+
     function updateHiddenInput() {
-      const dataTransfer = new DataTransfer();
-      croppedBlobs.forEach((blob, i) => {
-        dataTransfer.items.add(new File([blob], `product-image-${i}.jpg`));
-      });
-      document.getElementById('final-images').files = dataTransfer.files;
-    }
+  const dataTransfer = new DataTransfer();
+  croppedBlobs.forEach((blob, i) => {
+    const file = new File([blob], `product-image-${i}.jpg`, { type: 'image/jpeg' });
+    dataTransfer.items.add(file);
+  });
+  document.getElementById('final-images').files = dataTransfer.files;
+}
 
     function removeImage(button) {
       const container = button.parentElement;
