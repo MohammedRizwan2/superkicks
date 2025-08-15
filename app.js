@@ -7,6 +7,11 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const cloudinary = require('./config/cloudinary');
+const { getImageUrl } = require('./helper/imageHandler');;
+
+
+
 
 dotenv.config();
 
@@ -18,6 +23,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.locals.getImageUrl = getImageUrl;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -44,7 +50,7 @@ app.use(
   })
 );
 
-// Passport initialization
+// Passport 
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -55,18 +61,19 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost/superkicks', {
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// passport config();
+// passport
 try {
   require('./config/passport');
 } catch (err) {
   console.error('Error loading passport config:', err);
 }
 
-// app.use((req,res,next)=>{
-//   console.log(req.method);
-//   console.log(req.url);
-//   next();
-// })
+app.use((req,res,next)=>{
+  console.log("---")
+  console.log(req.method);
+  console.log(req.url);
+  next();
+})
 
 // Routes
 app.use('/user', userRoutes);

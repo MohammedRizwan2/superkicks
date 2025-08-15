@@ -3,16 +3,17 @@ const router = express.Router();
 const passport = require('passport');
 const User = require('../models/userSchema'); // Capitalized model
 const userController = require('../controllers/user/userController');
-const productController = require('../controllers/user/productController'); // Fixed spelling
+const productController = require('../controllers/user/productController'); 
+const categoryController  = require('../controllers/user/categoryController')
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
   try {
     if (req.session && req.session.user) {
-      // User is authenticated, continue
+      
       return next();
     } else {
-      // Not authenticated, redirect to login
+      
       return res.redirect('/user/login');
     }
   } catch (err) {
@@ -24,11 +25,12 @@ const isAuthenticated = (req, res, next) => {
 // Middleware to check if user is NOT authenticated
 const isNotAuthenticated = (req, res, next) => {
   try {
+   
     if (!req.session.user) {
-      // Not logged in, continue
+
       return next();
     }
-    // Logged in users should not access these routes
+
     res.redirect('/');
   } catch (err) {
     console.error('Error in isNotAuthenticated middleware:', err);
@@ -72,11 +74,11 @@ router.post('/resend-otp', isNotAuthenticated, userController.resendOtp);
 
 // Google OAuth routes (SSO)
 router.get(
-  '/auth/google',
+  '/auth/google',isNotAuthenticated,
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 router.get(
-  '/auth/google/callback',
+  '/auth/google/callback',isNotAuthenticated,
   passport.authenticate('google', { failureRedirect: '/user/login' }),
   userController.googleCallback
 );
@@ -87,10 +89,14 @@ router.post('/forgot-password', isNotAuthenticated, userController.postForgotPas
 router.get('/reset-password/:token', isNotAuthenticated, userController.getResetPassword);
 router.post('/reset-password/:token', isNotAuthenticated, userController.postResetPassword);
 
-// Protected product routes (requires authenticated and not blocked)
+// Protected product routes 
 router.get('/product/list', isAuthenticated, checkUserBlocked, productController.getShop);
 router.get('/products/:id', isAuthenticated, checkUserBlocked, productController.getProductDetails);
+router.get('/products/variants/:variantId',isAuthenticated,checkUserBlocked, productController.getVariantDetails);
 
+//category
+router.get('/categories/:id',isAuthenticated,checkUserBlocked,categoryController.getCategoryPage);
+router.get('/categories',isAuthenticated,checkUserBlocked,categoryController.getCategoriesPage)
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);
 

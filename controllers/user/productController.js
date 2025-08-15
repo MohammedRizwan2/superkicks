@@ -1,206 +1,102 @@
 const Product = require('../../models/product');
 const Category = require('../../models/category');
 const Review = require('../../models/reviews');
-const mongoose = require('mongoose')
-// exports.getShop = async (req, res) => {
-//   try {
-//     // --- 1. Parse query params ---
-//     const q = req.query.q ? req.query.q.trim() : '';
-//     const category = req.query.category || '';
-//     const priceMin = req.query.priceMin !== undefined && req.query.priceMin !== '' ? Number(req.query.priceMin) : undefined;
-//     const priceMax = req.query.priceMax !== undefined && req.query.priceMax !== '' ? Number(req.query.priceMax) : undefined;
-//     const sort = req.query.sort || '';
-//     const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
-//     const limit = 12; // Products per page
-
-//     // --- 2. Build Mongo filter ---
-//     const filter = {
-//       isListed: true, // Hide blocked/unlisted products
-//     };
-
-//     // Search (name/brand/case-insensitive)
-//     if (q) {
-//       filter.$or = [
-//         { productName: { $regex: q, $options: 'i' } },
-//         { brand: { $regex: q, $options: 'i' } }
-//       ];
-//     }
-
-//     // Category filter
-//     if (category) {
-//       filter.categoryId = category;
-//     }
-
-//     // We'll need price range filter based on lowest variant price:
-//     // To keep it efficient, filter products by variant price only after fetching, or precompute in aggregation if needed.
-//     // For moderate product counts, post-filtering is fine.
-
-//     // --- 3. Find all listed categories for filter dropdown ---
-//     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
-
-//     // --- 4. Build sort option ---
-//     let sortCondition = {};
-//     if (sort === 'priceAsc') {
-//       sortCondition = { 'variants.regularPrice': 1 };
-//     } else if (sort === 'priceDesc') {
-//       sortCondition = { 'variants.regularPrice': -1 };
-//     } else if (sort === 'nameAsc') {
-//       sortCondition = { productName: 1 };
-//     } else if (sort === 'nameDesc') {
-//       sortCondition = { productName: -1 };
-//     } else if (sort === 'newest') {
-//       sortCondition = { createdAt: -1 };
-//     } else {
-//       sortCondition = { createdAt: -1 }; // default: newest first
-//     }
-
-//     // --- 5. Fetch Products (with population) & filter variants ---
-//     let productQuery = Product.find(filter)
-//       .populate('categoryId', 'name')
-//       .populate('variants')
-//       .sort(sortCondition);
-
-//     // Pagination
-//     productQuery = productQuery.skip((page - 1) * limit).limit(limit);
-
-//     let products = await productQuery.exec();
-
-//     // --- 6. Further filter by price range (if set) on variant prices ---
-//     if (priceMin !== undefined || priceMax !== undefined) {
-//       products = products.filter(product => {
-//         if (!product.variants || product.variants.length === 0) return false;
-//         // Find lowest variant price per product
-//         const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
-//         if (prices.length === 0) return false;
-//         const lowest = Math.min(...prices);
-//         if (priceMin !== undefined && lowest < priceMin) return false;
-//         if (priceMax !== undefined && lowest > priceMax) return false;
-//         return true;
-//       });
-//     }
-
-//     // --- 7. Count total matching documents for pagination ---
-//     // Best accuracy: repeat the filter steps without pagination
-//     const fullProductQuery = Product.find(filter).populate('variants');
-//     let allMatchingProducts = await fullProductQuery.exec();
-//     if (priceMin !== undefined || priceMax !== undefined) {
-//       allMatchingProducts = allMatchingProducts.filter(product => {
-//         if (!product.variants || product.variants.length === 0) return false;
-//         const prices = product.variants.map(v => v.price).filter(p => typeof p === 'number');
-//         if (prices.length === 0) return false;
-//         const lowest = Math.min(...prices);
-//         if (priceMin !== undefined && lowest < priceMin) return false;
-//         if (priceMax !== undefined && lowest > priceMax) return false;
-//         return true;
-//       });
-//     }
-//     const totalProducts = allMatchingProducts.length;
-//     const totalPages = Math.ceil(totalProducts / limit);
-
-//     // --- 8. Render the page ---
-//     res.render('user/productlist', {
-//       products,
-//       categories,
-//       user: req.session.user || null,
-//       q,
-//       category,
-//       priceMin,
-//       priceMax,
-//       sort,
-//       currentPage: page,
-//       totalPages
-//     });
-//   } catch (err) {
-//     console.error('Error fetching products:', err);
-//     res.status(500).render('error/500', { title: 'Server Error' });
-//   }
-// };
+const Variant = require('../../models/variant');
+const mongoose = require('mongoose');
+const category = require('../../models/category');
 
 
 
 exports.getShop = async (req, res) => {
   try {
-    // --- 1. Parse query params ---
     const q = req.query.q ? req.query.q.trim() : '';
     const category = req.query.category || '';
     const priceMin = req.query.priceMin !== undefined && req.query.priceMin !== '' ? Number(req.query.priceMin) : undefined;
     const priceMax = req.query.priceMax !== undefined && req.query.priceMax !== '' ? Number(req.query.priceMax) : undefined;
     const sort = req.query.sort || '';
     const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
-    const limit = 12;
+    const limit = 8;
     const skip = (page - 1) * limit;
 
-    // --- 2. Build product filters ---
-    const matchStage = { isListed: true };
+    // Build match stage
+    const matchStage = { isListed: true ,};
     if (q) {
       matchStage.$or = [
         { productName: { $regex: q, $options: 'i' } },
         { brand: { $regex: q, $options: 'i' } }
       ];
     }
-    if (category) {
-      // convert to ObjectId if necessary
+    if (category && mongoose.Types.ObjectId.isValid(category)) {
       matchStage.categoryId = new mongoose.Types.ObjectId(category);
     }
 
-    // --- 3. Create aggregation pipeline ---
+    // Main aggregation pipeline
     const pipeline = [
       { $match: matchStage },
 
-      // Lookup variants collection docs
+            {
+        $lookup: {
+          from: 'categories',
+          localField: 'categoryId',
+          foreignField: '_id',
+          as: 'categoryInfo'
+        }
+      },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      {$match:{'categoryInfo.isListed':true}},
       {
         $lookup: {
-          from: 'variants', // collection name (usually plural and lowercase)
+          from: 'variants',
           localField: 'variants',
           foreignField: '_id',
           as: 'variantDocs'
         }
       },
 
-      // Add a field with the lowest variant price (regularPrice)
       {
         $addFields: {
-          lowestPrice: { $min: '$variantDocs.regularPrice' }
+          // Get the best offer (product or category)
+          bestOffer: {
+            $max: [
+              { $ifNull: ["$offer", 0] },
+              { $ifNull: ["$categoryInfo.offer", 0] }
+            ]
+          },
+          // Get lowest regular price
+          lowestPrice: { $min: "$variantDocs.regularPrice" },
+          // Get lowest sale price (already calculated in variant schema)
+          lowestSalePrice: { $min: "$variantDocs.salePrice" }
         }
       }
     ];
 
-    // --- 4. Filter by price range on lowestPrice ---
+
     if (priceMin !== undefined || priceMax !== undefined) {
       const priceFilter = {};
       if (priceMin !== undefined) priceFilter.$gte = priceMin;
       if (priceMax !== undefined) priceFilter.$lte = priceMax;
-      pipeline.push({ $match: { lowestPrice: priceFilter } });
+      if (Object.keys(priceFilter).length > 0) {
+        pipeline.push({ $match: { lowestSalePrice: priceFilter } });
+      }
     }
 
-    // --- 5. Apply sorting ---
+    // Sorting
     let sortCondition = {};
     switch (sort) {
-      case 'priceAsc':
-        sortCondition = { lowestPrice: 1 };
-        break;
-      case 'priceDesc':
-        sortCondition = { lowestPrice: -1 };
-        break;
-      case 'nameAsc':
-        sortCondition = { productName: 1 };
-        break;
-      case 'nameDesc':
-        sortCondition = { productName: -1 };
-        break;
-      case 'newest':
-        sortCondition = { createdAt: -1 };
-        break;
-      default:
-        sortCondition = { createdAt: -1 };
+      case 'priceAsc': sortCondition = { lowestPrice: 1 }; break;
+      case 'priceDesc': sortCondition = { lowestPrice: -1 }; break;
+      case 'nameAsc': sortCondition = { productName: 1 }; break;
+      case 'nameDesc': sortCondition = { productName: -1 }; break;
+      case 'newest': sortCondition = { createdAt: -1 }; break;
+      default: sortCondition = { createdAt: -1 };
     }
     pipeline.push({ $sort: sortCondition });
 
-    // --- 6. Pagination ---
+    // Pagination
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: limit });
 
-    // --- 7. Lookup category info (optional but recommended for dropdowns or display) ---
+    // Category lookup
     pipeline.push({
       $lookup: {
         from: 'categories',
@@ -209,17 +105,27 @@ exports.getShop = async (req, res) => {
         as: 'categoryInfo'
       }
     });
+    pipeline.push({ $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      {$match:{'categoryInfo.isListed':true}}
+    );
 
-    // To unwind categoryInfo array (usually with single item)
-    pipeline.push({ $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } });
-
-    // --- 8. Execute aggregation ---
+    // Execute query
     const products = await Product.aggregate(pipeline).exec();
 
-    // --- 9. Get total count for pagination ---
-    // Rebuild pipeline without pagination, just counting
+    // Count total products for pagination
     const countPipeline = [
       { $match: matchStage },
+      {
+        $lookup:{
+          from:'categories',
+          localField:'categoryId',
+          foreignField:'_id',
+          as:'categoryInfo'
+
+        }
+      },
+      {$unwind:{path:'$categoryInfo',preserveNullAndEmptyArrays:true}},
+      {$match:{'categoryInfo.isListed':true}},
       {
         $lookup: {
           from: 'variants',
@@ -234,103 +140,165 @@ exports.getShop = async (req, res) => {
         }
       }
     ];
-
     if (priceMin !== undefined || priceMax !== undefined) {
       const priceFilter = {};
       if (priceMin !== undefined) priceFilter.$gte = priceMin;
       if (priceMax !== undefined) priceFilter.$lte = priceMax;
-      countPipeline.push({ $match: { lowestPrice: priceFilter } });
+      if (Object.keys(priceFilter).length > 0) {
+        countPipeline.push({ $match: { lowestPrice: priceFilter } });
+      }
     }
-
     countPipeline.push({ $count: 'totalCount' });
-
     const countResult = await Product.aggregate(countPipeline).exec();
     const totalProducts = countResult.length > 0 ? countResult[0].totalCount : 0;
     const totalPages = Math.ceil(totalProducts / limit);
 
-    // --- 10. Fetch all categories for filter dropdown ---
+    // Get categories for filter dropdown
     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+
+    // Build pagination URLs
+    const baseUrl = req.originalUrl.split('?')[0];
+    const currentQuery = { ...req.query };
     
-    console.log("products-->",products);
-    console.log("products-->",priceMax);
-    console.log("products-->",priceMin);
+    function buildPageUrl(pageNum) {
+      const params = new URLSearchParams(currentQuery);
+      params.set('page', pageNum);
+      return `${baseUrl}?${params.toString()}`;
+    }
 
+    const prevPageUrl = page > 1 ? buildPageUrl(page - 1) : null;
+    const nextPageUrl = page < totalPages ? buildPageUrl(page + 1) : null;
+    
 
-    // --- 11. Render the page ---
-    res.render('user/productlist', {
+    // Prepare response
+    const responseData = {
       products,
       categories,
-      user: req.session.user || null,
       q,
       category,
       priceMin,
       priceMax,
       sort,
       currentPage: page,
-      totalPages
-    });
+      totalPages,
+      prevPageUrl,
+      nextPageUrl,
+  
+    };
+
+    // Return JSON for Axios or render EJS
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+      res.json(responseData);
+    } else {
+      res.render('user/productlist', { 
+        ...responseData,
+        user: req.session.user || null 
+      });
+    }
+
   } catch (err) {
     console.error('Error fetching products:', err);
-    res.status(500).render('error/500', { title: 'Server Error' });
+    if (req.xhr) {
+      res.status(500).json({ error: 'Server error' });
+    } else {
+      res.status(500).render('error/500', { title: 'Server Error' });
+    }
   }
 };
-
-
-
-
-
 
 
 exports.getProductDetails = async (req, res) => {
   try {
     const productId = req.params.id;
 
-    // 1. Fetch product + related data
     const product = await Product.findById(productId)
-      .populate('categoryId', 'name')           // For breadcrumbs
-      .populate('variants');                    // For sizes/prices/stock
-
-    // 2. Blocked/unlisted/unavailable: redirect to shop
-    if (!product || !product.isListed) {
-      return res.redirect('/user/poduct/list');
+      .populate({path:'categoryId',select:'name isListed'})
+      .populate('variants');
+    console.log(product)
+    if (!product || !product.categoryId||!product.isListed||!product.categoryId.isListed) {
+      return res.redirect('/user/product/list');
     }
+    
 
-    // 3. Fetch reviews (if model exists)
-    // Assuming "Review" has { productId, user, text, rating }
+    // Get reviews with user info
     const reviews = await Review.find({ productId })
       .populate('user', 'fullName email')
       .sort({ createdAt: -1 });
 
-    // 4. Highlights/specs (array of strings as product.highlights or derive/specify in model)
-    // const highlights = product.highlights || [];
-
-    // 5. Related products (same category, listed, not the same product)
+    // Get related products (same category)
     const relatedProducts = await Product.find({
-      categoryId: product.categoryId && product.categoryId._id,
+      categoryId: product.categoryId?._id,
       isListed: true,
       _id: { $ne: product._id }
     })
-    .limit(4)
-    .populate('variants');
+      .limit(4)
+      .populate('variants');
 
-    // 6. Determine stock, price, etc.
-    // All logic handled in EJS as well
-
-    // 7. Optionally handle error message for out of stock or unavailable, for add-to-cart or reload
-    // You can set some errorMessage if passed via req.flash, query, etc.
-    const errorMessage = req.query.error || null;
-
+   
+    
     res.render('user/productdetail', {
       product,
+      stock:product.variants[0].stock,
       reviews,
       relatedProducts,
       user: req.session.user || null,
-      categories: [product.categoryId], // for breadcrumb, extend if needed
-      errorMessage
+      categories: [product.categoryId],
+      errorMessage: req.query.error || null,
+      
     });
 
   } catch (error) {
     console.error('Product details error:', error);
-    res.redirect('/user/poduct/list');
+    res.redirect('/user/product/list');
+  }
+};
+
+exports.getVariantDetails = async (req, res) => {
+  try {
+    const variantId = req.params.variantId;
+    console.log("Fetching variant details for:", variantId);
+
+    const variant = await Variant.findById(variantId)
+      .populate({
+        path: 'productId',
+        select: 'offer coupon categoryId',
+        populate: {
+          path: 'categoryId',
+          select: 'offer'
+        }
+      })
+      .lean();
+
+    if (!variant) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Variant not found' 
+      });
+    }
+
+    // Calculate best offer (product or category)
+    const productOffer = variant.productId?.offer || 0;
+    const categoryOffer = variant.productId?.categoryId?.offer || 0;
+    const bestOffer = Math.max(productOffer, categoryOffer);
+
+    
+
+    res.json({
+      success: true,
+      price: variant.salePrice,
+      regularPrice: variant.regularPrice,
+      discountPercentage: bestOffer,
+      stock: variant.stock,
+      size: variant.size,
+      coupon: variant.productId?.coupon || null,
+      offerSource: bestOffer === productOffer ? 'product' : 'category'
+    });
+
+  } catch (error) {
+    console.error('Error fetching variant:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
   }
 };

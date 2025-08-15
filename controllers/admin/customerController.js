@@ -1,13 +1,13 @@
 const User = require('../../models/userSchema');
 
-// routes/admin.js or your relevant file
+
 
 
 exports.getUsers = async (req, res) => {
   try {
     const query = req.query.q ? req.query.q.trim() : '';
-    const page = parseInt(req.query.page) || 1; // current page number, default 1
-    const limit = 10; // number of customers per page
+    const page = parseInt(req.query.page) || 1; 
+    const limit = 10; 
 
     const filter = { role: "user" };
 
@@ -18,15 +18,15 @@ exports.getUsers = async (req, res) => {
       ];
     }
 
-    // Count total documents matching the filter
+    
     const totalCustomers = await User.countDocuments(filter);
 
-    // Calculate total pages
+    
     const totalPages = Math.ceil(totalCustomers / limit);
 
-    // Fetch paginated results sorted by creation date descending (latest first)
+    
     const customers = await User.find(filter)
-      .sort({ createdAt: -1 }) // descending order by createdAt field; adjust if your timestamp field is different
+      .sort({ createdAt: -1 }) 
       .skip((page - 1) * limit)
       .limit(limit);
 

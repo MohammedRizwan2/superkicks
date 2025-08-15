@@ -4,6 +4,11 @@ const Category = require('../../models/category');
 
 exports.getCategories = async (req, res) => {
   try {
+    const justedited = req.session.categoryEditted?req.session.categoryEditted:false
+    delete req.session.categoryEditted;
+    const justAdded= req.session.categoryAdded?req.session.categoryAdded:false
+    delete req.session.categoryAdded;
+    console.log(justAdded)
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
@@ -13,13 +18,13 @@ exports.getCategories = async (req, res) => {
       filter.name = { $regex: query, $options: 'i' };
     }
 
-    // Count total documents for pagination
+    
     const totalCategories = await Category.countDocuments(filter);
     const totalPages = Math.ceil(totalCategories / limit);
     
-    // Fetch categories sorted by latest first. Use 'createdAt' or '_id' depending on your schema.
+    
     const categories = await Category.find(filter)
-      .sort({ createdAt: -1 }) // or { _id: -1 } if you don't use timestamps
+      .sort({ createdAt: -1 }) 
       .skip((page - 1) * limit)
       .limit(limit);
 
@@ -27,7 +32,10 @@ exports.getCategories = async (req, res) => {
       categories,
       query,
       currentPage: page,
-      totalPages
+      totalPages,
+      justedited,
+      justAdded
+
     });
   } catch (err) {
     console.error(err);
@@ -69,15 +77,19 @@ exports.postAddCategory = async (req, res) => {
 
   try {
    
-    const categoryExists = await Category.findOne({ name: name.trim() });
-    if (categoryExists) {
-      return res.render('admin/addcategory', {
-        errors: ['A category with this name already exists.'],
-        old: req.body
-      });
-    }
+const categoryExists = await Category.findOne({
+  name: { $regex: `^${name.trim()}$`, $options: 'i' } 
+});
 
-    // Prepare data
+if (categoryExists) {
+  return res.render('admin/addcategory', {
+    errors: ['A category with this name already exists.'],
+    old: req.body
+  });
+}
+
+
+    
     const categoryData = {
       name: name.trim(),
       description: description || '',
@@ -85,16 +97,28 @@ exports.postAddCategory = async (req, res) => {
       isListed: isListed === 'on' ? true : false
     };
 
-    // Create and save the new category
+    
     await Category.create(categoryData);
+   req.session.categoryAdded = true;
 
-    // Redirect or show SweetAlert in response if using flash messages
+
+req.session.save((err) => {
+    if (err) {
+        console.error('Session save error in category add:', err);
+
+    }
+    console.log("session saved")
+    
+});
+
+
     res.redirect('/admin/category');
   } catch (error) {
     console.error(error);
     res.render('admin/addcategory', {
       errors: ['Server error, please try again later.'],
-      old: req.body
+      old: req.body,
+    
     });
   }
 };
@@ -105,9 +129,11 @@ exports.postAddCategory = async (req, res) => {
 
 exports.getEditCategory = async (req, res) => {
   try {
+
+   
     const category = await Category.findById(req.params.id);
     if (!category) {
-      // Handle category not found (could also redirect with a flash error)
+      
       return res.status(404).render('error/404', { title: 'Category Not Found' });
     }
     res.render('admin/editcategory', { category, errors: [], old: {} });
@@ -118,7 +144,7 @@ exports.getEditCategory = async (req, res) => {
 };
 
 
-// You can put this validateCategoryInput in a separate file if you want.
+
 function validateCategoryInput({ name, offer }) {
   let errors = [];
   if (!name || !name.trim()) errors.push("Category name is required.");
@@ -134,11 +160,11 @@ exports.postEditCategory = async (req, res) => {
   const { name, description, offer, isListed } = req.body;
   const categoryId = req.params.id;
 
-  // Validate input
+  
   const errors = validateCategoryInput({ name, offer });
 
   if (errors.length > 0) {
-    // Reload edit page with errors and previous input
+        
     const category = await Category.findById(categoryId);
     return res.render('admin/editcategory', {
       category,
@@ -148,9 +174,9 @@ exports.postEditCategory = async (req, res) => {
   }
 
   try {
-    // Check for duplicate name (but allow if it is the current category)
+    
     const duplicate = await Category.findOne({ 
-      name: name.trim(), 
+      name: { $regex: `^${name.trim()}$`, $options: 'i' } ,
       _id: { $ne: categoryId } 
     });
     if (duplicate) {
@@ -162,7 +188,7 @@ exports.postEditCategory = async (req, res) => {
       });
     }
 
-    // Prepare update fields
+    
     const updatedFields = {
       name: name.trim(),
       description: description || '',
@@ -170,7 +196,15 @@ exports.postEditCategory = async (req, res) => {
       isListed: isListed === 'on'
     };
 
-    // Update the category
+    req.session.categoryEditted=true;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error in category edit:', err);
+       
+      }
+      console.log("savesaveed")
+    });
+
     await Category.findByIdAndUpdate(categoryId, updatedFields, { new: true });
 
     return res.redirect('/admin/category');

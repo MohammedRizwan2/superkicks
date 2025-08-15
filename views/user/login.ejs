@@ -8,7 +8,7 @@
   <!-- Add any additional meta or stylesheets here -->
 </head>
 
-<body class="min-h-screen bg-white flex items-center justify-center">
+<body class="min-h-screen bg-white flex items-center justify-center"data-just-registered= <%= justRegistered %>>
   <main class="w-full max-w-6xl mx-auto flex flex-col lg:flex-row shadow-lg rounded-xl overflow-hidden" role="main" aria-label="User login form">
     
     <!-- Left Side: Login Form -->
@@ -119,14 +119,30 @@
     </section>
 
     <!-- Right Side: Image -->
-    <aside class="w-full lg:w-1/2 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center p-10" aria-hidden="true">
-      <img
-        src="https://pngimg.com/uploads/running_shoes/running_shoes_PNG5823.png"
-        alt="Running shoe"
-        class="w-80 h-auto object-contain rounded-xl shadow-lg"
-      />
-    </aside>
+<aside class="w-full lg:w-1/2 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center p-10" aria-hidden="true">
+  <img
+    src="/img/shoe-removebg-preview.png"
+    alt="Superkicks shoe"
+    class="w-80 h-auto object-contain rounded-xl shadow-lg"
+  />
+</aside>
 
   </main>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>    const justRegistered = document.body.dataset.justRegistered;
+  console.log(justRegistered);
+
+    if (justRegistered==true) {
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: 'registered in successfully',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+  });
+}
+</script>
 </body>
 </html>
