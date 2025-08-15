@@ -15,7 +15,7 @@ exports.getShop = async (req, res) => {
     const priceMax = req.query.priceMax !== undefined && req.query.priceMax !== '' ? Number(req.query.priceMax) : undefined;
     const sort = req.query.sort || '';
     const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
-    const limit = 8;
+    const limit = 4;
     const skip = (page - 1) * limit;
 
     // Build match stage

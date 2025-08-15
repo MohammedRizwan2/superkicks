@@ -14,9 +14,8 @@ const transporter = nodemailer.createTransport({
 
 // Render login page
 exports.getLogin = (req, res) => {
-  console.log(req.session.justRegistered)
   const justRegistered=req.session.justRegistered?req.session.justRegistered:false;
-  console.log(justRegistered)
+  console.log(justRegistered,">>>>>")
   delete req.session.justRegistered;
   res.render('user/login', {
     message:null,
@@ -79,7 +78,6 @@ exports.postLogin = async (req, res) => {
     };
    
  req.session.justLoggedIn= true;
-    // Save session explicitly and redirect
     req.session.save((err) => {
       if (err) {
         console.error('Session save error in login:', err);
