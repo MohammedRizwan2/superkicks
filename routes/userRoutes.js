@@ -5,7 +5,9 @@ const User = require('../models/userSchema'); // Capitalized model
 const userController = require('../controllers/user/userController');
 const productController = require('../controllers/user/productController'); 
 const categoryController  = require('../controllers/user/categoryController')
-
+const profileController = require('../controllers/user/profileController')
+const addressController = require('../controllers/user/addressController');
+const { avatarUpload } = require('../config/multer');
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
   try {
@@ -97,7 +99,43 @@ router.get('/products/variants/:variantId',isAuthenticated,checkUserBlocked, pro
 //category
 router.get('/categories/:id',isAuthenticated,checkUserBlocked,categoryController.getCategoryPage);
 router.get('/categories',isAuthenticated,checkUserBlocked,categoryController.getCategoriesPage)
+
+
+
+
+
+//profile
+router.get('/profile',profileController.getProfile);
+
+router.get('/profile/edit',profileController.getProfileEdit);
+
+router.put('/api/profile',profileController.updateProfile);
+router.post('/api/avatar',avatarUpload,profileController.uploadAvatar,);
+
+
+
+
+
+//addresses
+router.get('/addresses',addressController.getAddresses)
+
+
+router.post('/api/addresses', addressController.addAddress);
+router.get('/api/addresses', addressController.getUserAddresses);
+router.get('/api/addresses/:id', addressController.getAddress);
+router.put('/api/addresses/:id', addressController.updateAddress);
+router.delete('/api/addresses/:id', addressController.deleteAddress);
+
+
+
+
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);
+
+
+
+
+
+
 
 module.exports = router;

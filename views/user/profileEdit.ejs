@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth antialiased">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Profile – Superkicks</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    /* Cropper Modal Styles */
+    .cropper-container {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+    
+    .cropper-wrap-box,
+    .cropper-canvas,
+    .cropper-drag-box {
+      max-height: 100% !important;
+    }
+    
+    #cropModal {
+      display: none; /* Ensure modal is hidden by default */
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 100;
+    }
+    
+    #cropModal.show {
+      display: flex; /* Show modal when class is added */
+    }
+    
+    #cropModal .modal-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      padding: 1rem;
+    }
+    
+    .cropper-view-box {
+      border-radius: 50%;
+      outline: inherit;
+    }
+    
+    .crop-container {
+      width: 100%;
+      height: 400px;
+      position: relative;
+      overflow: hidden;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    #cropImage {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    .img-magnifier-glass {
+      position: absolute;
+      border: 2px solid #000;
+      border-radius: 50%;
+      cursor: none;
+      width: 120px;
+      height: 120px;
+      opacity: 0.9;
+      background: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 30;
+    }
+    .img-zoom { transition: transform 0.25s; }
+    .thumb-active { border: 2px solid #000 !important; }
+
+    .form-input {
+      @apply w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-colors;
+    }
+    .field-error {
+      @apply text-xs text-red-600 hidden mt-1;
+    }
+    .field-error.show {
+      @apply block;
+    }
+    .avatar-upload {
+      position: relative;
+      display: inline-block;
+    }
+    .avatar-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      cursor: pointer;
+    }
+    .avatar-upload:hover .avatar-overlay {
+      opacity: 1;
+    }
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      transform: translateX(400px);
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .toast.show {
+      transform: translateX(0);
+    }
+    .toast.success {
+      background-color: #10b981;
+    }
+    .toast.error {
+      background-color: #ef4444;
+    }
+    .otp-input {
+      width: 50px;
+      height: 50px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .otp-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .otp-input.filled {
+      border-color: #10b981;
+      background-color: #f0fdf4;
+    }
+    .phone-input-container {
+      position: relative;
+    }
+    .phone-input-container::before {
+      content: "+1";
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #4b5563;
+      font-weight: 500;
+      pointer-events: none;
+    }
+    .phone-input {
+      padding-left: 44px;
+    }
+    .floating-label {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      color: #6b7280;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      background: white;
+      padding: 0 4px;
+      font-size: 12px;
+      transform-origin: left top;
+    }
+    .floating-label.focused {
+      transform: translateY(-22px) scale(0.85);
+      color: #3b82f6;
+    }
+    .phone-input:focus ~ .floating-label,
+    .phone-input:not(:placeholder-shown) ~ .floating-label {
+      transform: translateY(-22px) scale(0.85);
+      color: #3b82f6;
+    }
+    .input-with-icon {
+      position: relative;
+    }
+    .input-with-icon i {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+      .crop-container {
+        height: 280px;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 font-sans tracking-wide" data-just-logged-in="<%= typeof justLoggedIn !== 'undefined' ? justLoggedIn : false %>">
+
+<%- include('../partials/header') %>
+
+<main class="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+  <div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Sidebar -->
+    <aside class="w-full lg:w-64 shrink-0">
+      <div class="bg-white rounded-xl shadow p-6">
+        <!-- User card -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg p-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full overflow-hidden bg-white border-2 border-white shadow">
+              <img src="<%= avatarUrl || '/images/default-avatar.png' %>"%>" alt="Avatar" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <p class="font-semibold"><%= (user && (user.fullName || user.name)) ? (user.fullName || user.name) : 'User' %></p>
+              <p class="text-blue-200 text-xs"><i class="fas fa-crown mr-1 text-yellow-300"></i> Premium Member</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="space-y-2">
+          <a href="/user/profile" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium">
+            <i class="fas fa-user w-5"></i><span>Account Overview</span>
+          </a>
+          <a href="/user/orders" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-bag-shopping w-5"></i><span>My Orders</span>
+          </a>
+          <a href="/user/addresses" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-map-marker-alt w-5"></i><span>Manage Addresses</span>
+          </a>
+          <a href="/user/wishlist" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="far fa-heart w-5"></i><span>Wishlist</span>
+          </a>
+          <a href="/user/cart" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-shopping-cart w-5"></i><span>Cart</span>
+          </a>
+          <a href="/user/wallet" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-wallet w-5"></i><span>Wallet</span>
+          </a>
+          <a href="/user/coupons" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-ticket w-5"></i><span>Coupons</span>
+          </a>
+          <a href="/user/logout" class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+            <i class="fas fa-right-from-bracket w-5"></i><span>Logout</span>
+          </a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <section class="flex-1 space-y-8">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Edit Profile</h1>
+          <p class="text-gray-600 mt-1">Update your personal information and account settings</p>
+        </div>
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-4 py-2 border border-blue-100">
+          <p class="text-sm text-gray-600">Member since: <span class="font-medium text-blue-600"><%= user ? new Date(user.createdAt).toLocaleDateString() : 'N/A' %></span></p>
+        </div>
+      </div>
+
+      <!-- Profile Information Card -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+              <i class="fas fa-user text-white text-xl"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Personal Information</h2>
+              <p class="text-gray-600">Update your profile details and avatar</p>
+            </div>
+          </div>
+        </div>
+
+        <form id="profileForm" class="p-6">
+          <div class="space-y-8">
+            <!-- Avatar Section -->
+            <div class="flex flex-col sm:flex-row items-center gap-6">
+              <div class="avatar-upload relative">
+                <div class="w-32 h-32 rounded-full overflow-hidden bg-gray-200 border-4 border-white shadow-lg">
+                  <img id="avatarPreview" src="<%= (user &&avatarUrl) ?avatarUrl : '/images/default-avatar.png' %>" 
+                       alt="Profile Avatar" class="w-full h-full object-cover">
+                </div>
+                <div class="avatar-overlay absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity duration-300"
+                     onclick="document.getElementById('avatarInput').click()">
+                  <i class="fas fa-camera text-white text-2xl"></i>
+                </div>
+                <input type="file" id="avatarInput" accept="image/*" class="hidden">
+              </div>
+              
+              <div class="text-center sm:text-left">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Profile Picture</h3>
+                <p class="text-gray-600 mb-4 max-w-md">Upload a photo to personalize your account. JPG, PNG or WEBP. Max 5MB.</p>
+                <div class="flex flex-wrap gap-3">
+                  <button type="button" id="uploadBtn" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-md">
+                    <i class="fas fa-upload mr-2"></i>Upload Photo
+                  </button>
+                  <button type="button" id="removeBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                    <i class="fas fa-trash mr-2"></i>Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cropper Modal -->
+            <div id="cropModal" class="fixed inset-0 z-[100] p-4">
+              <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+                <!-- Header -->
+                <div class="border-b px-6 py-4">
+                  <h3 class="text-xl font-bold text-gray-800">Crop Your Profile Picture</h3>
+                </div>
+                <!-- Cropper Body -->
+                <div class="modal-body flex-1">
+                  <div class="crop-container">
+                    <img id="cropImage" src="" alt="Crop Image">
+                  </div>
+                </div>
+                <!-- Footer Buttons -->
+                <div class="border-t px-6 py-4 flex justify-end gap-3 bg-gray-50">
+                  <button id="cancelCropBtn" class="px-5 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+                    Cancel
+                  </button>
+                  <button id="confirmCropBtn" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-md">
+                    Save Profile Picture
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Fields -->
+            <div class="card-grid">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                <div class="input-with-icon">
+                  <input type="text" id="fullName" name="fullName" required
+                         value="<%= (user && user.fullName) ? user.fullName : '' %>"
+                         class="form-input" placeholder="Enter your full name">
+                  <i class="fas fa-user"></i>
+                </div>
+                <div class="field-error" id="fullNameError"></div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                <div class="phone-input-container">
+                  <input type="tel" id="phone" name="phone"
+                         value="<%= (user && user.phone) ? user.phone : '' %>"
+                         class="form-input phone-input" placeholder="(123) 456-7890">
+                  <span class="floating-label">Phone Number</span>
+                </div>
+                <div class="field-error" id="phoneError"></div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
+                <div class="input-with-icon">
+                  <input type="date" id="dateOfBirth" name="dateOfBirth"
+                         value="<%= (user && user.dateOfBirth) ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '' %>"
+                         class="form-input">
+                  <i class="fas fa-calendar"></i>
+                </div>
+                <div class="field-error" id="dateOfBirthError"></div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
+              <button type="submit" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition font-semibold shadow-md">
+                <span id="saveProfileText">Save Changes</span>
+                <span id="saveProfileLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
+              </button>
+              
+              <button type="button" id="changeEmailBtn" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-semibold shadow-md">
+                <i class="fas fa-envelope mr-2"></i>Change Email
+              </button>
+              
+              <button type="button" id="changePasswordBtn" class="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition font-semibold shadow-md">
+                <i class="fas fa-lock mr-2"></i>Change Password
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Current Account Info -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Account Information</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Email Address</p>
+              <p class="text-gray-900 font-medium"><%= (user && user.email) ? user.email : 'Not set' %></p>
+            </div>
+            <i class="fas fa-envelope text-blue-500 text-xl"></i>
+          </div>
+          
+          <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Phone Number</p>
+              <p class="text-gray-900 font-medium"><%= (user && user.phone) ? user.phone : 'Not set' %></p>
+            </div>
+            <i class="fas fa-phone text-blue-500 text-xl"></i>
+          </div>
+          
+          <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Account Status</p>
+              <p class="text-green-600 font-semibold">Active</p>
+            </div>
+            <i class="fas fa-check-circle text-green-500 text-xl"></i>
+          </div>
+          
+          <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Last Updated</p>
+              <p class="text-gray-900 font-medium"><%= user ? new Date(user.updatedAt).toLocaleDateString() : 'N/A' %></p>
+            </div>
+            <i class="fas fa-clock text-blue-500 text-xl"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Change Email Modal -->
+<div id="emailModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <!-- Modal Header -->
+    <div class="p-6 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-envelope text-purple-600"></i>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-gray-900">Change Email</h3>
+            <p class="text-sm text-gray-600" id="emailModalSubtitle">Enter your new email address</p>
+          </div>
+        </div>
+        <button id="closeEmailModal" class="p-2 hover:bg-gray-100 rounded-lg transition">
+          <i class="fas fa-times text-gray-500"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Email Change Form -->
+    <div id="emailChangeStep" class="p-6">
+      <form id="emailChangeForm">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">New Email Address *</label>
+            <div class="input-with-icon">
+              <input type="email" id="newEmail" name="newEmail" required
+                     class="form-input" placeholder="Enter new email address">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="field-error" id="newEmailError"></div>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button type="button" id="cancelEmailBtn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium">
+            <span id="sendOtpText">Send OTP</span>
+            <span id="sendOtpLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Sending...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- OTP Verification Step -->
+    <div id="otpVerificationStep" class="p-6 hidden">
+      <form id="otpVerificationForm">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-shield-alt text-purple-600 text-2xl"></i>
+          </div>
+          <h4 class="text-lg font-semibold text-gray-900 mb-2">Verify Your Email</h4>
+          <p class="text-gray-600 text-sm">We've sent a verification code to</p>
+          <p class="text-purple-600 font-medium" id="otpEmailDisplay"></p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3">Enter 6-digit code</label>
+            <div class="flex gap-2 justify-center">
+              <input type="text" class="otp-input" maxlength="1" data-index="0">
+              <input type="text" class="otp-input" maxlength="1" data-index="1">
+              <input type="text" class="otp-input" maxlength="1" data-index="2">
+              <input type="text" class="otp-input" maxlength="1" data-index="3">
+              <input type="text" class="otp-input" maxlength="1" data-index="4">
+              <input type="text" class="otp-input" maxlength="1" data-index="5">
+            </div>
+            <div class="field-error text-center mt-2" id="otpError"></div>
+          </div>
+          
+          <div class="text-center">
+            <p class="text-sm text-gray-600">Didn't receive the code?</p>
+            <button type="button" id="resendOtpBtn" class="text-purple-600 hover:text-purple-700 font-medium text-sm">
+              Resend OTP (<span id="resendTimer">60</span>s)
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button type="button" id="backToEmailBtn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+            Back
+          </button>
+          <button type="submit" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium">
+            <span id="verifyOtpText">Verify & Update</span>
+            <span id="verifyOtpLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Verifying...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="passwordModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+    <!-- Modal Header -->
+    <div class="p-6 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-lock text-orange-600"></i>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-gray-900">Change Password</h3>
+            <p class="text-sm text-gray-600">Update your account password</p>
+          </div>
+        </div>
+        <button id="closePasswordModal" class="p-2 hover:bg-gray-100 rounded-lg transition">
+          <i class="fas fa-times text-gray-500"></i>
+        </button>
+      </div>
+    </div>
+    
+    <form id="passwordChangeForm" class="p-6">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Current Password *</label>
+          <div class="relative">
+            <input type="password" id="currentPassword" name="currentPassword" required
+                   class="form-input pr-12" placeholder="Enter current password">
+            <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" 
+                    onclick="togglePasswordVisibility('currentPassword')">
+              <i class="fas fa-eye" id="currentPasswordIcon"></i>
+            </button>
+          </div>
+          <div class="field-error" id="currentPasswordError"></div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">New Password *</label>
+          <div class="relative">
+            <input type="password" id="newPassword" name="newPassword" required
+                   class="form-input pr-12" placeholder="Enter new password">
+            <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" 
+                    onclick="togglePasswordVisibility('newPassword')">
+              <i class="fas fa-eye" id="newPasswordIcon"></i>
+            </button>
+          </div>
+          <div class="field-error" id="newPasswordError"></div>
+          <div class="mt-2 text-xs text-gray-600">
+            <p class="flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> Must be at least 8 characters</p>
+            <p class="flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> Include at least one number</p>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password *</label>
+          <div class="relative">
+            <input type="password" id="confirmPassword" name="confirmPassword" required
+                   class="form-input pr-12" placeholder="Confirm new password">
+            <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" 
+                    onclick="togglePasswordVisibility('confirmPassword')">
+              <i class="fas fa-eye" id="confirmPasswordIcon"></i>
+            </button>
+          </div>
+          <div class="field-error" id="confirmPasswordError"></div>
+        </div>
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button type="button" id="cancelPasswordBtn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+          Cancel
+        </button>
+        <button type="submit" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-lg hover:from-orange-600 hover:to-amber-600 transition font-medium">
+          <span id="changePasswordText">Change Password</span>
+          <span id="changePasswordLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Changing...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-white mt-16">
+  <div class="max-w-7xl mx-auto px-6 py-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-shipping-fast text-2xl text-blue-400"></i>
+      <div><p class="font-semibold">Express Shipping</p><p class="text-gray-400">Ships in 24 hours</p></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <i class="fas fa-location-dot text-2xl text-blue-400"></i>
+      <div><p class="font-semibold">Shipping Tracking</p><p class="text-gray-400">Track your orders</p></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <i class="fas fa-shield-halved text-2xl text-blue-400"></i>
+      <div><p class="font-semibold">Buy Safely</p><p class="text-gray-400">Secure checkout</p></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <i class="fab fa-cc-visa text-2xl text-blue-400"></i>
+      <i class="fab fa-cc-mastercard text-2xl text-red-400"></i>
+      <i class="fab fa-paypal text-2xl text-blue-600"></i>
+    </div>
+  </div>
+</footer>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<script>
+class ProfileEditor {
+  constructor() {
+    this.BASE_PATH = '/user/api';
+    this.resendTimer = null;
+    this.cropper = null;
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.setupOtpInputs();
+    this.setupPhoneInput();
+    this.initCropper();
+  }
+
+  bindEvents() {
+    // Profile form
+    document.getElementById('profileForm').addEventListener('submit', this.handleProfileUpdate.bind(this));
+    
+    // Avatar handlers
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      document.getElementById('avatarInput').click();
+    });
+    document.getElementById('removeBtn').addEventListener('click', this.removeAvatar.bind(this));
+    document.getElementById('avatarInput').addEventListener('change', this.handleAvatarSelect.bind(this));
+    
+    // Cropper buttons
+    document.getElementById('confirmCropBtn').addEventListener('click', this.handleAvatarCrop.bind(this));
+    document.getElementById('cancelCropBtn').addEventListener('click', this.cancelAvatarCrop.bind(this));
+    
+    // Email change
+    document.getElementById('changeEmailBtn').addEventListener('click', this.openEmailModal.bind(this));
+    document.getElementById('closeEmailModal').addEventListener('click', this.closeEmailModal.bind(this));
+    document.getElementById('cancelEmailBtn').addEventListener('click', this.closeEmailModal.bind(this));
+    document.getElementById('emailChangeForm').addEventListener('submit', this.handleEmailChangeRequest.bind(this));
+    document.getElementById('otpVerificationForm').addEventListener('submit', this.handleOtpVerification.bind(this));
+    document.getElementById('backToEmailBtn').addEventListener('click', this.backToEmailStep.bind(this));
+    document.getElementById('resendOtpBtn').addEventListener('click', this.resendOtp.bind(this));
+    
+    // Password change
+    document.getElementById('changePasswordBtn').addEventListener('click', this.openPasswordModal.bind(this));
+    document.getElementById('closePasswordModal').addEventListener('click', this.closePasswordModal.bind(this));
+    document.getElementById('cancelPasswordBtn').addEventListener('click', this.closePasswordModal.bind(this));
+    document.getElementById('passwordChangeForm').addEventListener('submit', this.handlePasswordChange.bind(this));
+    
+    // ESC key handler
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeEmailModal();
+        this.closePasswordModal();
+        this.cancelAvatarCrop();
+      }
+    });
+  }
+
+  initCropper() {
+    this.cropModal = document.getElementById('cropModal');
+    this.cropImage = document.getElementById('cropImage');
+    this.avatarInput = document.getElementById('avatarInput');
+    
+    // Ensure modal is hidden on initialization
+    if (this.cropModal) {
+      this.cropModal.classList.remove('show');
+      this.cropModal.style.display = 'none';
+      
+      // Close modal when clicking outside
+      this.cropModal.addEventListener('click', (e) => {
+        if (e.target === this.cropModal) {
+          this.cancelAvatarCrop();
+        }
+      });
+    }
+  }
+
+  handleAvatarSelect(e) {
+    const file = e.target.files[0];
+    if (!file) {
+      this.cancelAvatarCrop(); // Reset if no file is selected
+      return;
+    }
+    
+    if (!file.type.match('image.*')) {
+      this.showToast('error', 'Please select a valid image file');
+      this.avatarInput.value = ''; // Clear input
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('error', 'Image size must be less than 5MB');
+      this.avatarInput.value = ''; // Clear input
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (this.cropper) {
+        this.cropper.destroy();
+        this.cropper = null;
+      }
+      
+      this.cropImage.src = e.target.result;
+      this.cropModal.style.display = 'flex';
+      this.cropModal.classList.add('show');
+      
+      const container = this.cropImage.parentElement;
+      const maxWidth = container.clientWidth - 40;
+      const maxHeight = container.clientHeight - 40;
+      
+      this.cropper = new Cropper(this.cropImage, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 0.8,
+        guides: false,
+        minCanvasWidth: Math.min(maxWidth, 400),
+        minCanvasHeight: Math.min(maxHeight, 400),
+        ready: () => {
+          const containerRatio = container.clientWidth / container.clientHeight;
+          const imageRatio = this.cropper.getImageData().aspectRatio;
+          
+          if (containerRatio > imageRatio) {
+            this.cropper.zoomTo(container.clientHeight / this.cropper.getImageData().height);
+          } else {
+            this.cropper.zoomTo(container.clientWidth / this.cropper.getImageData().width);
+          }
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async handleAvatarCrop() {
+    if (!this.cropper) return;
+    
+    const canvas = this.cropper.getCroppedCanvas({
+      width: 500,
+      height: 500,
+      fillColor: '#fff'
+    });
+    
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      
+      try {
+        this.toggleLoading(true);
+        
+        const file = new File([blob], 'avatar.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        const response = await fetch(`${this.BASE_PATH}/avatar`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result?.error?.message || 'Failed to upload avatar');
+        }
+        
+        document.getElementById('avatarPreview').src = result.data.avatarUrl;
+        this.showToast('success', 'Profile picture updated successfully!');
+        
+        this.cancelAvatarCrop();
+      } catch (error) {
+        this.showToast('error', error.message);
+      } finally {
+        this.toggleLoading(false);
+        this.avatarInput.value = '';
+      }
+    }, 'image/jpeg', 0.95);
+  }
+
+  cancelAvatarCrop() {
+    if (this.cropModal) {
+      this.cropModal.classList.remove('show');
+      this.cropModal.style.display = 'none';
+    }
+    if (this.cropper) {
+      this.cropper.destroy();
+      this.cropper = null;
+    }
+    if (this.avatarInput) {
+      this.avatarInput.value = '';
+    }
+    this.cropImage.src = ''; // Clear the image source
+  }
+
+  async removeAvatar() {
+    if (!confirm('Are you sure you want to remove your profile photo?')) return;
+    
+    try {
+      this.toggleLoading(true);
+      
+      const response = await fetch(`${this.BASE_PATH}/avatar`, {
+        method: 'DELETE'
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result?.error?.message || 'Failed to remove avatar');
+      }
+      
+      document.getElementById('avatarPreview').src = '/images/default-avatar.png';
+      this.showToast('success', 'Profile picture removed successfully!');
+    } catch (error) {
+      this.showToast('error', error.message);
+    } finally {
+      this.toggleLoading(false);
+    }
+  }
+
+  setupPhoneInput() {
+    const phoneInput = document.getElementById('phone');
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('input', function(e) {
+      const input = e.target.value.replace(/\D/g, '').substring(0, 10);
+      const areaCode = input.substring(0, 3);
+      const middle = input.substring(3, 6);
+      const last = input.substring(6, 10);
+      
+      if (input.length > 6) {
+        e.target.value = `(${areaCode}) ${middle}-${last}`;
+      } else if (input.length > 3) {
+        e.target.value = `(${areaCode}) ${middle}`;
+      } else if (input.length > 0) {
+        e.target.value = `(${areaCode}`;
+      }
+    });
+
+    phoneInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' && 
+          (this.value.endsWith('-') || this.value.endsWith(') ') || this.value.endsWith('('))) {
+        e.preventDefault();
+        this.value = this.value.slice(0, -1);
+      }
+    });
+  }
+
+  async handleProfileUpdate(e) {
+    e.preventDefault();
+    this.clearErrors();
+    this.setLoading('saveProfile', true);
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    if (data.phone) {
+      data.phone = data.phone.replace(/\D/g, '');
+    }
+
+    try {
+      const response = await fetch(`${this.BASE_PATH}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result?.error?.errors) {
+          this.showFieldErrors(result.error.errors);
+        }
+        throw new Error(result?.error?.message || 'Failed to update profile');
+      }
+
+      this.showToast('success', 'Profile updated successfully!');
+      setTimeout(() => this.updateSidebarInfo(data), 500);
+      this.updateAccountInfo(data);
+
+    } catch (error) {
+      this.showToast('error', error.message);
+    } finally {
+      this.setLoading('saveProfile', false);
+    }
+  }
+
+  openEmailModal() {
+    document.getElementById('emailModal').classList.remove('hidden');
+    document.getElementById('emailModal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    this.showEmailStep();
+  }
+
+  closeEmailModal() {
+    document.getElementById('emailModal').classList.add('hidden');
+    document.getElementById('emailModal').classList.remove('flex');
+    document.body.style.overflow = '';
+    this.resetEmailModal();
+  }
+
+  showEmailStep() {
+    document.getElementById('emailChangeStep').classList.remove('hidden');
+    document.getElementById('otpVerificationStep').classList.add('hidden');
+    document.getElementById('emailModalSubtitle').textContent = 'Enter your new email address';
+  }
+
+  showOtpStep() {
+    document.getElementById('emailChangeStep').classList.add('hidden');
+    document.getElementById('otpVerificationStep').classList.remove('hidden');
+    document.getElementById('emailModalSubtitle').textContent = 'Verify your new email address';
+  }
+
+  backToEmailStep() {
+    this.showEmailStep();
+    this.clearOtpInputs();
+  }
+
+  resetEmailModal() {
+    document.getElementById('emailChangeForm').reset();
+    document.getElementById('otpVerificationForm').reset();
+    this.clearOtpInputs();
+    this.clearErrors();
+    this.showEmailStep();
+    if (this.resendTimer) {
+      clearInterval(this.resendTimer);
+      this.resendTimer = null;
+    }
+  }
+
+  async handleEmailChangeRequest(e) {
+    e.preventDefault();
+    this.clearErrors();
+    this.setLoading('sendOtp', true);
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const response = await fetch(`${this.BASE_PATH}/email/request-change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result?.error?.errors) {
+          this.showFieldErrors(result.error.errors);
+        }
+        throw new Error(result?.error?.message || 'Failed to send OTP');
+      }
+
+      document.getElementById('otpEmailDisplay').textContent = data.newEmail;
+      this.showOtpStep();
+      this.startResendTimer();
+      this.showToast('success', 'OTP sent to your new email address!');
+
+    } catch (error) {
+      this.showToast('error', error.message);
+    } finally {
+      this.setLoading('sendOtp', false);
+    }
+  }
+
+  async handleOtpVerification(e) {
+    e.preventDefault();
+    this.clearErrors();
+    
+    const otp = this.getOtpValue();
+    if (!otp || otp.length !== 6) {
+      this.showFieldError('otpError', 'Please enter the complete 6-digit code');
+      return;
+    }
+
+    this.setLoading('verifyOtp', true);
+
+    const newEmail = document.getElementById('newEmail').value;
+
+    try {
+      const response = await fetch(`${this.BASE_PATH}/email/verify-change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEmail, otp })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result?.error?.field === 'otp') {
+          this.showFieldError('otpError', result.error.message);
+        } else {
+          throw new Error(result?.error?.message || 'Failed to verify OTP');
+        }
+        return;
+      }
+
+      this.showToast('success', 'Email updated successfully!');
+      this.closeEmailModal();
+      setTimeout(() => location.reload(), 1000);
+
+    } catch (error) {
+      this.showToast('error', error.message);
+    } finally {
+      this.setLoading('verifyOtp', false);
+    }
+  }
+
+  async resendOtp() {
+    const newEmail = document.getElementById('newEmail').value;
+    
+    try {
+      const response = await fetch(`${this.BASE_PATH}/email/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEmail })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result?.error?.message || 'Failed to resend OTP');
+      }
+
+      this.clearOtpInputs();
+      this.startResendTimer();
+      this.showToast('success', 'New OTP sent to your email!');
+
+    } catch (error) {
+      this.showToast('error', error.message);
+    }
+  }
+
+  openPasswordModal() {
+    document.getElementById('passwordModal').classList.remove('hidden');
+    document.getElementById('passwordModal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('currentPassword').focus(), 100);
+  }
+
+  closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+    document.getElementById('passwordModal').classList.remove('flex');
+    document.body.style.overflow = '';
+    document.getElementById('passwordChangeForm').reset();
+    this.clearErrors();
+  }
+
+  async handlePasswordChange(e) {
+    e.preventDefault();
+    this.clearErrors();
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    if (data.newPassword !== data.confirmPassword) {
+      this.showFieldError('confirmPasswordError', 'Passwords do not match');
+      return;
+    }
+
+    if (data.newPassword.length < 8) {
+      this.showFieldError('newPasswordError', 'Password must be at least 8 characters');
+      return;
+    }
+
+    if (!/\d/.test(data.newPassword)) {
+      this.showFieldError('newPasswordError', 'Password must contain at least one number');
+      return;
+    }
+
+    this.setLoading('changePassword', true);
+
+    try {
+      const response = await fetch(`${this.BASE_PATH}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result?.error?.errors) {
+          this.showFieldErrors(result.error.errors);
+        }
+        throw new Error(result?.error?.message || 'Failed to change password');
+      }
+
+      this.showToast('success', 'Password changed successfully!');
+      this.closePasswordModal();
+
+    } catch (error) {
+      this.showToast('error', error.message);
+    } finally {
+      this.setLoading('changePassword', false);
+    }
+  }
+
+  setupOtpInputs() {
+    const inputs = document.querySelectorAll('.otp-input');
+    
+    inputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        
+        if (value.length === 1) {
+          input.classList.add('filled');
+          if (index < inputs.length - 1) {
+            inputs[index + 1].focus();
+          }
+        } else {
+          input.classList.remove('filled');
+        }
+        
+        e.target.value = value.replace(/[^0-9]/g, '');
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && index > 0) {
+          inputs[index - 1].focus();
+          inputs[index - 1].classList.remove('filled');
+        }
+      });
+      
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasteData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        
+        pasteData.split('').forEach((digit, i) => {
+          if (inputs[i]) {
+            inputs[i].value = digit;
+            inputs[i].classList.add('filled');
+          }
+        });
+        
+        if (pasteData.length < 6 && inputs[pasteData.length]) {
+          inputs[pasteData.length].focus();
+        }
+      });
+    });
+  }
+
+  getOtpValue() {
+    const inputs = document.querySelectorAll('.otp-input');
+    return Array.from(inputs).map(input => input.value).join('');
+  }
+
+  clearOtpInputs() {
+    document.querySelectorAll('.otp-input').forEach(input => {
+      input.value = '';
+      input.classList.remove('filled');
+    });
+  }
+
+  startResendTimer() {
+    const resendBtn = document.getElementById('resendOtpBtn');
+    const timerSpan = document.getElementById('resendTimer');
+    let seconds = 60;
+    
+    resendBtn.disabled = true;
+    resendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    
+    this.resendTimer = setInterval(() => {
+      seconds--;
+      timerSpan.textContent = seconds;
+      
+      if (seconds <= 0) {
+        clearInterval(this.resendTimer);
+        resendBtn.disabled = false;
+        resendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        resendBtn.innerHTML = 'Resend OTP';
+      }
+    }, 1000);
+  }
+
+  showFieldErrors(errors) {
+    Object.entries(errors).forEach(([field, message]) => {
+      this.showFieldError(field + 'Error', message);
+    });
+  }
+
+  showFieldError(errorId, message) {
+    const errorEl = document.getElementById(errorId);
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+    }
+  }
+
+  clearErrors() {
+    document.querySelectorAll('.field-error').forEach(el => {
+      el.textContent = '';
+      el.classList.remove('show');
+    });
+  }
+
+  setLoading(type, loading) {
+    const textEl = document.getElementById(type + 'Text');
+    const loadingEl = document.getElementById(type + 'Loading');
+    
+    if (textEl && loadingEl) {
+      textEl.classList.toggle('hidden', loading);
+      loadingEl.classList.toggle('hidden', !loading);
+    }
+  }
+
+  showToast(type, message) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+      <span>${message}</span>
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  updateSidebarInfo(data) {
+    const sidebarName = document.querySelector('aside .text-white p.font-semibold');
+    if (sidebarName && data.fullName) {
+      sidebarName.textContent = data.fullName;
+    }
+  }
+  
+  updateAccountInfo(data) {
+    if (data.fullName) {
+      const accountName = document.querySelector('.bg-gradient-to-r.from-blue-600.to-indigo-600 p.font-semibold');
+      if (accountName) accountName.textContent = data.fullName;
+    }
+    
+    if (data.phone) {
+      const phoneEl = document.querySelector('#accountInfoPhone');
+      if (phoneEl) phoneEl.textContent = data.phone;
+    }
+    
+    if (data.dateOfBirth) {
+      const dobEl = document.querySelector('#accountInfoDob');
+      if (dobEl) dobEl.textContent = new Date(data.dateOfBirth).toLocaleDateString();
+    }
+  }
+
+  toggleLoading(loading) {
+    const confirmCropBtn = document.getElementById('confirmCropBtn');
+    if (loading) {
+      confirmCropBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+      confirmCropBtn.disabled = true;
+    } else {
+      confirmCropBtn.innerHTML = 'Save Profile Picture';
+      confirmCropBtn.disabled = false;
+    }
+  }
+}
+
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(inputId + 'Icon');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+function initFloatingLabels() {
+  const phoneInput = document.getElementById('phone');
+  const floatingLabel = document.querySelector('.floating-label');
+  
+  if (phoneInput && floatingLabel) {
+    phoneInput.addEventListener('focus', () => {
+      floatingLabel.classList.add('focused');
+    });
+    
+    phoneInput.addEventListener('blur', () => {
+      if (!phoneInput.value) {
+        floatingLabel.classList.remove('focused');
+      }
+    });
+    
+    if (phoneInput.value) {
+      floatingLabel.classList.add('focused');
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  new ProfileEditor();
+  initFloatingLabels();
+  
+  const profileBtn = document.getElementById('profileBtn');
+  const profileDropdown = document.getElementById('profileDropdown');
+  
+  if (profileBtn && profileDropdown) {
+    profileBtn.addEventListener('click', () => {
+      profileDropdown.classList.toggle('opacity-0');
+      profileDropdown.classList.toggle('invisible');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+        profileDropdown.classList.add('opacity-0', 'invisible');
+      }
+    });
+  }
+  
+  gsap.from('.bg-white', {
+    duration: 0.6,
+    y: 20,
+    opacity: 0,
+    stagger: 0.1,
+    ease: "power2.out"
+  });
+});
+</script>
+</body>
+</html>

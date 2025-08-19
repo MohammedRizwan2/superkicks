@@ -4,88 +4,153 @@
   <meta charset="UTF-8">
   <title>Superkicks – Home</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+  <style>
+    .img-magnifier-glass {
+      position: absolute;
+      border: 2px solid #000;
+      border-radius: 50%;
+      cursor: none;
+      width: 120px;
+      height: 120px;
+      opacity: 0.9;
+      background: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 30;
+    }
+    .img-zoom { transition: transform 0.25s; }
+    .thumb-active { border: 2px solid #000 !important; }
+
+
+    .address-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .modal-open {
+            overflow: hidden;
+        }
+        .error-field {
+            border-color: #ef4444 !important;
+        }
+  </style>
 </head>
 
-<body class="bg-white text-gray-900 font-sans tracking-wide" data-just-logged-in="<%= justLoggedIn||false %>">
-  <!-- ░░ HEADER ░░ -->
-<header class="sticky top-0 z-50 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/70">
-  <nav class="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
-    <!-- Logo -->
-    <a href="/" class="text-2xl font-extrabold tracking-[0.15em] text-white hover:text-gray-300 transition">
-      SUPERKICKS
-    </a>
+<body class="bg-white text-gray-900 font-sans tracking-wide "data-just-logged-in="<%= typeof justLoggedIn !== 'undefined' ? justLoggedIn :false %>">
+  <header class="sticky top-0 z-50 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/90">
+    <nav class="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
+      <!-- Logo -->
+      <a href="/" class="text-2xl font-extrabold tracking-[0.15em] text-white hover:text-gray-300 transition">
+        SUPERKICKS
+      </a>
 
-    <!-- Desktop links -->
-    <ul class="hidden md:flex items-center gap-10 text-sm uppercase font-medium">
-      <li><a href="/"                   class="text-white hover:text-gray-300">Home</a></li>
-      <li><a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a></li>
-      <li><a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a></li>
+      <!-- Desktop Navigation -->
+      <div class="hidden md:flex items-center gap-8">
+        <!-- Navigation Links -->
+        <ul class="flex items-center gap-6 text-sm uppercase font-medium">
+          <li><a href="/" class="text-white hover:text-gray-300 transition">Home</a></li>
+          <li><a href="/user/product/list" class="text-white hover:text-gray-300 transition">Shop</a></li>
+          <li><a href="/user/categories" class="text-white hover:text-gray-300 transition">Categories</a></li>
+        </ul>
 
-      <% if (!isLoggedIn) { %>
-        <li class="space-x-2">
-          <a href="/user/login"
-             class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
-            Login
-          </a>
-          <a href="/user/signup"
-             class="px-4 py-1.5 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
-            Sign Up
-          </a>
-        </li>
-      <% } else { %>
-        <li class="flex items-center gap-4">
-          <span class="text-white/80"><i class="fa-solid fa-user mr-1"></i><%= user ? user.fullName : 'User' %></span>
-          <a href="/user/logout"
-             class="px-4 py-1.5 rounded border border-white text-white hover:bg-white hover:text-black transition">
-            Logout
-          </a>
-        </li>
-      <% } %>
-    </ul>
+        <!-- User Actions -->
+        <div class="flex items-center gap-4">
+          <% if (typeof isLoggedIn !== 'undefined' && !isLoggedIn) { %>
+            <div class="flex items-center gap-3">
+              <a href="/user/login" class="px-4 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
+                Login
+              </a>
+              <a href="/user/signup" class="px-4 py-2 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
+                Sign Up
+              </a>
+            </div>
+          <% } else { %>
+            <!-- Cart -->
+            <a href="/user/cart" class="relative text-white hover:text-gray-300 transition p-2">
+              <i class="fas fa-shopping-bag text-xl"></i>
+              <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                <span class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <%= cartCount %>
+                </span>
+              <% } %>
+            </a>
 
-    <!-- Mobile hamburger -->
-    <button id="mobileBtn"
-            class="md:hidden text-white text-2xl focus:outline-none">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-  </nav>
+            <!-- Wishlist -->
+            <a href="/user/wishlist" class="relative text-white hover:text-gray-300 transition p-2">
+              <i class="far fa-heart text-xl"></i>
+              <% if (typeof wishlistCount !== 'undefined' && wishlistCount > 0) { %>
+                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <%= wishlistCount %>
+                </span>
+              <% } %>
+            </a>
 
-  <!-- Mobile drawer -->
-  <div id="mobileMenu"
-       class="fixed inset-0 z-40 bg-black/90 backdrop-blur-md translate-x-full transition-transform duration-300 md:hidden">
-    <div class="flex flex-col items-center gap-8 pt-24 text-lg font-medium">
-      <a href="/"                   class="text-white hover:text-gray-300">Home</a>
-      <a href="/user/product/list"  class="text-white hover:text-gray-300">Shop</a>
-      <a href="/user/categories"         class="text-white hover:text-gray-300">Categories</a>
+            <!-- Profile -->
+            <div class="relative">
+              <button id="profileBtn" class="flex items-center gap-2 text-white hover:text-gray-300 transition p-2">
+                <div class="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
+                  <% if (typeof user !== 'undefined' && user && user.avatarUrl) { %>
+                    <img src="<%= user.avatarUrl %>" alt="Profile" class="w-full h-full object-cover">
+                  <% } else { %>
+                    <i class="fas fa-user text-sm flex items-center justify-center h-full"></i>
+                  <% } %>
+                </div>
+                <span class="hidden lg:inline text-sm">
+                  <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
+                </span>
+                <i class="fas fa-chevron-down text-xs"></i>
+              </button>
 
-      <% if (!isLoggedIn) { %>
-        <a href="/user/login"
-           class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
-          Login
-        </a>
-        <a href="/user/signup"
-           class="px-6 py-2 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
-          Sign Up
-        </a>
-      <% } else { %>
-        <span class="text-white/80"><i class="fa-solid fa-user mr-1"></i><%= user ? user.fullName : 'User' %></span>
-        <a href="/user/logout"
-           class="px-6 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
-          Logout
-        </a>
-      <% } %>
-    </div>
-  </div>
-</header>
+              <!-- Dropdown Menu -->
+              <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border opacity-0 invisible transition-all duration-200">
+                <div class="py-2">
+                  <a href="/user/profile" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <i class="fas fa-user w-4"></i>
+                    <span>My Profile</span>
+                  </a>
+                  <a href="/user/orders" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <i class="fas fa-shopping-bag w-4"></i>
+                    <span>My Orders</span>
+                  </a>
+                  <div class="border-t border-gray-100 mt-2 pt-2">
+                    <a href="/user/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                      <i class="fas fa-sign-out-alt w-4"></i>
+                      <span>Logout</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
 
-<!-- Mobile toggle script -->
-<script>
-  const btn   = document.getElementById('mobileBtn');
-  const menu  = document.getElementById('mobileMenu');
-  btn.addEventListener('click', () => {
-    menu.classList.toggle('translate-x-full');
-  });
-</script>
+      <!-- Mobile menu button -->
+      <button id="mobileBtn" class="md:hidden text-white text-2xl">
+        <i class="fas fa-bars"></i>
+      </button>
+    </nav>
+  </header>
+
+  <script>
+    // Profile dropdown toggle
+    const profileBtn = document.getElementById('profileBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    
+    if (profileBtn && profileDropdown) {
+      profileBtn.addEventListener('click', () => {
+        profileDropdown.classList.toggle('opacity-0');
+        profileDropdown.classList.toggle('invisible');
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+          profileDropdown.classList.add('opacity-0', 'invisible');
+        }
+      });
+    }
+  </script>

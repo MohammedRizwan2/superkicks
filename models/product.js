@@ -15,7 +15,7 @@ const productSchema = new mongoose.Schema({
   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }]
 }, { timestamps: true });
 
-// Updates variant prices but doesn't store on product
+
 productSchema.methods.updateVariantPrices = async function() {
   const product = this.populated('categoryId') || await this.populate('categoryId');
   const Variant = mongoose.model('Variant');
