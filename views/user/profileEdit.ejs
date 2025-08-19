@@ -1,222 +1,4 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth antialiased">
-<head>
-  <meta charset="UTF-8">
-  <title>Edit Profile – Superkicks</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <style>
-    /* Cropper Modal Styles */
-    .cropper-container {
-      width: 100% !important;
-      height: 100% !important;
-      max-height: 100% !important;
-    }
-    
-    .cropper-wrap-box,
-    .cropper-canvas,
-    .cropper-drag-box {
-      max-height: 100% !important;
-    }
-    
-    #cropModal {
-      display: none; /* Ensure modal is hidden by default */
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 100;
-    }
-    
-    #cropModal.show {
-      display: flex; /* Show modal when class is added */
-    }
-    
-    #cropModal .modal-body {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-      padding: 1rem;
-    }
-    
-    .cropper-view-box {
-      border-radius: 50%;
-      outline: inherit;
-    }
-    
-    .crop-container {
-      width: 100%;
-      height: 400px;
-      position: relative;
-      overflow: hidden;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-
-    #cropImage {
-      max-width: 100%;
-      max-height: 100%;
-      display: block;
-    }
-
-    .img-magnifier-glass {
-      position: absolute;
-      border: 2px solid #000;
-      border-radius: 50%;
-      cursor: none;
-      width: 120px;
-      height: 120px;
-      opacity: 0.9;
-      background: none;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      display: none;
-      z-index: 30;
-    }
-    .img-zoom { transition: transform 0.25s; }
-    .thumb-active { border: 2px solid #000 !important; }
-
-    .form-input {
-      @apply w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-colors;
-    }
-    .field-error {
-      @apply text-xs text-red-600 hidden mt-1;
-    }
-    .field-error.show {
-      @apply block;
-    }
-    .avatar-upload {
-      position: relative;
-      display: inline-block;
-    }
-    .avatar-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      cursor: pointer;
-    }
-    .avatar-upload:hover .avatar-overlay {
-      opacity: 1;
-    }
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      transform: translateX(400px);
-      transition: transform 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .toast.show {
-      transform: translateX(0);
-    }
-    .toast.success {
-      background-color: #10b981;
-    }
-    .toast.error {
-      background-color: #ef4444;
-    }
-    .otp-input {
-      width: 50px;
-      height: 50px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
-      outline: none;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-    .otp-input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-    .otp-input.filled {
-      border-color: #10b981;
-      background-color: #f0fdf4;
-    }
-    .phone-input-container {
-      position: relative;
-    }
-    .phone-input-container::before {
-      content: "+1";
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #4b5563;
-      font-weight: 500;
-      pointer-events: none;
-    }
-    .phone-input {
-      padding-left: 44px;
-    }
-    .floating-label {
-      position: absolute;
-      top: 12px;
-      left: 16px;
-      color: #6b7280;
-      pointer-events: none;
-      transition: all 0.2s ease;
-      background: white;
-      padding: 0 4px;
-      font-size: 12px;
-      transform-origin: left top;
-    }
-    .floating-label.focused {
-      transform: translateY(-22px) scale(0.85);
-      color: #3b82f6;
-    }
-    .phone-input:focus ~ .floating-label,
-    .phone-input:not(:placeholder-shown) ~ .floating-label {
-      transform: translateY(-22px) scale(0.85);
-      color: #3b82f6;
-    }
-    .input-with-icon {
-      position: relative;
-    }
-    .input-with-icon i {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af;
-    }
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
-    }
-    @media (max-width: 768px) {
-      .card-grid {
-        grid-template-columns: 1fr;
-      }
-      .crop-container {
-        height: 280px;
-      }
-    }
-  </style>
-</head>
-
-<body class="bg-gray-50 text-gray-900 font-sans tracking-wide" data-just-logged-in="<%= typeof justLoggedIn !== 'undefined' ? justLoggedIn : false %>">
-
-<%- include('../partials/header') %>
+<%- include('../partials/header.ejs') %>
 
 <main class="max-w-7xl mx-auto px-4 lg:px-6 py-8">
   <div class="flex flex-col lg:flex-row gap-8">
@@ -367,7 +149,7 @@
                 <div class="phone-input-container">
                   <input type="tel" id="phone" name="phone"
                          value="<%= (user && user.phone) ? user.phone : '' %>"
-                         class="form-input phone-input" placeholder="(123) 456-7890">
+                         class="form-input phone-input" placeholder="+91 ">
                   <span class="floating-label">Phone Number</span>
                 </div>
                 <div class="field-error" id="phoneError"></div>
@@ -467,31 +249,43 @@
     </div>
 
     <!-- Email Change Form -->
-    <div id="emailChangeStep" class="p-6">
-      <form id="emailChangeForm">
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">New Email Address *</label>
-            <div class="input-with-icon">
-              <input type="email" id="newEmail" name="newEmail" required
-                     class="form-input" placeholder="Enter new email address">
-              <i class="fas fa-envelope"></i>
-            </div>
-            <div class="field-error" id="newEmailError"></div>
-          </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button type="button" id="cancelEmailBtn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-            Cancel
-          </button>
-          <button type="submit" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium">
-            <span id="sendOtpText">Send OTP</span>
-            <span id="sendOtpLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Sending...</span>
+<div id="emailChangeStep" class="p-6">
+  <form id="emailChangeForm">
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Current Password *</label>
+        <div class="relative">
+          <input type="password" id="currentPasswordEmail" name="currentPassword" required
+                 class="form-input pr-12" placeholder="Enter current password">
+          <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" 
+                  onclick="togglePasswordVisibility('currentPasswordEmail')">
+            <i class="fas fa-eye" id="currentPasswordEmailIcon"></i>
           </button>
         </div>
-      </form>
+        <div class="field-error" id="currentPasswordEmailError"></div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">New Email Address *</label>
+        <div class="input-with-icon">
+          <input type="email" id="newEmail" name="newEmail" required
+                 class="form-input" placeholder="Enter new email address">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div class="field-error" id="newEmailError"></div>
+      </div>
     </div>
+    
+    <div class="flex gap-3 mt-6">
+      <button type="button" id="cancelEmailBtn" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+        Cancel
+      </button>
+      <button type="submit" class="flex-1 bg-gradient-to-r from-plurple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium">
+        <span id="sendOtpText">Send OTP</span>
+        <span id="sendOtpLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Sending...</span>
+      </button>
+    </div>
+  </form>
+</div>
 
     <!-- OTP Verification Step -->
     <div id="otpVerificationStep" class="p-6 hidden">
@@ -589,7 +383,7 @@
           </div>
           <div class="field-error" id="newPasswordError"></div>
           <div class="mt-2 text-xs text-gray-600">
-            <p class="flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> Must be at least 8 characters</p>
+            <p class="flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> Must be at least 6 characters</p>
             <p class="flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> Include at least one number</p>
           </div>
         </div>
@@ -1104,7 +898,7 @@ class ProfileEditor {
       return;
     }
 
-    if (data.newPassword.length < 8) {
+    if (data.newPassword.length < 6) {
       this.showFieldError('newPasswordError', 'Password must be at least 8 characters');
       return;
     }

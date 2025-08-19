@@ -105,19 +105,26 @@ router.get('/categories',isAuthenticated,checkUserBlocked,categoryController.get
 
 
 //profile
-router.get('/profile',profileController.getProfile);
+router.get('/profile',isAuthenticated,profileController.getProfile);
 
-router.get('/profile/edit',profileController.getProfileEdit);
+router.get('/profile/edit',isAuthenticated,profileController.getProfileEdit);
+router.put('/api/password',profileController.changePassword)
+router.post('/api/email/request-change',profileController.initiateEmailChange)
+router.post('/api/email/verify-change',profileController.confirmEmailChange)
+router.post('/api/email/resend-otp',profileController.resendEmailChangeOtp)
+
 
 router.put('/api/profile',profileController.updateProfile);
 router.post('/api/avatar',avatarUpload,profileController.uploadAvatar,);
+router.delete('/api/avatar',profileController.removeAvatar);
+
 
 
 
 
 
 //addresses
-router.get('/addresses',addressController.getAddresses)
+router.get('/addresses',isAuthenticated,addressController.getAddresses)
 
 
 router.post('/api/addresses', addressController.addAddress);
@@ -125,6 +132,7 @@ router.get('/api/addresses', addressController.getUserAddresses);
 router.get('/api/addresses/:id', addressController.getAddress);
 router.put('/api/addresses/:id', addressController.updateAddress);
 router.delete('/api/addresses/:id', addressController.deleteAddress);
+
 
 
 
