@@ -8,10 +8,7 @@ const product = require('../models/product');
 // Middleware to check if user is blocked
 async function checkUserBlocked(req, res, next) {
   try {
-    console.log("heeee")
     
-    
-
     if (req.session && req.session.user) {
     const email = req.session.user.email;
       const user = await User.findOne({ email });

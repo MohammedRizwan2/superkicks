@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema(
       type: String, 
       required: [true, 'Email is required'], 
       unique: true, 
-      lowercase: true,           // store emails in lowercase
+      lowercase: true,           
       trim: true,
       match: [/\S+@\S+\.\S+/, 'Please use a valid email address'],
       index: true,
@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\+?[0-9\s\-]{7,15}$/, 'Please use a valid phone number'], // optional simple phone validation
     },
+    avatar:{type:Object},
+  dateOfBirth:{type:Date},
+
     role: { 
       type: String, 
       enum: ['user', 'admin'], 
@@ -38,6 +41,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean, 
       default: false 
     },
+
  
   },
   {

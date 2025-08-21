@@ -125,8 +125,7 @@
           <label class="block text-gray-600 font-medium mb-1">Product Images <span class="text-red-500">*</span></label>
           <p class="text-sm text-gray-500 mb-3">
             Current images: <span id="image-count">0</span> | 
-            <span class="text-blue-600">Blue badge = Cloudinary</span> | 
-            <span class="text-green-600">Green badge = Local</span>
+          
           </p>
           
           <input type="file" id="file-input" name="images" accept="image/*" style="display: none;" multiple>
@@ -395,7 +394,7 @@
           updateNewImagesInput();
         }
         
-        // Optionally delete from Cloudinary immediately (if you have an endpoint for this)
+        
         if (imageType === 'cloudinary') {
           axios.delete(`/admin/delete-temp-image`, { data: { publicId: imageId } })
             .catch(err => console.warn('Cleanup failed:', err));
@@ -423,14 +422,25 @@
         <input type="text" name="variants[${index}][size]" placeholder="Size" required class="w-1/4 px-2 py-1 border rounded">
         <input type="number" name="variants[${index}][price]" step="0.01" placeholder="Price" required class="w-1/4 px-2 py-1 border rounded">
         <input type="number" name="variants[${index}][stock]" placeholder="Stock" class="w-1/4 px-2 py-1 border rounded">
+        <input type="hidden" name="variants[${index}][_id]" value="">
         <button type="button" onclick="removeVariantRow(this)" class="bg-red-500 text-white px-2 rounded hover:bg-red-700 font-bold">-</button>
       `;
       
       area.appendChild(row);
     });
 
+    // FIXED: Track variant deletion
     function removeVariantRow(btn) {
-      btn.closest('.variant-row').remove();
+      const row = btn.closest('.variant-row');
+      const variantId = row.querySelector('[name*="_id"]')?.value;
+      
+      // If this is an existing variant, track it for deletion
+      if (variantId) {
+        deletedVariants.push(variantId);
+        document.getElementById('deleted-variants').value = JSON.stringify(deletedVariants);
+      }
+      
+      row.remove();
     }
 
     // Form submission
@@ -453,18 +463,35 @@
       // Prepare FormData
       const formData = new FormData(form);
       
-      // Manually append variants as JSON
       const variants = [];
-      document.querySelectorAll('.variant-row').forEach((row) => {
-        variants.push({
-          size: row.querySelector('[name*="size"]').value,
-          price: row.querySelector('[name*="price"]').value,
-          stock: row.querySelector('[name*="stock"]').value,
-          id: row.querySelector('[name*="id"]')?.value || null
-        });
+      let variantError = null;
+      document.querySelectorAll('.variant-row').forEach((row, idx) => {
+        const size = row.querySelector('[name*="size"]').value.trim();
+        const price = parseFloat(row.querySelector('[name*="price"]').value);
+        const stockVal = row.querySelector('[name*="stock"]').value;
+        const stock = stockVal !== '' ? parseInt(stockVal, 10) : 0;
+        const variantId = row.querySelector('[name*="_id"]')?.value || null;
+
+        if (!size) {
+          variantError = `Variant ${idx + 1}: Size is required.`;
+        } else if (isNaN(price) || price < 0) {
+          variantError = `Variant ${idx + 1}: Price must be a positive number.`;
+        } else if (isNaN(stock) || stock < 0) {
+          variantError = `Variant ${idx + 1}: Stock must be zero or a positive number.`;
+        }
+
+        variants.push({ _id: variantId, size, price, stock });
       });
-      formData.set('variants', JSON.stringify(variants));
-      
+
+      if (variantError) {
+        alert(variantError);
+        return;
+      }
+
+      if (variants.length === 0) {
+        alert('Please add at least one variant.');
+        return;
+      }
       // Update button state
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';

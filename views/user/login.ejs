@@ -8,7 +8,8 @@
   <!-- Add any additional meta or stylesheets here -->
 </head>
 
-<body class="min-h-screen bg-white flex items-center justify-center"data-just-registered= <%= justRegistered %>>
+<body class="min-h-screen bg-white flex items-center justify-center"
+      data-just-registered="<%= typeof justRegistered !== 'undefined' ? justRegistered : false %>">
   <main class="w-full max-w-6xl mx-auto flex flex-col lg:flex-row shadow-lg rounded-xl overflow-hidden" role="main" aria-label="User login form">
     
     <!-- Left Side: Login Form -->

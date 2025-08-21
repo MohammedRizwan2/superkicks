@@ -6,7 +6,7 @@ const sharp = require('sharp');
 const Variant = require('../../models/variant');
 const { promisify } = require('util');
 const unlinkAsync = promisify(fs.unlink);
-const { uploadBufferToCloudinary } = require('../../helper/cloudinaryUpload');
+const { uploadBufferToCloudinary } = require('../../helper/cloudinaryUploadHelper');
 
 
 
@@ -245,7 +245,6 @@ console.log(product.categoryId);
 };
 
 
-
 exports.postEditProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -256,19 +255,23 @@ exports.postEditProduct = async (req, res) => {
       description,
       offer,
       isListed,
-      deletedImages = '[]',  // Can be URLs for local or publicIds for Cloudinary
-      newImages = '[]'       // Can be array of objects {url, publicId} from client
+      deletedImages = '[]',
+      newImages = '[]',
+      variants = '[]',
+      deletedVariants = '[]'   
     } = req.body;
 
+  
     const parsedDeletedImages = JSON.parse(deletedImages);
     const parsedNewImages = Array.isArray(newImages) ? newImages : JSON.parse(newImages);
+  
 
     const currentProduct = await Product.findById(id);
     if (!currentProduct) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Filter out deleted images (works for both string URLs & object format)
+    
     let finalImages = currentProduct.images.filter(img => {
       if (typeof img === 'string') {
         return !parsedDeletedImages.includes(img);
@@ -278,7 +281,7 @@ exports.postEditProduct = async (req, res) => {
       }
     });
 
-    // Handle any new file uploads via Multer from multi-part form
+    
     if (req.files && req.files.length > 0) {
       const uploads = await Promise.all(
         req.files.map(file => uploadBufferToCloudinary(file.buffer, 'superkicks/products'))
@@ -290,12 +293,11 @@ exports.postEditProduct = async (req, res) => {
       finalImages = [...finalImages, ...uploadedImages];
     }
 
-    // Handle new images sent from the client as already-uploaded Cloudinary objects
-    if (parsedNewImages && parsedNewImages.length > 0) {
+  
+    if (parsedNewImages.length > 0) {
       finalImages = [...finalImages, ...parsedNewImages];
     }
 
-    // Ensure at least one image remains
     if (finalImages.length === 0) {
       return res.status(400).json({
         success: false,
@@ -303,20 +305,17 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-    // Delete images flagged for removal
+    
     await Promise.all(
-      parsedDeletedImages.map(async (identifier) => {
+      parsedDeletedImages.map(async identifier => {
         if (!identifier) return;
-
         if (identifier.startsWith('/uploads/')) {
-          // Local file delete
           const filename = identifier.split('/').pop();
           const filepath = path.join(__dirname, '../../public/uploads/products', filename);
           if (fs.existsSync(filepath)) {
             await unlinkAsync(filepath);
           }
         } else {
-          // Assume Cloudinary publicId
           try {
             await cloudinary.uploader.destroy(identifier);
           } catch (err) {
@@ -326,7 +325,86 @@ exports.postEditProduct = async (req, res) => {
       })
     );
 
-    // Prepare and save product
+    let parsedVariants, parsedDeletedVariants;
+    try {
+      parsedVariants = Array.isArray(variants) ? variants : JSON.parse(variants);
+      parsedDeletedVariants = Array.isArray(deletedVariants) ? deletedVariants : JSON.parse(deletedVariants);
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid JSON for variants',
+        errors: ['Variants data is malformed']
+      });
+    }
+
+    const errors = [];
+
+
+    if (!productName  || !productName.trim()) errors.push('Product name is required.');
+    if (!brand        || !brand.trim())       errors.push('Brand is required.');
+    if (!categoryId)                       errors.push('Category is required.');
+    if (!description  || !description.trim()) errors.push('Description is required.');
+
+    
+    if (offer !== '' && offer != null) {
+      const numOffer = Number(offer);
+      if (isNaN(numOffer)) errors.push('Offer must be a number.');
+      else if (numOffer < 0 || numOffer > 100) errors.push('Offer must be between 0 and 100.');
+    }
+
+    
+    if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+      errors.push('At least one variant is required.');
+    } else {
+      parsedVariants.forEach((v, i) => {
+        if (!v.size || !v.size.trim()) errors.push(`Variant ${i+1}: Size is required.`);
+        if (v.price == null || v.price === '' || isNaN(v.price) || v.price < 0)errors.push(`Variant ${i+1}: Price must be a non-negative number.`);
+        if (v.stock != null && (isNaN(v.stock) || v.stock < 0)) errors.push(`Variant ${i+1}: Stock must be a non-negative number.`);
+      });
+    }
+
+    
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors
+      });
+    }
+
+    
+    if (parsedDeletedVariants.length > 0) {
+      await Variant.deleteMany({ 
+        _id: { $in: parsedDeletedVariants }, 
+        productId: id 
+      });
+    }
+
+    
+    const finalVariantIds = [];
+    for (const v of parsedVariants) {
+      if (v._id) {
+        await Variant.findByIdAndUpdate(v._id, {
+          size: v.size.trim(),
+          regularPrice: Number(v.price),
+          stock: v.stock ? Number(v.stock) : 0,
+          isListed: true
+        });
+        finalVariantIds.push(v._id);
+      } else {
+        const newVar = new Variant({
+          productId: id,
+          size: v.size.trim(),
+          regularPrice: Number(v.price),
+          stock: v.stock ? Number(v.stock) : 0,
+          isListed: true
+        });
+        await newVar.save();
+        finalVariantIds.push(newVar._id);
+      }
+    }
+
+    
     const updateData = {
       productName: productName.trim(),
       brand: brand.trim(),
@@ -334,12 +412,13 @@ exports.postEditProduct = async (req, res) => {
       description: description.trim(),
       offer: Math.min(100, Math.max(0, Number(offer)) || 0),
       isListed: isListed === 'true',
-      images: finalImages
+      images: finalImages,
+      variants: finalVariantIds  
     };
 
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
 
-    req.session.productEddited = true;
+    req.session.productEdited = true;
     req.session.save(err => {
       if (err) console.error("Error saving session:", err);
     });
@@ -361,13 +440,14 @@ exports.postEditProduct = async (req, res) => {
 
 
 
+
 exports.uploadProductImage = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Upload buffer to Cloudinary
+  
     const result = await uploadBufferToCloudinary(req.file.buffer, 'superkicks/products');
 
     res.json({

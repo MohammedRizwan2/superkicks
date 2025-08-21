@@ -29,7 +29,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Session store
 const store = new MongoDBStore({
-  uri: process.env.MONGO_URI || 'mongodb://localhost/superkicks',
+  uri: process.env.MONGO_URI ,
   collection: 'sessions',
 });
 store.on('error', (error) => {
@@ -38,7 +38,7 @@ store.on('error', (error) => {
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'your_session_secret',
+    secret: process.env.SESSION_SECRET ,
     resave: false,
     saveUninitialized: false,
     store,
