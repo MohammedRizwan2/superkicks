@@ -16,15 +16,15 @@ exports.listOrder = async (req , res)=>{
       if(search){
         const user = await User.find({
             $or:[
-                {fullName:{$regax:search,$options:'i' }},
-                {email:{$regax:search,$options:'i'}},
-                {phone:{$regax:search,$options:'i'}}
+                {fullName:{$regex:search,$options:'i' }},
+                {email:{$regex:search,$options:'i'}},
+                {phone:{$regex:search,$options:'i'}}
             ]
         }).select('_id');
 
         query = {
             $or:[
-                {referenceNo:{regax:search,$options:'i'}},
+                {referenceNo:{$regex:search,$options:'i'}},
                 {userId:{$in:user.map(u =>u._id)}}
             ]
         }

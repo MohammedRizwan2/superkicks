@@ -85,7 +85,7 @@ router.get('/',checkUserBlocked, async (req, res) => {
 
     ])
 
-    // Prepare login state from the session
+  
     const user = req.session && req.session.user ? req.session.user : null;
     const isLoggedIn = !!user;
     const justLoggedIn= !!req.session.justLoggedIn;

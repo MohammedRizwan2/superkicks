@@ -16,24 +16,24 @@ module.exports = async(req,res,next)=>{
 
     const user =await User.findById(userId);
 
-    const userAvatar = user.avatar?.url;
+   const userAvatar = user?.avatar?.url || '/img/default-avatar.jpg';
     if(!userAvatar){
         console.log("user avatar not found");
     }
 
-    const cartCount = await Cart.countDocuments({userId});
+    const cart = await Cart.find({userId});
+    
+    const cartCount = cart[0]?.items?.length||0;
+  
+    
+     const wish = await wishList.find({userId})
 
-    const wish  = await wishList.aggregate([
-        {$match:{userId:userId}},
-        {$project:{count:{$size:"$items"}}}
+   
+    wishCount = wish[0]?.items.length||0;
 
-    ])
-
-    wishCount = wish[0].count;
-
-    res.locals.wishCount = wishCount? wishCount:0;
-    res.locals.cartCount = cartCount? cartCount:0;
-    res.locals.avatarUrl = userAvatar? userAvatar:"";
+    res.locals.wishCount = wishCount;
+    res.locals.cartCount = cartCount;
+    res.locals.avatar = userAvatar;
     next();
    }
    catch(err){
