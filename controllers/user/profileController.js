@@ -47,13 +47,13 @@ exports.getProfile = async (req,res)=>{
 
 const orderCount = await Order.countDocuments({userId})
 
-   const wishCount = result[0].count
+   const wishCount = result[0]?.count||0
    const viewUser = {
     id:user._id.toString(),
     fullName:user.fullName,
     email:user.email,
     phone:user.phone,
-    avatarUrl:user.avatar?.url||" ",
+    avatarUrl:user.avatar?.url||'/img/default-avatar.jpg',
     dateOfBirth:user.dateOfBirth||user.createdAt,
     orderCount,
     wishCount,
@@ -82,7 +82,7 @@ exports.getProfileEdit =async (req,res)=>{
      
     res.render('user/profileEdit',{
         user,
-        avatarUrl:user.avatar?.url||" "
+        avatarUrl:user.avatar?.url||'/img/default-avatar.jpg'
     })
 
 }
@@ -256,7 +256,7 @@ exports.removeAvatar = async (req, res) => {
     }
 
     
-    user.avatar = '/images/default-avatar.png';
+    user.avatar = '/img/default-avatar.jpg';
     user.avatarPublicId = null;
     await user.save();
 

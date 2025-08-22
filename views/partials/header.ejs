@@ -120,11 +120,9 @@
             <div class="relative">
               <button id="profileBtn" class="flex items-center gap-2 text-white hover:text-gray-300 transition p-2">
                 <div class="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
-                  <% if (typeof user !== 'undefined'&& avatarUrl!=='undefined') { %>
-                    <img src="<%=avatarUrl %>" alt="Profile" class="w-full h-full object-cover">
-                  <% } else { %>
-                    <i class="fas fa-user text-sm flex items-center justify-center h-full"></i>
-                  <% } %>
+                 
+                    <img src="<%=avatar ||'/img/default-avatar.jpg'%>" alt="Profile" class="w-full h-full object-cover">
+                  
                 </div>
                 <span class="hidden lg:inline text-sm">
                   <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
