@@ -9,6 +9,34 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
   <style>
+     .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.success {
+            background-color: #10B981;
+        }
+        
+        .toast.error {
+            background-color: #EF4444;
+        }
     .img-magnifier-glass {
       position: absolute;
       border: 2px solid #000;
@@ -81,9 +109,9 @@
             <!-- Wishlist -->
             <a href="/user/wishlist" class="relative text-white hover:text-gray-300 transition p-2">
               <i class="far fa-heart text-xl"></i>
-              <% if (typeof wishlistCount !== 'undefined' && wishlistCount > 0) { %>
+              <% if (typeof wishCount !== 'undefined' && wishCount > 0) { %>
                 <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  <%= wishlistCount %>
+                  <%= wishCount %>
                 </span>
               <% } %>
             </a>
@@ -92,8 +120,8 @@
             <div class="relative">
               <button id="profileBtn" class="flex items-center gap-2 text-white hover:text-gray-300 transition p-2">
                 <div class="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
-                  <% if (typeof user !== 'undefined' && user && user.avatarUrl) { %>
-                    <img src="<%= user.avatarUrl %>" alt="Profile" class="w-full h-full object-cover">
+                  <% if (typeof user !== 'undefined'&& avatarUrl!=='undefined') { %>
+                    <img src="<%=avatarUrl %>" alt="Profile" class="w-full h-full object-cover">
                   <% } else { %>
                     <i class="fas fa-user text-sm flex items-center justify-center h-full"></i>
                   <% } %>

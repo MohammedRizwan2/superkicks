@@ -5,6 +5,8 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer');
 const cloudinary = require('../../config/cloudinary');
+const Order = require('../../models/order')
+const wishList = require('../../models/wish')
 
 
 const transporter = nodemailer.createTransport({
@@ -33,8 +35,19 @@ exports.getProfile = async (req,res)=>{
     delete req.session.user;
     res.redirect('/user/login')
    }
+    
+ const result = await wishList.aggregate([
+  { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+  { 
+    $project: { 
+      count: { $size: "$items" } } 
+    } 
+  
+]);
 
+const orderCount = await Order.countDocuments({userId})
 
+   const wishCount = result[0].count
    const viewUser = {
     id:user._id.toString(),
     fullName:user.fullName,
@@ -42,6 +55,8 @@ exports.getProfile = async (req,res)=>{
     phone:user.phone,
     avatarUrl:user.avatar?.url||" ",
     dateOfBirth:user.dateOfBirth||user.createdAt,
+    orderCount,
+    wishCount,
 
    }
      const address= await Address.find({userId}).sort({createdAt:-1}).limit(1)

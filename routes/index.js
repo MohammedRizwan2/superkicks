@@ -5,6 +5,10 @@ const Category = require('../models/category')
 const User = require('../models/userSchema');
 const product = require('../models/product');
 
+
+const headerload = require('../middleware/header');
+
+
 // Middleware to check if user is blocked
 async function checkUserBlocked(req, res, next) {
   try {
@@ -31,7 +35,7 @@ async function checkUserBlocked(req, res, next) {
   }
 }
 
-
+ router.use(headerload);
 router.get('/',checkUserBlocked, async (req, res) => {
   try {
    // Fetch up to 4 listed categories

@@ -6,4 +6,4 @@ const wishSchema = new mongoose.Schema({
   items: [{ variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Variant', required: true } }],
 }, { timestamps: true });
 
-const Wish = mongoose.model('Wish', wishSchema);
+module.exports=mongoose.model('Wish', wishSchema);

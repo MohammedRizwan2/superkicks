@@ -39,6 +39,46 @@ next(err)
 }
 
 
+exports.setDefaultAddress = async (req, res, next) => {
+  try {
+    const userId = req.session?.user.id;
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: { code: 'UNAUTHENTICATED', message: 'Login required' } 
+      });
+    }
+
+    const { id } = req.params;
+
+    
+    const address = await Address.findOne({ _id: id, userId });
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Address not found' }
+      });
+    }
+
+    
+    await Address.updateMany({ userId }, { isDefault: false });
+    
+  
+    await Address.updateOne({ _id: id, userId }, { isDefault: true });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Default address updated successfully!'
+    });
+
+  } catch (err) {
+    console.error('Set default address error:', err);
+    return res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to update default address' }
+    });
+  }
+};
 
 
 
@@ -68,7 +108,7 @@ exports.addAddress = async (req, res, next) => {
 
     const errors = {};
 
-    // Use the variable name, not bare trim()
+    
     if (!name || name.trim().length < 2) {
       errors.name = 'Name must be at least 2 characters';
     }
@@ -97,7 +137,7 @@ exports.addAddress = async (req, res, next) => {
     if (Object.keys(errors).length) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Fix the errors', errors }
+        error: { code: 'VALIDATION_ERROR', message: 'Fix the  validation errors', errors }
       });
     }
 
@@ -145,12 +185,11 @@ exports.addAddress = async (req, res, next) => {
   } catch (err) {
     console.error('Add address error:', err);
 
-    // If headers already sent, delegate to Express error handler
+
     if (res.headersSent) {
       return next(err);
     }
 
-    // Handle Mongoose validation
     if (err.name === 'ValidationError') {
       const mongooseErrors = {};
       Object.values(err.errors).forEach(e => {

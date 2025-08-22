@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cart — Superkicks</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ash: '#f8f8f8',
+            graphite: '#e5e5e5'
+          },
+          boxShadow: {
+            smooth: '0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.15)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
+    .loading { opacity: 0.6; pointer-events: none; }
+  </style>
+</head>
+
+<body class="min-h-full bg-white text-black">
+  <%- include('../partials/header') %>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 shadow-xl">
+      <div class="flex items-center gap-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+        <span>Loading cart...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+    <!-- Cart Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Your Cart</h1>
+        <p id="cart-count" class="mt-1 text-black/60 text-sm">Loading...</p>
+      </div>
+      <a href="/shop" class="text-sm text-black/70 hover:text-black transition">Continue Shopping</a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+      <!-- Cart Items -->
+      <section class="lg:col-span-2">
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden rounded-xl border border-dashed border-black/15 p-10 text-center bg-ash/40">
+          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-black/5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5m2.5-5L9 15"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Your cart is empty</h3>
+          <p class="text-black/60 mb-6">Discover amazing products and add your favorites.</p>
+          <a href="/user/product/list" class="inline-flex items-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white hover:bg-black/90 transition">
+            Start Shopping
+          </a>
+        </div>
+
+        <!-- Cart Items Container -->
+        <div id="cart-items" class="space-y-4"></div>
+      </section>
+
+      <!-- Order Summary -->
+      <aside class="lg:col-span-1">
+        <div class="sticky top-24">
+          <div class="rounded-xl border border-black/10 bg-ash/30 p-6 shadow-smooth">
+            <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+            
+            <dl class="space-y-3 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-black/70">Items (<span id="summary-items">0</span>)</dt>
+                <dd id="summary-subtotal" class="font-medium">₹0</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-black/70">Delivery</dt>
+                <dd id="summary-delivery" class="font-medium">₹0</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-black/70">GST (18%)</dt>
+                <dd id="summary-tax" class="font-medium">₹0</dd>
+              </div>
+              <div class="border-t border-black/10 pt-3">
+                <div class="flex justify-between text-base font-semibold">
+                  <dt>Total</dt>
+                  <dd id="summary-total">₹0</dd>
+                </div>
+              </div>
+            </dl>
+
+            <!-- Free Shipping Progress -->
+            <div id="free-shipping-progress" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p class="text-sm text-blue-800" id="shipping-text">
+                Add more for free delivery
+              </p>
+              <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
+                <div id="shipping-progress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Checkout Button -->
+            <div id="checkout-section">
+              <form action="/user/checkout" method="GET" class="mt-6">
+                <button type="submit" id="checkout-btn"
+                        class="w-full rounded-full bg-black py-3 text-sm font-semibold text-white hover:bg-black/90 transition focus-ring disabled:opacity-50 disabled:cursor-not-allowed">
+                  Proceed to Checkout
+                </button>
+              </form>
+            </div>
+
+            <!-- Clear Cart -->
+            <button id="clear-cart-btn" 
+                    class="mt-3 w-full text-sm text-red-600 hover:text-red-800 transition">
+              Clear Cart
+            </button>
+          </div>
+
+          <!-- Trust Badges -->
+          <div class="mt-6 space-y-3 text-sm text-black/70">
+            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                <path d="M3 12h6m6 0h6"/>
+              </svg>
+              <span>Secure Payment</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <path d="M20 8v6"/>
+                <path d="M23 11h-6"/>
+              </svg>
+              <span>24/7 Support</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9,22 9,12 15,12 15,22"/>
+              </svg>
+              <span>Easy Returns</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Cart API JavaScript -->
+  <script>
+    class CartAPI {
+      constructor() {
+        this.cartData = { items: [], totals: { itemCount: 0, subtotal: 0, deliveryCharge: 0, tax: 0, total: 0 } };
+        this.loadingOverlay = document.getElementById('loading-overlay');
+        this.init();
+      }
+
+      async init() {
+        await this.loadCart();
+        this.bindEvents();
+        this.hideLoading();
+      }
+
+      showLoading() {
+        this.loadingOverlay.classList.remove('hidden');
+      }
+
+      hideLoading() {
+        this.loadingOverlay.classList.add('hidden');
+      }
+
+      // API Methods using proper HTTP methods
+      async apiCall(url, options = {}) {
+        try {
+          const response = await fetch(url, {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            },
+            ...options
+          });
+
+          const data = await response.json();
+          
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+          }
+
+          return data;
+        } catch (error) {
+          console.error('API Error:', error);
+          throw error;
+        }
+      }
+
+      async loadCart() {
+        try {
+          const result = await this.apiCall('/user/api/cart');
+          this.cartData = result.data;
+          this.render();
+        } catch (error) {
+          this.showError('Failed to load cart: ' + error.message);
+        }
+      }
+
+      async updateQuantity(variantId, action, directQuantity = null) {
+        try {
+          const body = directQuantity !== null ? { quantity: directQuantity } : { action };
+          
+          const result = await this.apiCall(`/user/api/cart/item/${variantId}`, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+          });
+
+          if (result.data.removed) {
+            this.removeItemFromDOM(variantId);
+          }
+
+          await this.loadCart(); // Refresh cart data
+          return result;
+        } catch (error) {
+          this.showError('Failed to update quantity: ' + error.message);
+          throw error;
+        }
+      }
+
+      async removeItem(variantId) {
+        try {
+          await this.apiCall(`/user/api/cart/item/${variantId}`, {
+            method: 'DELETE'
+          });
+
+          this.removeItemFromDOM(variantId);
+          await this.loadCart(); // Refresh cart data
+        } catch (error) {
+          this.showError('Failed to remove item: ' + error.message);
+        }
+      }
+
+      async clearCart() {
+        try {
+          if (!confirm('Are you sure you want to clear your entire cart?')) {
+            return;
+          }
+
+          await this.apiCall('/user/api/cart', {
+            method: 'DELETE'
+          });
+
+          await this.loadCart(); // Refresh cart data
+        } catch (error) {
+          this.showError('Failed to clear cart: ' + error.message);
+        }
+      }
+
+      removeItemFromDOM(variantId) {
+        const itemEl = document.querySelector(`[data-variant="${variantId}"]`);
+        if (itemEl) {
+          itemEl.style.opacity = '0.5';
+          itemEl.style.transform = 'scale(0.95)';
+          setTimeout(() => itemEl.remove(), 200);
+        }
+      }
+
+      formatINR(amount) {
+        return '₹' + Math.round(amount).toLocaleString('en-IN');
+      }
+
+      render() {
+        this.renderItems();
+        this.renderSummary();
+        this.renderFreeShippingProgress();
+      }
+
+      renderItems() {
+        const container = document.getElementById('cart-items');
+        const emptyState = document.getElementById('empty-state');
+
+        if (this.cartData.items.length === 0) {
+          container.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        
+        container.innerHTML = this.cartData.items.map(item => `
+          <div class="rounded-xl border border-black/10 bg-white p-4 shadow-sm transition-all duration-200" data-variant="${item.variantId}">
+            <div class="flex flex-col sm:flex-row gap-4">
+              <!-- Product Image -->
+              <div class="flex-shrink-0">
+                <img src="${item.image}" 
+                     alt="${item.productName}" 
+                     class="h-32 w-32 rounded-lg object-cover border border-black/10"
+                     onerror="this.src='/images/placeholder.png'"/>
+              </div>
+
+              <!-- Product Details -->
+              <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <!-- Product Info -->
+                <div class="lg:col-span-7">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1 min-w-0">
+                      <h3 class="font-semibold text-lg truncate">${item.productName}</h3>
+                      <p class="text-sm text-black/60 line-clamp-2">${item.description}</p>
+                      <div class="mt-2 flex items-center gap-3 text-sm text-black/50">
+                        <span>Brand: ${item.brand}</span>
+                        <span>•</span>
+                        <span>Size: ${item.size}</span>
+                      </div>
+                      
+                      <!-- Stock Info -->
+                      <div class="mt-2">
+                        ${item.stock <= 5 ? 
+                          `<span class="text-xs text-red-600 font-medium">Only ${item.stock} left in stock</span>` :
+                          `<span class="text-xs text-green-600">In stock</span>`
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Remove Button -->
+                    <button type="button" 
+                            class="ml-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 hover:bg-black/5 remove-btn transition" 
+                            data-variant="${item.variantId}"
+                            title="Remove item">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/>
+                        <path d="M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Quantity Controls -->
+                  <div class="mt-4 flex items-center gap-3">
+                    <div class="inline-flex items-center rounded-full border border-black/10 bg-ash/50">
+                      <button type="button" 
+                              class="h-9 w-9 inline-flex items-center justify-center rounded-l-full hover:bg-black/5 qty-dec transition" 
+                              data-variant="${item.variantId}"
+                              ${item.quantity <= 1 ? 'disabled' : ''}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M5 12h14"/>
+                        </svg>
+                      </button>
+                      <span class="px-3 py-2 text-sm font-medium qty-val" data-variant="${item.variantId}">
+                        ${item.quantity}
+                      </span>
+                      <button type="button" 
+                              class="h-9 w-9 inline-flex items-center justify-center rounded-r-full hover:bg-black/5 qty-inc transition" 
+                              data-variant="${item.variantId}"
+                              ${item.quantity >= 5 || item.quantity >= item.stock ? 'disabled' : ''}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <span class="text-xs text-black/50">Max 5 per item</span>
+                  </div>
+                </div>
+
+                <!-- Pricing -->
+                <div class="lg:col-span-5 flex items-center justify-between lg:justify-end lg:text-right">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2 lg:justify-end">
+                      ${item.hasDiscount ? `
+                        <span class="text-sm text-black/40 line-through">${this.formatINR(item.regularPrice)}</span>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                          ${item.discountPercent}% OFF
+                        </span>
+                      ` : ''}
+                    </div>
+                    <div class="text-lg font-bold">${this.formatINR(item.salePrice)}</div>
+                    <div class="text-sm text-black/60">per item</div>
+                  </div>
+                  <div class="lg:ml-6">
+                    <div class="text-sm text-black/60">Subtotal</div>
+                    <div class="text-xl font-bold item-subtotal" data-variant="${item.variantId}">
+                      ${this.formatINR(item.itemTotal)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderSummary() {
+        const { totals } = this.cartData;
+        
+        document.getElementById('cart-count').textContent = 
+          `Total ${totals.itemCount} item${totals.itemCount !== 1 ? 's' : ''} in your cart`;
+        document.getElementById('summary-items').textContent = totals.itemCount;
+        document.getElementById('summary-subtotal').textContent = this.formatINR(totals.subtotal);
+        document.getElementById('summary-tax').textContent = this.formatINR(totals.tax);
+        document.getElementById('summary-total').textContent = this.formatINR(totals.total);
+        
+        const deliveryEl = document.getElementById('summary-delivery');
+        if (totals.deliveryCharge === 0) {
+          deliveryEl.innerHTML = '<span class="text-green-600">FREE</span>';
+        } else {
+          deliveryEl.textContent = this.formatINR(totals.deliveryCharge);
+        }
+
+        // Enable/disable checkout
+        const checkoutBtn = document.getElementById('checkout-btn');
+        if (totals.itemCount === 0) {
+          checkoutBtn.disabled = true;
+          checkoutBtn.textContent = 'Cart is Empty';
+        } else {
+          checkoutBtn.disabled = false;
+          checkoutBtn.textContent = 'Proceed to Checkout';
+        }
+      }
+
+      renderFreeShippingProgress() {
+        const { totals } = this.cartData;
+        const progressContainer = document.getElementById('free-shipping-progress');
+        
+        if (totals.deliveryCharge > 0 && totals.subtotal > 0) {
+          const remaining = 2999 - totals.subtotal;
+          const progress = Math.min((totals.subtotal / 2999) * 100, 100);
+          
+          document.getElementById('shipping-text').textContent = 
+            `Add ${this.formatINR(remaining)} more for free delivery`;
+          document.getElementById('shipping-progress').style.width = `${progress}%`;
+          progressContainer.classList.remove('hidden');
+        } else {
+          progressContainer.classList.add('hidden');
+        }
+      }
+
+      bindEvents() {
+        // Quantity controls
+        document.addEventListener('click', async (e) => {
+          const target = e.target.closest('button');
+          if (!target) return;
+
+          const variantId = target.dataset.variant;
+          if (!variantId) return;
+
+          try {
+            if (target.classList.contains('qty-inc')) {
+              await this.updateQuantity(variantId, 'increment');
+            } else if (target.classList.contains('qty-dec')) {
+              await this.updateQuantity(variantId, 'decrement');
+            } else if (target.classList.contains('remove-btn')) {
+              if (confirm('Remove this item from your cart?')) {
+                await this.removeItem(variantId);
+              }
+            }
+          } catch (error) {
+            console.error('Action failed:', error);
+          }
+        });
+
+        // Clear cart
+        document.getElementById('clear-cart-btn').addEventListener('click', () => {
+          this.clearCart();
+        });
+
+        // Direct quantity input (optional enhancement)
+        document.addEventListener('change', async (e) => {
+          if (e.target.matches('.qty-input')) {
+            const variantId = e.target.dataset.variant;
+            const quantity = parseInt(e.target.value) || 1;
+            try {
+              await this.updateQuantity(variantId, null, quantity);
+            } catch (error) {
+              console.error('Quantity update failed:', error);
+            }
+          }
+        });
+      }
+
+      showError(message) {
+        // You can replace this with a proper toast notification
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => errorDiv.remove(), 5000);
+      }
+    }
+
+    // Initialize cart
+    document.addEventListener('DOMContentLoaded', () => {
+      new CartAPI();
+    });
+  </script>
+</body>
+</html>
