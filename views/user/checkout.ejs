@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout — Superkicks</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ash: '#f8f8f8',
+            graphite: '#e5e5e5'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
+    .modal-overlay { backdrop-filter: blur(4px); }
+    .field-error { border-color: #ef4444 !important; }
+    .error-text { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; }
+  </style>
+</head>
+
+<body class="min-h-full bg-white text-black">
+  <%- include('../partials/header') %>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 shadow-xl">
+      <div class="flex items-center gap-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+        <span>Processing...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Checkout</h1>
+      <nav class="mt-2 text-sm text-black/60">
+        <a href="/cart" class="hover:text-black">Cart</a>
+        <span class="mx-2">&gt;</span>
+        <span class="text-black font-semibold">Checkout</span>
+      </nav>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Left Side - Shipping & Payment -->
+      <div class="lg:col-span-2 space-y-8">
+        
+        <!-- Shipping Address Section -->
+        <div class="border border-black/10 rounded-xl p-6 bg-ash/30">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold">Shipping Address</h2>
+            <button id="add-address-btn" 
+                    class="text-sm text-black/70 hover:text-black border border-black/20 px-3 py-1 rounded-full hover:border-black/40 transition">
+              + Add New Address
+            </button>
+          </div>
+
+          <!-- Address List -->
+          <div id="address-list" class="space-y-3">
+            <% if (addresses.length === 0) { %>
+              <div class="text-center py-8 text-black/60">
+                <p class="mb-4">No saved addresses found</p>
+                <button id="add-first-address-btn" 
+                        class="px-4 py-2 bg-black text-white rounded-lg hover:bg-black/90 transition">
+                  Add Your First Address
+                </button>
+              </div>
+            <% } else { %>
+              <% addresses.forEach((addr, index) => { %>
+                <label class="flex items-start gap-3 p-4 border border-black/10 rounded-lg hover:border-black/20 cursor-pointer transition address-item">
+                  <input type="radio" 
+                         name="selectedAddress" 
+                         value="<%= addr.id %>" 
+                         class="mt-1 h-4 w-4 text-black focus:ring-black border-black/30"
+                         <%= addr.isDefault || index === 0 ? 'checked' : '' %>>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="font-semibold"><%= addr.name %></span>
+                      <span class="text-xs bg-black/10 text-black/70 px-2 py-1 rounded-full uppercase">
+                        <%= addr.type %>
+                      </span>
+                      <% if (addr.isDefault) { %>
+                        <span class="text-xs bg-black text-white px-2 py-1 rounded-full">DEFAULT</span>
+                      <% } %>
+                    </div>
+                    <p class="text-sm text-black/70 mb-2">
+                      <%= addr.address %><% if (addr.landmark) { %>, <%= addr.landmark %><% } %>
+                    </p>
+                    <p class="text-sm text-black/70 mb-2">
+                      <%= addr.state %>, <%= addr.country %> - <%= addr.pinCode %>
+                    </p>
+                    <p class="text-sm text-black/70">
+                      <i class="fa-solid fa-phone text-xs mr-1"></i><%= addr.phone %>
+                      <% if (addr.alternatePhone) { %>, <%= addr.alternatePhone %><% } %>
+                    </p>
+                    <p class="text-sm text-black/70">
+                      <i class="fa-solid fa-envelope text-xs mr-1"></i><%= addr.email %>
+                    </p>
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <button type="button" 
+                            onclick="editAddress('<%= addr.id %>')"
+                            class="text-xs text-black/60 hover:text-black border border-black/20 px-2 py-1 rounded">
+                      Edit
+                    </button>
+                    <% if (!addr.isDefault) { %>
+                      <button type="button" 
+                              onclick="setDefaultAddress('<%= addr.id %>')"
+                              class="text-xs text-black/60 hover:text-black border border-black/20 px-2 py-1 rounded">
+                        Set Default
+                      </button>
+                    <% } %>
+                  </div>
+                </label>
+              <% }) %>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="border border-black/10 rounded-xl p-6 bg-ash/30">
+          <h2 class="text-lg font-semibold mb-4">Payment Method</h2>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-4 border border-black/10 rounded-lg cursor-pointer hover:border-black/20 transition">
+              <input type="radio" name="paymentMethod" value="COD" checked 
+                     class="h-4 w-4 text-black focus:ring-black border-black/30">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-money-bill text-black/60"></i>
+                </div>
+                <div>
+                  <div class="font-semibold">Cash on Delivery</div>
+                  <div class="text-sm text-black/60">Pay when your order arrives</div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side - Order Summary -->
+      <div class="lg:col-span-1">
+        <div class="sticky top-6 border border-black/10 rounded-xl p-6 bg-ash/30">
+          <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+          
+          <!-- Items -->
+          <div class="space-y-3 mb-6 max-h-80 overflow-y-auto">
+            <% cartItems.forEach(item => { %>
+              <div class="flex gap-3">
+                <img src="<%= item.image %>" 
+                     alt="<%= item.productName %>" 
+                     class="w-16 h-16 object-cover rounded border border-black/10">
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-medium truncate"><%= item.productName %></h4>
+                  <p class="text-sm text-black/60"><%= item.brand %> • Size: <%= item.size %></p>
+                  <div class="flex justify-between items-center mt-1">
+                    <span class="text-sm">Qty: <%= item.quantity %></span>
+                    <span class="font-semibold">₹<%= item.itemTotal.toLocaleString('en-IN') %></span>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <!-- Totals -->
+          <div class="border-t border-black/10 pt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span>Subtotal (<%= totals.itemCount %> items)</span>
+              <span>₹<%= totals.subtotal.toLocaleString('en-IN') %></span>
+            </div>
+            <div class="flex justify-between">
+              <span>Shipping</span>
+              <span>
+                <% if (totals.deliveryCharge === 0) { %>
+                  <span class="text-green-600">FREE</span>
+                <% } else { %>
+                  ₹<%= totals.deliveryCharge.toLocaleString('en-IN') %>
+                <% } %>
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tax (18%)</span>
+              <span>₹<%= totals.tax.toLocaleString('en-IN') %></span>
+            </div>
+            <div class="border-t border-black/10 pt-2 flex justify-between text-base font-semibold">
+              <span>Total</span>
+              <span>₹<%= totals.total.toLocaleString('en-IN') %></span>
+            </div>
+          </div>
+
+          <!-- Place Order Button -->
+          <button id="place-order-btn" 
+                  class="w-full mt-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-black/90 transition focus-ring disabled:opacity-50 disabled:cursor-not-allowed">
+            Place Order
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Address Modal -->
+  <div id="address-modal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay">
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 id="modal-title" class="text-lg font-semibold">Add New Address</h3>
+            <button id="close-modal" class="text-black/40 hover:text-black">
+              <i class="fa-solid fa-times text-lg"></i>
+            </button>
+          </div>
+          
+          <form id="address-form" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Name *</label>
+                <input type="text" name="name" required
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="name"></div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Email *</label>
+                <input type="email" name="email" required
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="email"></div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Phone *</label>
+                <input type="tel" name="phone" required
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="phone"></div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Alternate Phone</label>
+                <input type="tel" name="alternatePhone"
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="alternatePhone"></div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Address *</label>
+              <textarea name="address" required rows="2"
+                        class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"></textarea>
+              <div class="error-text hidden" data-field="address"></div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Landmark</label>
+              <input type="text" name="landmark"
+                     class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+              <div class="error-text hidden" data-field="landmark"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">State *</label>
+                <input type="text" name="state" required
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="state"></div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">PIN Code *</label>
+                <input type="text" name="pinCode" required pattern="[0-9]{5,6}"
+                       class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <div class="error-text hidden" data-field="pinCode"></div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Country *</label>
+              <input type="text" name="country" value="India" required
+                     class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+              <div class="error-text hidden" data-field="country"></div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Address Type *</label>
+              <select name="type" required
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40">
+                <option value="">Select type</option>
+                <option value="home">Home</option>
+                <option value="work">Work</option>
+                <option value="other">Other</option>
+              </select>
+              <div class="error-text hidden" data-field="type"></div>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+              <button type="button" id="cancel-address"
+                      class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                Cancel
+              </button>
+              <button type="submit" id="save-address"
+                      class="flex-1 py-3 bg-black text-white rounded-lg hover:bg-black/90 transition">
+                Save Address
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Updated Checkout JavaScript with Proper Error Handling -->
+  <script>
+    class CheckoutManager {
+      constructor() {
+        this.modal = document.getElementById('address-modal');
+        this.form = document.getElementById('address-form');
+        this.editingAddressId = null;
+        this.loadingOverlay = document.getElementById('loading-overlay');
+        
+        this.init();
+      }
+
+      init() {
+        this.bindEvents();
+      }
+
+      showLoading() {
+        this.loadingOverlay.classList.remove('hidden');
+      }
+
+      hideLoading() {
+        this.loadingOverlay.classList.add('hidden');
+      }
+
+      clearErrors() {
+        // Clear all error messages and reset field styles
+        const errorElements = this.form.querySelectorAll('.error-text');
+        const inputElements = this.form.querySelectorAll('input, textarea, select');
+        
+        errorElements.forEach(el => {
+          el.classList.add('hidden');
+          el.textContent = '';
+        });
+        
+        inputElements.forEach(el => {
+          el.classList.remove('field-error');
+        });
+      }
+
+      showFieldErrors(errors) {
+        // Clear existing errors first
+        this.clearErrors();
+        
+        // Show individual field errors
+        Object.keys(errors).forEach(fieldName => {
+          const errorElement = this.form.querySelector(`[data-field="${fieldName}"]`);
+          const inputElement = this.form.querySelector(`[name="${fieldName}"]`);
+          
+          if (errorElement && inputElement) {
+            errorElement.textContent = errors[fieldName];
+            errorElement.classList.remove('hidden');
+            inputElement.classList.add('field-error');
+          }
+        });
+      }
+
+      bindEvents() {
+        // Modal controls
+        document.getElementById('add-address-btn')?.addEventListener('click', () => this.openModal());
+        document.getElementById('add-first-address-btn')?.addEventListener('click', () => this.openModal());
+        document.getElementById('close-modal').addEventListener('click', () => this.closeModal());
+        document.getElementById('cancel-address').addEventListener('click', () => this.closeModal());
+        
+        // Form submission
+        this.form.addEventListener('submit', (e) => this.handleAddressSubmit(e));
+        
+        // Place order
+        document.getElementById('place-order-btn').addEventListener('click', () => this.placeOrder());
+
+        // Close modal on outside click
+        this.modal.addEventListener('click', (e) => {
+          if (e.target === this.modal) this.closeModal();
+        });
+
+        // Clear field errors on input
+        this.form.addEventListener('input', (e) => {
+          const field = e.target;
+          if (field.classList.contains('field-error')) {
+            field.classList.remove('field-error');
+            const errorElement = this.form.querySelector(`[data-field="${field.name}"]`);
+            if (errorElement) {
+              errorElement.classList.add('hidden');
+            }
+          }
+        });
+      }
+
+      openModal(editData = null) {
+        this.editingAddressId = editData ? editData.id : null;
+        const title = document.getElementById('modal-title');
+        const saveBtn = document.getElementById('save-address');
+        
+        // Clear any existing errors
+        this.clearErrors();
+        
+        if (editData) {
+          title.textContent = 'Edit Address';
+          saveBtn.textContent = 'Update Address';
+          this.fillForm(editData);
+        } else {
+          title.textContent = 'Add New Address';
+          saveBtn.textContent = 'Save Address';
+          this.form.reset();
+        }
+        
+        this.modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      closeModal() {
+        this.modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        this.form.reset();
+        this.editingAddressId = null;
+        this.clearErrors();
+      }
+
+      fillForm(data) {
+        Object.keys(data).forEach(key => {
+          const field = this.form.querySelector(`[name="${key}"]`);
+          if (field && data[key]) {
+            field.value = data[key];
+          }
+        });
+      }
+
+      async handleAddressSubmit(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this.form);
+        const addressData = Object.fromEntries(formData.entries());
+        
+        try {
+          this.showLoading();
+          
+          let response;
+          if (this.editingAddressId) {
+            response = await fetch(`/user/api/address/${this.editingAddressId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(addressData)
+            });
+          } else {
+            response = await fetch('/user/api/address', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(addressData)
+            });
+          }
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', result.message || 'Address saved successfully!');
+            this.closeModal();
+            // Reload page to show updated addresses
+            window.location.reload();
+          } else {
+            // Handle validation errors properly
+            if (result.error && result.error.code === 'VALIDATION_ERROR' && result.error.errors) {
+              this.showFieldErrors(result.error.errors);
+            } else {
+              this.showToast('error', result.error?.message || result.error || 'Failed to save address');
+            }
+          }
+          
+        } catch (error) {
+          console.error('Address save error:', error);
+          this.showToast('error', 'Failed to save address. Please try again.');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      async placeOrder() {
+        try {
+          const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
+          const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+          
+          if (!selectedAddress) {
+            this.showToast('error', 'Please select a shipping address');
+            return;
+          }
+
+          if (!paymentMethod) {
+            this.showToast('error', 'Please select a payment method');
+            return;
+          }
+
+          this.showLoading();
+          
+          const response = await fetch('/user/api/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              addressId: selectedAddress.value,
+              paymentMethod: paymentMethod.value
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            // Redirect to success page
+            window.location.href = `/user/order-success/${result.data.orderId}`;
+          } else {
+            this.showToast('error', result.error || 'Failed to place order');
+          }
+          
+        } catch (error) {
+          console.error('Place order error:', error);
+          this.showToast('error', 'Failed to place order. Please try again.');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      showToast(type, message) {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
+        
+        if (type === 'success') {
+          toast.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-200');
+        } else {
+          toast.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
+        }
+        
+        toast.innerHTML = `
+          <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+          <span>${message}</span>
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.remove('translate-x-full', 'opacity-0');
+          toast.classList.add('translate-x-0', 'opacity-100');
+        }, 100);
+        
+        setTimeout(() => {
+          toast.classList.add('translate-x-full', 'opacity-0');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+    }
+
+    // Global functions for inline handlers
+    async function editAddress(addressId) {
+      try {
+        const response = await fetch(`/user/api/address/${addressId}`, {
+          credentials: 'include'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          checkoutManager.openModal(result.data);
+        } else {
+          checkoutManager.showToast('error', 'Failed to load address details');
+        }
+      } catch (error) {
+        console.error('Edit address error:', error);
+        checkoutManager.showToast('error', 'Failed to load address details');
+      }
+    }
+
+    async function setDefaultAddress(addressId) {
+      try {
+        const response = await fetch(`/user/api/address/${addressId}/default`, {
+          method: 'PUT',
+          credentials: 'include'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          checkoutManager.showToast('success', result.message);
+          // Reload to update default address display
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          checkoutManager.showToast('error', result.error?.message || 'Failed to set default address');
+        }
+      } catch (error) {
+        console.error('Set default address error:', error);
+        checkoutManager.showToast('error', 'Failed to set default address');
+      }
+    }
+
+    // Initialize checkout manager
+    const checkoutManager = new CheckoutManager();
+  </script>
+</body>
+</html>

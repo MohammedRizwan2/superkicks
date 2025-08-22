@@ -8,6 +8,12 @@ const categoryController  = require('../controllers/user/categoryController')
 const profileController = require('../controllers/user/profileController')
 const addressController = require('../controllers/user/addressController');
 const { avatarUpload } = require('../config/multer');
+const cartController = require('../controllers/user/cartController');
+const checkoutController = require('../controllers/user/checkoutController')
+const orderController = require('../controllers/user/orderController');
+const wishListController = require('../controllers/user/wishListController')
+;
+const headerload = require('../middleware/header');
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
   try {
@@ -91,6 +97,8 @@ router.post('/forgot-password', isNotAuthenticated, userController.postForgotPas
 router.get('/reset-password/:token', isNotAuthenticated, userController.getResetPassword);
 router.post('/reset-password/:token', isNotAuthenticated, userController.postResetPassword);
 
+
+router.use(headerload);
 // Protected product routes 
 router.get('/product/list', isAuthenticated, checkUserBlocked, productController.getShop);
 router.get('/products/:id', isAuthenticated, checkUserBlocked, productController.getProductDetails);
@@ -127,12 +135,45 @@ router.delete('/api/avatar',profileController.removeAvatar);
 router.get('/addresses',isAuthenticated,addressController.getAddresses)
 
 
-router.post('/api/addresses', addressController.addAddress);
-router.get('/api/addresses', addressController.getUserAddresses);
-router.get('/api/addresses/:id', addressController.getAddress);
-router.put('/api/addresses/:id', addressController.updateAddress);
-router.delete('/api/addresses/:id', addressController.deleteAddress);
+router.post('/api/address', addressController.addAddress);
+router.get('/api/address', addressController.getUserAddresses);
+router.get('/api/address/:id', addressController.getAddress);
+router.put('/api/address/:id', addressController.updateAddress);
+router.delete('/api/address/:id', addressController.deleteAddress);
+router.put('/api/address/:id/default',addressController.setDefaultAddress);
 
+//cart
+router.get('/cart', cartController.renderCart);
+
+
+router.get('/api/cart', cartController.getCart);
+router.post('/api/cart', cartController.addToCart);
+router.put('/api/cart/item/:variantId', cartController.updateCartQuantity);
+router.delete('/api/cart/item/:variantId', cartController.removeFromCart);
+router.delete('/api/cart', cartController.clearCart);
+
+//checkout order
+
+router.get('/checkout',checkoutController.renderCheckout)
+router.post('/api/order',checkoutController.placeOrder)
+router.get('/order-success/:orderId',checkoutController.orderSuccess)
+router.get('/orders/:orderId',orderController.orderDetails)
+router.get('/orders/:orderId/invoice',orderController.downloadInvoice);
+
+router.get('/orders',orderController.orderList)
+router.get('/api/orders',orderController.getOrders);
+router.put('/api/orders/:orderId/cancel',orderController.cancelOrder);
+router.put('/api/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
+router.get('/api/orders/search',orderController.searchOrders);
+router.post('/api/orders/:orderId/returns',orderController.requestReturn);
+
+
+router.post('/api/wishlist/:variantId',wishListController.addToWishlist)
+router.delete('/api/wishlist/:variantId',wishListController.removeFromWishlist);
+router.get('/api/wishlist/:variantId ',wishListController.checkWishlistStatus);
+router.get('/wishlist',wishListController.renderWishlistPage)
+router.delete('/api/wishlist',wishListController.clearWishlist)
+router.get('/api/wishlist',wishListController.getWishlist);
 
 
 

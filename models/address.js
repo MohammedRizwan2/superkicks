@@ -11,7 +11,8 @@ const addressSchema = new mongoose.Schema({
   address: { type: String, required: true },
   landmark: { type: String },
   pinCode: { type: String, required: true, match: /^[0-9]{5,6}$/ },
-  type: { type: String, enum: ['home', 'work', 'other'], required: true }
+  type: { type: String, enum: ['home', 'work', 'other'], required: true },
+   isDefault: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Address', addressSchema);

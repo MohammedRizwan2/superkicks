@@ -6,7 +6,7 @@ const orderSchema = new mongoose.Schema({
   referenceNo: { type: String, required: true, unique: true },
   paymentMethod: { type: String, required: true }, 
   orderDate: { type: Date, default: Date.now },
-  status: { type: String, required: true }, //  'pending', 'shipped', 'delivered'
+  status: { type: String, required: true }, //  
   address: {
     name: { type: String, required: true },
     email: { type: String, required: true, match: /.+\@.+\..+/ },
@@ -25,4 +25,4 @@ const orderSchema = new mongoose.Schema({
   orderItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem', required: true }],
 }, { timestamps: true });
 
-const Order = mongoose.model('Order', orderSchema);
+module.exports= mongoose.model('Order', orderSchema);

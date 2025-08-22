@@ -6,6 +6,11 @@ const orderItemSchema = new mongoose.Schema({
   price: { type: Number, required: true, min: 0 },
   quantity: { type: Number, required: true, min: 1 },
   status: { type: String, required: true },
+  cancellationReason: { type: String },
+  returnReason: { type: String },
+  returnRequestDate: { type: Date },
+  isReturned: { type: Boolean, default: false },
+  isCancelled: { type: Boolean, default: false }
 }, { timestamps: true });
 
-const OrderItem = mongoose.model('OrderItem', orderItemSchema);
+module.exports = mongoose.model('OrderItem', orderItemSchema);
