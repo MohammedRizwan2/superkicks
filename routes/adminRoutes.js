@@ -43,8 +43,13 @@ router.post('/category/:id/edit', categoryController.postEditCategory);
 
 router.get('/orders',orderController.renderOrdersPage)
 router.get('/api/orders',orderController.listOrder);
-router.put('/api/orders/:orderId/status',orderController.updateOrderStatusAPI)
-router.get('/orders/:orderId',orderController.getOrderDetails)
+router.put('/api/orders/:orderId/status',orderController.updateOrderStatus)
+router.put('/api/orders/items/:itemId/status',orderController.updateItemStatus);
+router.get('/orders/:orderId',orderController.getOrderDetails);
+
+
+router.put('/api/orders/items/:itemId/return/approve', orderController.approveReturnRequest);
+router.put('/api/orders/items/:itemId/return/reject', orderController.rejectReturnRequest);
 
 
 router.get('/logout',adminController.logout)

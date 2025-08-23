@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 const orderItemSchema = new mongoose.Schema({
   productName: { type: String, required: true },
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -10,7 +11,19 @@ const orderItemSchema = new mongoose.Schema({
   returnReason: { type: String },
   returnRequestDate: { type: Date },
   isReturned: { type: Boolean, default: false },
-  isCancelled: { type: Boolean, default: false }
+  isCancelled: { type: Boolean, default: false },
+  
+  
+  returnRequested: { type: Boolean, default: false }, 
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order',  },
+
+  statusHistory: [{ 
+    status: String,
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedAt: { type: Date, default: Date.now },
+    reason: String
+  }]
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('OrderItem', orderItemSchema);

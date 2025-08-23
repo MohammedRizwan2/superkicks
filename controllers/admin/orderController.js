@@ -94,6 +94,8 @@ exports.listOrder = async (req , res)=>{
     });
   }
 };
+
+
 exports.getOrderDetails = async (req, res, next) => {
   try {
     const orderId = req.params.orderId;
@@ -123,11 +125,11 @@ exports.getOrderDetails = async (req, res, next) => {
       return res.status(404).render('error/404', { message: 'Order not found' });
     }
 
-    // Process order items with proper data extraction
+
     const processedItems = order.orderItems.map(item => ({
       id: item._id,
       productName: item.productName, // This is stored directly in OrderItem
-      image: item.productId?.images?.[0] || '/images/placeholder.png',
+      image: typeof item.productId?.images?.[0] === "string" ? item.productId.images[0] : item.productId?.images?.[0]?.url|| '/images/placeholder.png',
       size: item.variantId?.size || 'N/A',
       color: item.variantId?.color || null,
       quantity: item.quantity,
@@ -183,13 +185,110 @@ exports.getOrderDetails = async (req, res, next) => {
 };
 
 
-exports.updateOrderStatusAPI = async (req, res) => {
-  try {
-    const orderId = req.params.orderId;
+// exports.updateOrderStatusAPI = async (req, res) => {
+//   try {
+//     const orderId = req.params.orderId;
   
-    const { status } = req.body;
+//     const { status } = req.body;
 
-    const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+//     const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+    
+//     if (!validStatuses.includes(status)) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ')
+//       });
+//     }
+
+//     const order = await Order.findById(orderId).populate('orderItems');
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Order not found'
+//       });
+//     }
+
+//     const oldStatus = order.status;
+//     order.status = status;
+
+
+//     await OrderItem.updateMany(
+//       { _id: { $in: order.orderItems } },
+//       { status: status }
+//     );
+
+//     await order.save();
+
+//     // Inventory management
+//     if (oldStatus !== 'Shipped' && status === 'Shipped') {
+//       for (const itemId of order.orderItems) {
+//         const item = await OrderItem.findById(itemId);
+//         if (item && item.variantId) {
+//           const variant = await Variant.findById(item.variantId);
+//           if (variant && variant.stock >= item.quantity) {
+//             variant.stock -= item.quantity;
+//             await variant.save();
+//           }
+//         }
+//       }
+//     }
+    
+    
+//     if (oldStatus !== 'Cancelled' && status === 'Cancelled') {
+//       for (const itemId of order.orderItems) {
+//         const item = await OrderItem.findById(itemId);
+//         if (item && item.variantId) {
+//           const variant = await Variant.findById(item.variantId);
+//           if (variant) {
+//             variant.stock += item.quantity;
+//             await variant.save();
+//           }
+//         }
+//       }
+//     }
+
+//     return res.json({
+//       success: true,
+//       message: `Order status updated from ${oldStatus} to ${status}`,
+//       data: {
+//         orderId: order._id,
+//         status: order.status,
+//         oldStatus,
+//         updatedAt: order.updatedAt
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('Update order status API error:', error);
+//     return res.status(500).json({
+//       success: false,
+//       error: 'Failed to update order status'
+//     });
+//   }
+// };
+
+exports.renderOrdersPage = async (req, res) => {
+  try {
+    res.render('admin/orderList');
+  } catch (error) {
+    console.error('Render orders page error:', error);
+    res.status(500).send('Server Error');
+  }
+};
+
+
+
+
+module.exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, reason } = req.body;
+
+    // Valid order statuses
+    const validStatuses = [
+      'Pending', 'Confirmed', 'Processing', 'Shipped', 
+      'Out for Delivery', 'Delivered', 'Cancelled'
+    ];
     
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -206,44 +305,110 @@ exports.updateOrderStatusAPI = async (req, res) => {
       });
     }
 
+  
+    const statusFlow = {
+      'Pending': ['Confirmed', 'Cancelled'],
+      'Confirmed': ['Processing', 'Cancelled'], 
+      'Processing': ['Shipped', 'Cancelled'],
+      'Shipped': ['Out for Delivery', 'Delivered', 'Cancelled'],
+      'Out for Delivery': ['Delivered', 'Cancelled'],
+      'Delivered': ['Cancelled'],
+      'Cancelled': [] 
+    };
+
+  
+    if (!statusFlow[order.status]?.includes(status)) {
+      if (order.status === 'Delivered' && status === 'Cancelled') {
+        const hasReturnRequest = await OrderItem.exists({
+          orderId: order._id,
+          returnRequested: true
+        });
+        
+        if (!hasReturnRequest) {
+          return res.status(400).json({
+            success: false,
+            error: 'Cannot change delivered order status without return request'
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot change status from ${order.status} to ${status}`
+        });
+      }
+    }
+
     const oldStatus = order.status;
     order.status = status;
+    
+  
+    order.statusHistory = order.statusHistory || [];
+    order.statusHistory.push({
+      status: status,
+      updatedBy: req.user.id,
+      updatedAt: new Date(),
+      reason: reason || null
+    });
 
+  
+    if (status === 'Cancelled') {
+  
+      await OrderItem.updateMany(
+        { 
+          orderId: order._id, 
+          status: { $nin: ['Delivered', 'Cancelled', 'Returned'] }
+        },
+        { 
+          status: 'Cancelled',
+          cancellationReason: reason || 'Order cancelled by admin',
+          $push: {
+            statusHistory: {
+              status: 'Cancelled',
+              updatedBy: req.user.id,
+              updatedAt: new Date(),
+              reason: reason || 'Order cancelled by admin'
+            }
+          }
+        }
+      );
 
-    await OrderItem.updateMany(
-      { _id: { $in: order.orderItems } },
-      { status: status }
-    );
+      
+      const itemsToCancel = await OrderItem.find({
+        orderId: order._id,
+        status: { $nin: ['Delivered', 'Cancelled', 'Returned'] }
+      }).populate('variantId');
+
+      for (const item of itemsToCancel) {
+        if (item.variantId) {
+          await Variant.findByIdAndUpdate(
+            item.variantId._id,
+            { $inc: { stock: item.quantity } }
+          );
+        }
+      }
+    }
+
+  
+    if (status === 'Delivered') {
+      await OrderItem.updateMany(
+        { 
+          orderId: order._id, 
+          status: { $nin: ['Cancelled', 'Returned'] }
+        },
+        { 
+          status: 'Delivered',
+          $push: {
+            statusHistory: {
+              status: 'Delivered',
+              updatedBy: req.user.id,
+              updatedAt: new Date()
+            }
+          }
+        }
+      );
+    }
 
     await order.save();
-
-    // Inventory management
-    if (oldStatus !== 'Shipped' && status === 'Shipped') {
-      for (const itemId of order.orderItems) {
-        const item = await OrderItem.findById(itemId);
-        if (item && item.variantId) {
-          const variant = await Variant.findById(item.variantId);
-          if (variant && variant.stock >= item.quantity) {
-            variant.stock -= item.quantity;
-            await variant.save();
-          }
-        }
-      }
-    }
-    
-    
-    if (oldStatus !== 'Cancelled' && status === 'Cancelled') {
-      for (const itemId of order.orderItems) {
-        const item = await OrderItem.findById(itemId);
-        if (item && item.variantId) {
-          const variant = await Variant.findById(item.variantId);
-          if (variant) {
-            variant.stock += item.quantity;
-            await variant.save();
-          }
-        }
-      }
-    }
 
     return res.json({
       success: true,
@@ -251,13 +416,12 @@ exports.updateOrderStatusAPI = async (req, res) => {
       data: {
         orderId: order._id,
         status: order.status,
-        oldStatus,
-        updatedAt: order.updatedAt
+        oldStatus
       }
     });
 
   } catch (error) {
-    console.error('Update order status API error:', error);
+    console.error('Update order status error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to update order status'
@@ -265,11 +429,355 @@ exports.updateOrderStatusAPI = async (req, res) => {
   }
 };
 
-exports.renderOrdersPage = async (req, res) => {
+module.exports.updateItemStatus = async (req, res) => {
   try {
-    res.render('admin/orderList');
+    const { itemId } = req.params;
+    const { status, reason } = req.body;
+
+  
+    const validStatuses = [
+      'Pending', 'Confirmed', 'Processing', 'Shipped', 
+      'Out for Delivery', 'Delivered', 'Cancelled',
+      'Return Processing', 'Return Approved', 'Returned'
+    ];
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ')
+      });
+    }
+
+    const orderItem = await OrderItem.findById(itemId)
+      .populate('orderId')
+      .populate('variantId');
+      
+    if (!orderItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order item not found'
+      });
+    }
+
+    
+    if ((orderItem.status === 'Delivered' || orderItem.status === 'Cancelled') && 
+        !orderItem.returnRequested && status !== orderItem.status) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot change status of ${orderItem.status.toLowerCase()} item without return request`
+      });
+    }
+
+
+    const itemStatusFlow = {
+      'Pending': ['Confirmed', 'Cancelled'],
+      'Confirmed': ['Processing', 'Cancelled'], 
+      'Processing': ['Shipped', 'Cancelled'],
+      'Shipped': ['Out for Delivery', 'Delivered', 'Cancelled'],
+      'Out for Delivery': ['Delivered', 'Cancelled'],
+      'Delivered': ['Cancelled'], 
+      'Cancelled': [], 
+      'Return Processing': ['Return Approved', 'Cancelled'],
+      'Return Approved': ['Returned'],
+      'Returned': [] 
+    };
+
+  
+    const allowedTransitions = itemStatusFlow[orderItem.status] || [];
+    
+    if (!allowedTransitions.includes(status)) {
+      
+      if (orderItem.returnRequested && 
+          ['Return Processing', 'Return Approved', 'Returned'].includes(status)) {
+      
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot change item status from ${orderItem.status} to ${status}`
+        });
+      }
+    }
+
+    const oldStatus = orderItem.status;
+
+    
+    if ((status === 'Cancelled' && oldStatus !== 'Cancelled') || 
+        (status === 'Returned' && oldStatus !== 'Returned')) {
+      if (orderItem.variantId) {
+        await Variant.findByIdAndUpdate(
+          orderItem.variantId._id,
+          { $inc: { stock: orderItem.quantity } }
+        );
+      }
+    }
+
+   
+    orderItem.status = status;
+    
+   
+    orderItem.statusHistory = orderItem.statusHistory || [];
+    orderItem.statusHistory.push({
+      status: status,
+      updatedBy: req.user.id,
+      updatedAt: new Date(),
+      reason: reason || null
+    });
+
+    
+    if (status === 'Cancelled') {
+      orderItem.cancellationReason = reason || 'Cancelled by admin';
+    }
+
+    await orderItem.save();
+
+  
+    await updateOverallOrderStatus(orderItem.orderId._id);
+
+    return res.json({
+      success: true,
+      message: `Item status updated from ${oldStatus} to ${status}`,
+      data: {
+        itemId: orderItem._id,
+        status: orderItem.status,
+        oldStatus
+      }
+    });
+
   } catch (error) {
-    console.error('Render orders page error:', error);
-    res.status(500).send('Server Error');
+    console.error('Update item status error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update item status'
+    });
+  }
+};
+
+async function updateOverallOrderStatus(orderId) {
+  try {
+    const order = await Order.findById(orderId);
+    const orderItems = await OrderItem.find({ orderId });
+
+    if (!orderItems.length) return;
+
+    const itemStatuses = orderItems.map(item => item.status);
+    let newOrderStatus = order.status;
+
+  
+    if (itemStatuses.every(status => status === 'Delivered')) {
+      newOrderStatus = 'Delivered';
+    }
+    else if (itemStatuses.every(status => status === 'Cancelled')) {
+      newOrderStatus = 'Cancelled';
+    }
+    else if (itemStatuses.every(status => 
+      ['Shipped', 'Out for Delivery', 'Delivered'].includes(status))) {
+      if (itemStatuses.some(status => status === 'Out for Delivery')) {
+        newOrderStatus = 'Out for Delivery';
+      } else if (itemStatuses.every(status => 
+        ['Shipped', 'Delivered'].includes(status))) {
+        newOrderStatus = 'Shipped';
+      }
+    }
+    else if (itemStatuses.some(status => 
+      ['Processing', 'Shipped', 'Out for Delivery'].includes(status))) {
+      newOrderStatus = 'Processing';
+    }
+    else if (itemStatuses.some(status => status === 'Confirmed')) {
+      newOrderStatus = 'Confirmed';
+    }
+
+  
+    if (newOrderStatus !== order.status) {
+      order.status = newOrderStatus;
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: newOrderStatus,
+        updatedBy: 'system',
+        updatedAt: new Date(),
+        reason: 'Auto-updated based on item statuses'
+      });
+      await order.save();
+    }
+
+  } catch (error) {
+    console.error('Update overall order status error:', error);
+  }
+}
+
+
+
+
+
+exports.approveReturnRequest = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const adminId = req.session.admin?.id || req.user?.id;
+
+  
+    const orderItem = await OrderItem.findById(itemId);
+    if (!orderItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order item not found'
+      });
+    }
+
+  
+    if (!orderItem.returnRequested) {
+      return res.status(400).json({
+        success: false,
+        error: 'No return request found for this item'
+      });
+    }
+
+  
+    if (orderItem.status === 'Returned') {
+      return res.status(400).json({
+        success: false,
+        error: 'Return request already processed'
+      });
+    }
+
+    
+    orderItem.status = 'Returned';
+    orderItem.isReturned = true;
+    orderItem.returnApproved = true;
+    orderItem.returnProcessedDate = new Date();
+
+  
+    orderItem.statusHistory.push({
+      status: 'Returned',
+      updatedBy: adminId,
+      updatedAt: new Date(),
+      reason: 'Return request approved by admin'
+    });
+
+    await orderItem.save();
+;
+
+    res.json({
+      success: true,
+      message: 'Return request approved successfully',
+      item: orderItem
+    });
+
+  } catch (error) {
+    console.error('Approve return error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve return request'
+    });
+  }
+};
+
+exports.rejectReturnRequest = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { reason } = req.body;
+    const adminId = req.session.admin?.id || req.user?.id;
+
+    if (!reason || reason.trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide a valid reason for rejection'
+      });
+    }
+
+    // Find the order item
+    const orderItem = await OrderItem.findById(itemId);
+    if (!orderItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order item not found'
+      });
+    }
+
+    if (!orderItem.returnRequested) {
+      return res.status(400).json({
+        success: false,
+        error: 'No return request found for this item'
+      });
+    }
+
+    
+    if (orderItem.returnApproved === false) {
+      return res.status(400).json({
+        success: false,
+        error: 'Return request already rejected'
+      });
+    }
+
+    orderItem.returnRequested = false;
+    orderItem.returnApproved = false;
+    orderItem.returnRejectionReason = reason.trim();
+    orderItem.returnProcessedDate = new Date();
+
+    orderItem.statusHistory.push({
+      status: orderItem.status, 
+      updatedBy: adminId,
+      updatedAt: new Date(),
+      reason: `Return request rejected: ${reason.trim()}`
+    });
+
+    await orderItem.save();
+
+    res.json({
+      success: true,
+      message: 'Return request rejected successfully',
+      item: orderItem
+    });
+
+  } catch (error) {
+    console.error('Reject return error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reject return request'
+    });
+  }
+};
+
+exports.getAdminOrderDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    
+    const order = await Order.findById(id)
+      .populate({
+        path: 'orderItems',
+        populate: [
+          { path: 'productId', model: 'Product' },
+          { path: 'variantId', model: 'Variant' }
+        ]
+      });
+
+    if (!order) {
+      return res.status(404).render('admin/error', {
+        message: 'Order not found',
+        title: 'Order Not Found'
+      });
+    }
+
+   
+    const totals = {
+      subtotal: order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+      deliveryCharge: 0, 
+      tax: 0 
+    };
+
+   
+    totals.tax = Math.round(totals.subtotal * 0.18);
+
+    res.render('admin/order-details', { 
+      order, 
+      totals,
+      title: `Admin - Order #${order.referenceNo}` 
+    });
+
+  } catch (error) {
+    console.error('Admin order details error:', error);
+    res.status(500).render('admin/error', {
+      message: 'Failed to load order details',
+      title: 'Error'
+    });
   }
 };
