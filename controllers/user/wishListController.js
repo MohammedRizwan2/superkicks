@@ -5,7 +5,7 @@ const Product = require('../../models/product');
 // GET /api/user/wishlist - Get user's wishlist
 exports.getWishlist = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.session.user?.id;
 
     let wishlist = await Wish.findOne({ userId })
       .populate({
@@ -74,7 +74,7 @@ exports.getWishlist = async (req, res) => {
 // POST /api/user/wishlist/:variantId - Add variant to wishlist
 exports.addToWishlist = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.session.user.id;
     const { variantId } = req.params;
 
     // Check if variant exists and product is listed
@@ -91,13 +91,13 @@ exports.addToWishlist = async (req, res) => {
     let wishlist = await Wish.findOne({ userId });
 
     if (!wishlist) {
-      // Create new wishlist
+      
       wishlist = new Wish({
         userId,
         items: [{ variantId }]
       });
     } else {
-      // Check if variant already in wishlist
+    
       const existingItem = wishlist.items.find(item => 
         item.variantId.toString() === variantId
       );

@@ -166,6 +166,7 @@ router.put('/api/orders/:orderId/cancel',orderController.cancelOrder);
 router.put('/api/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
 router.get('/api/orders/search',orderController.searchOrders);
 router.post('/api/orders/:orderId/returns',orderController.requestReturn);
+router.put('/api/orders/:orderId/items/:itemId/return', orderController.returnOrderItem);
 
 
 router.post('/api/wishlist/:variantId',wishListController.addToWishlist)

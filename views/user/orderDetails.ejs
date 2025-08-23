@@ -208,19 +208,19 @@
           </div>
         </div>
 
-        <!-- Order Items with Individual Cancel Options -->
+        <!-- Order Items with Individual Cancel/Return Options -->
         <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
           <h2 class="text-lg font-semibold mb-4">Order Items</h2>
           
           <div class="space-y-4">
             <% order.items.forEach(item => { %>
-              <div class="flex flex-col sm:flex-row gap-4 p-4 bg-white/60 rounded-lg border border-black/5 <%= item.isCancelled ? 'opacity-60' : '' %>">
+              <div class="flex flex-col sm:flex-row gap-4 p-4 bg-white/60 rounded-lg border border-black/5 <%= (item.isCancelled || item.isReturned) ? 'opacity-60' : '' %>">
                 
                 <!-- Product Image -->
                 <div class="flex-shrink-0">
                   <img src="<%= item.image %>" 
                        alt="<%= item.productName %>" 
-                       class="w-20 h-20 object-cover rounded border border-black/10 <%= item.isCancelled ? 'grayscale' : '' %>"
+                       class="w-20 h-20 object-cover rounded border border-black/10 <%= (item.isCancelled || item.isReturned) ? 'grayscale' : '' %>"
                        onerror="this.src='/images/placeholder.png'">
                 </div>
 
@@ -230,8 +230,10 @@
                     <div>
                       <h3 class="font-semibold text-black truncate">
                         <%= item.productName %>
-                        <% if (item.isCancelled) { %>
-                          <span class="text-xs text-red-600 ml-2">(CANCELLED)</span>
+                        
+                        
+                        <% if (item.isReturned) { %>
+                          <span class="text-xs text-orange-600 ml-2">(RETURN REQUESTED)</span>
                         <% } %>
                       </h3>
                       <p class="text-sm text-black/60">Size: <%= item.size %></p>
@@ -253,6 +255,17 @@
                           <span class="text-red-700"><%= item.cancellationReason %></span>
                         </div>
                       <% } %>
+
+                      <!-- Individual Item Return Reason -->
+                      <% if (item.returnReason) { %>
+                        <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                          <span class="font-medium text-orange-800">Return reason:</span>
+                          <span class="text-orange-700"><%= item.returnReason %></span>
+                          <% if (item.returnRequestDate) { %>
+                            <p class="text-xs text-orange-600 mt-1">Requested on: <%= new Date(item.returnRequestDate).toLocaleDateString('en-IN') %></p>
+                          <% } %>
+                        </div>
+                      <% } %>
                     </div>
                     
                     <!-- Pricing and Actions -->
@@ -266,13 +279,23 @@
                         </div>
                       </div>
 
-                      <!-- Individual Cancel Button -->
-                      <% if (['Pending', 'Confirmed'].includes(item.status) && !item.isCancelled) { %>
-                        <button onclick="cancelItem('<%= order.id %>', '<%= item.id %>')"
-                                class="px-3 py-2 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-50 transition">
-                          Cancel Item
-                        </button>
-                      <% } %>
+                      <div class="flex flex-col gap-2">
+                        <!-- Individual Cancel Button -->
+                        <% if (['Pending', 'Confirmed'].includes(item.status) && !item.isCancelled) { %>
+                          <button onclick="cancelItem('<%= order.id %>', '<%= item.id %>')"
+                                  class="px-3 py-2 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-50 transition">
+                            Cancel Item
+                          </button>
+                        <% } %>
+
+                        <!-- Individual Return Button -->
+                        <% if (item.status === 'Delivered' && !item.isReturned && !item.isCancelled) { %>
+                          <button onclick="returnItem('<%= order.id %>', '<%= item.id %>')"
+                                  class="px-3 py-2 border border-orange-300 text-orange-700 rounded-lg text-xs font-medium hover:bg-orange-50 transition">
+                            Return Item
+                          </button>
+                        <% } %>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -417,6 +440,39 @@
     </div>
   </div>
 
+  <!-- Return Single Item Modal -->
+  <div id="return-item-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div class="p-6">
+          <h3 class="text-lg font-semibold mb-4">Return Item</h3>
+          <p class="text-black/70 mb-4">Please provide a reason for returning this item. Our team will review and process your request.</p>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Return Reason *</label>
+            <textarea id="return-item-reason" 
+                      placeholder="Please describe why you want to return this item (minimum 10 characters)..."
+                      rows="4"
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                      required></textarea>
+            <div class="text-xs text-red-600 hidden" id="return-item-reason-error">Return reason is required (minimum 10 characters)</div>
+          </div>
+
+          <div class="flex gap-3">
+            <button id="return-item-modal-close"
+                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+              Cancel
+            </button>
+            <button id="confirm-return-item"
+                    class="flex-1 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+              Submit Request
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Enhanced Order Details JavaScript -->
   <script>
     class OrderDetailsManager {
@@ -425,6 +481,7 @@
         this.loadingOverlay = document.getElementById('loading-overlay');
         this.cancelModal = document.getElementById('cancel-modal');
         this.returnModal = document.getElementById('return-modal');
+        this.returnItemModal = document.getElementById('return-item-modal');
         this.currentAction = null;
         this.currentItemId = null;
         this.init();
@@ -456,8 +513,10 @@
         // Modal controls
         document.getElementById('cancel-modal-close')?.addEventListener('click', () => this.closeCancelModal());
         document.getElementById('return-modal-close')?.addEventListener('click', () => this.closeReturnModal());
+        document.getElementById('return-item-modal-close')?.addEventListener('click', () => this.closeReturnItemModal());
         document.getElementById('confirm-cancel')?.addEventListener('click', () => this.confirmCancel());
         document.getElementById('confirm-return')?.addEventListener('click', () => this.confirmReturn());
+        document.getElementById('confirm-return-item')?.addEventListener('click', () => this.confirmReturnItem());
 
         // Close modals on outside click
         this.cancelModal?.addEventListener('click', (e) => {
@@ -465,6 +524,9 @@
         });
         this.returnModal?.addEventListener('click', (e) => {
           if (e.target === this.returnModal) this.closeReturnModal();
+        });
+        this.returnItemModal?.addEventListener('click', (e) => {
+          if (e.target === this.returnItemModal) this.closeReturnItemModal();
         });
       }
 
@@ -513,6 +575,20 @@
         document.body.style.overflow = '';
         document.getElementById('return-reason').value = '';
         document.getElementById('return-reason-error').classList.add('hidden');
+      }
+
+      showReturnItemModal(itemId) {
+        this.currentItemId = itemId;
+        this.returnItemModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      closeReturnItemModal() {
+        this.returnItemModal.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('return-item-reason').value = '';
+        document.getElementById('return-item-reason-error').classList.add('hidden');
+        this.currentItemId = null;
       }
 
       async confirmCancel() {
@@ -598,6 +674,48 @@
         }
       }
 
+      async confirmReturnItem() {
+        const reasonInput = document.getElementById('return-item-reason');
+        const errorElement = document.getElementById('return-item-reason-error');
+        const reason = reasonInput.value.trim();
+        
+        if (reason.length < 10) {
+          errorElement.classList.remove('hidden');
+          reasonInput.focus();
+          return;
+        }
+        
+        errorElement.classList.add('hidden');
+        
+        try {
+          this.showLoading();
+          
+          const response = await fetch(`/user/api/orders/${this.orderId}/items/${this.currentItemId}/return`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', result.message);
+            this.closeReturnItemModal();
+            // Reload page to show updated status
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            this.showToast('error', result.error);
+          }
+          
+        } catch (error) {
+          console.error('Return item error:', error);
+          this.showToast('error', 'Failed to submit return request. Please try again.');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
       async downloadInvoice() {
         try {
           this.showLoading();
@@ -664,6 +782,11 @@
     // Global function for individual item cancellation
     function cancelItem(orderId, itemId) {
       orderDetailsManager.showCancelModal('item', itemId);
+    }
+
+    // Global function for individual item return
+    function returnItem(orderId, itemId) {
+      orderDetailsManager.showReturnItemModal(itemId);
     }
 
     // Initialize order details manager

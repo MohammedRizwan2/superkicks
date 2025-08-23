@@ -75,7 +75,8 @@ exports.getOrders = async (req, res, next) => {
       isReturned: order.isReturned,
       cancellationReason: order.cancellationReason,
       returnReason: order.returnReason,
-      returnRequestDate: order.returnRequestDate
+      returnRequestDate: order.returnRequestDate,
+    
     }));
 
     return res.json({
@@ -104,8 +105,7 @@ exports.getOrders = async (req, res, next) => {
 
 
 
-
-//cancel orderrr
+// Cancel entire order (user side) - Updated
 exports.cancelOrder = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -136,13 +136,14 @@ exports.cancelOrder = async (req, res, next) => {
       });
     }
 
-    
+    // Update order status
     order.status = 'Cancelled';
     order.isCancelled = true;
     if (reason) {
       order.cancellationReason = reason;
     }
 
+    // Update order items
     for (const itemId of order.orderItems) {
       const orderItem = await OrderItem.findById(itemId);
       if (orderItem && !orderItem.isCancelled) {
@@ -151,9 +152,21 @@ exports.cancelOrder = async (req, res, next) => {
         if (reason) {
           orderItem.cancellationReason = reason;
         }
+        
+        // ADD: Set statusHistory if it exists (for admin compatibility)
+        if (orderItem.statusHistory !== undefined) {
+          orderItem.statusHistory = orderItem.statusHistory || [];
+          orderItem.statusHistory.push({
+            status: 'Cancelled',
+            updatedBy: userId,
+            updatedAt: new Date(),
+            reason: reason || 'Cancelled by user'
+          });
+        }
+        
         await orderItem.save();
 
-    
+        // Restore stock
         const variant = await Variant.findById(orderItem.variantId);
         if (variant) {
           variant.stock += orderItem.quantity;
@@ -184,9 +197,6 @@ exports.cancelOrder = async (req, res, next) => {
 };
 
 
-//order item delete 
-
-// PUT /api/orders/:orderId/items/:itemId/cancel - Cancel specific order item
 exports.cancelOrderItem = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -229,16 +239,27 @@ exports.cancelOrderItem = async (req, res, next) => {
     if (reason) {
       orderItem.cancellationReason = reason;
     }
+    
+   
+    if (orderItem.statusHistory !== undefined) {
+      orderItem.statusHistory = orderItem.statusHistory || [];
+      orderItem.statusHistory.push({
+        status: 'Cancelled',
+        updatedBy: userId,
+        updatedAt: new Date(),
+        reason: reason || 'Cancelled by user'
+      });
+    }
+    
     await orderItem.save();
 
-    // Restore stock
     const variant = await Variant.findById(orderItem.variantId);
     if (variant) {
       variant.stock += orderItem.quantity;
       await variant.save();
     }
 
-    // Check if all items are cancelled
+   
     const allItems = await OrderItem.find({ _id: { $in: order.orderItems } });
     const allCancelled = allItems.every(item => item.isCancelled);
     
@@ -268,7 +289,7 @@ exports.cancelOrderItem = async (req, res, next) => {
   }
 };
 
-// POST /api/orders/:orderId/returns
+
 exports.requestReturn = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -306,7 +327,7 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
-    
+
     const deliveryDate = new Date(order.updatedAt);
     const returnWindow = 7 * 24 * 60 * 60 * 1000; 
     const now = new Date();
@@ -330,6 +351,21 @@ exports.requestReturn = async (req, res, next) => {
         orderItem.isReturned = true;
         orderItem.returnReason = reason.trim();
         orderItem.returnRequestDate = new Date();
+        
+     
+        orderItem.returnRequested = true;
+        
+      
+        if (orderItem.statusHistory !== undefined) {
+          orderItem.statusHistory = orderItem.statusHistory || [];
+          orderItem.statusHistory.push({
+            status: 'Return Requested',
+            updatedBy: userId,
+            updatedAt: new Date(),
+            reason: reason.trim()
+          });
+        }
+        
         await orderItem.save();
       }
     }
@@ -355,6 +391,7 @@ exports.requestReturn = async (req, res, next) => {
     });
   }
 };
+
 
 //Search ordersss
 exports.searchOrders = async (req, res, next) => {
@@ -451,8 +488,10 @@ exports.orderDetails = async (req, res, next) => {
           quantity: item.quantity,
           status: item.status,
           itemTotal: item.price * item.quantity,
-          image: (
-  typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png'
+          image: (typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png',
+
+          returnApproved: item.returnApproved ,
+         returnRejectionReason: item.returnRejectionReason || null,
         }))
       },
       totals: {
@@ -530,5 +569,120 @@ exports.downloadInvoice = async (req, res, next) => {
   } catch (error) {
     console.error('Download invoice error:', error);
     res.status(500).json({ success: false, error: 'Failed to generate invoice' });
+  }
+};
+
+
+
+exports.returnOrderItem = async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { reason } = req.body;
+    const userId = req.session.user?.id;
+
+    console.log('Return item request:', { orderId, itemId, userId, reason }); 
+
+    // Validate input
+    if (!reason || reason.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Return reason is required and must be at least 10 characters long'
+      });
+    }
+
+    
+    const order = await Order.findOne({
+      _id: orderId,
+      userId: userId
+    }).populate('orderItems');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    console.log('Order found with items:', { 
+      orderId: order._id, 
+      itemsCount: order.orderItems?.length 
+    }); 
+
+    
+    const orderItem = order.orderItems.find(item => item._id.toString() === itemId.toString());
+
+    if (!orderItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Item not found in order'
+      });
+    }
+
+    console.log('Order item found:', { 
+      itemId: orderItem._id, 
+      status: orderItem.status,
+      isReturned: orderItem.isReturned,
+      isCancelled: orderItem.isCancelled
+    }); // Debug log
+
+    // Check if item can be returned
+    if (orderItem.status !== 'Delivered') {
+      return res.status(400).json({
+        success: false,
+        error: 'Item must be delivered before it can be returned'
+      });
+    }
+
+    if (orderItem.isReturned || orderItem.isCancelled) {
+      return res.status(400).json({
+        success: false,
+        error: 'Item has already been returned or cancelled'
+      });
+    }
+
+    // Update the order item directly in the database
+    await OrderItem.findByIdAndUpdate(itemId, {
+      returnRequested: true,
+      status: 'Return Requested',
+      returnReason: reason.trim(),
+      returnRequestDate: new Date(),
+      $push: {
+        statusHistory: {
+          status: 'Return Requested',
+          updatedBy: userId,
+          updatedAt: new Date(),
+          reason: reason.trim()
+        }
+      }
+    });
+
+    console.log('Order item updated successfully'); 
+
+    
+    const updatedOrder = await Order.findById(orderId).populate('orderItems');
+    const allItemsReturnedOrCancelled = updatedOrder.orderItems.every(item => 
+      item.isReturned || item.isCancelled
+    );
+
+    
+    if (allItemsReturnedOrCancelled) {
+      await Order.findByIdAndUpdate(orderId, {
+        status: 'Return Requested',
+        isReturned: true
+      });
+      console.log('Order status updated to Return Requested');
+    }
+
+    res.json({
+      success: true,
+      message: 'Item return request submitted successfully. We will process your request soon.'
+    });
+
+  } catch (error) {
+    console.error('Return item error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process return request. Please try again.'
+    });
   }
 };

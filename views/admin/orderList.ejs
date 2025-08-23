@@ -6,16 +6,6 @@
   <title>Order Management | SuperKicks Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
-  <style>
-    .status-select {
-      border: none;
-      background: transparent;
-    }
-    .status-select:focus {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-    }
-  </style>
 </head>
 <body class="bg-gray-100 font-sans">
   <div class="flex min-h-screen">
@@ -122,7 +112,7 @@
       <!-- Search and Filters -->
       <div class="bg-white rounded-lg shadow p-6 mb-8">
         <h3 class="text-lg font-semibold mb-4">Search & Filter Orders</h3>
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
           
           <!-- Search Input -->
           <div class="md:col-span-2">
@@ -133,27 +123,13 @@
                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
 
-          <!-- Status Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="Shipped">Shipped</option>
-              <option value="Out for Delivery">Out for Delivery</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
-
           <!-- Sort By -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
             <select id="sort-by" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="orderDate">Order Date</option>
-              <option value="status">Status</option>
               <option value="total">Total Amount</option>
+              <option value="customer">Customer Name</option>
             </select>
           </div>
 
@@ -192,7 +168,6 @@
                 <th class="py-3 px-4 text-left">Customer</th>
                 <th class="py-3 px-4 text-left">Items</th>
                 <th class="py-3 px-4 text-left">Total</th>
-                <th class="py-3 px-4 text-left">Status</th>
                 <th class="py-3 px-4 text-left w-20">Action</th>
               </tr>
             </thead>
@@ -219,7 +194,6 @@
           page: 1,
           limit: 20,
           search: '',
-          status: 'all',
           sortBy: 'orderDate',
           order: 'desc'
         };
@@ -244,12 +218,6 @@
         });
 
         // Filter changes
-        document.getElementById('status-filter').addEventListener('change', (e) => {
-          this.currentFilters.status = e.target.value;
-          this.currentFilters.page = 1;
-          this.loadOrders();
-        });
-
         document.getElementById('sort-by').addEventListener('change', (e) => {
           this.currentFilters.sortBy = e.target.value;
           this.currentFilters.page = 1;
@@ -308,7 +276,7 @@
         if (orders.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7" class="py-8 px-4 text-center text-gray-500">
+              <td colspan="6" class="py-8 px-4 text-center text-gray-500">
                 <i class="fas fa-shopping-bag text-4xl mb-2 opacity-50"></i>
                 <p>No orders found</p>
               </td>
@@ -336,26 +304,12 @@
             <td class="py-3 px-4">${order.itemCount} item${order.itemCount !== 1 ? 's' : ''}</td>
             <td class="py-3 px-4 font-semibold">₹${order.total.toLocaleString('en-IN')}</td>
             <td class="py-3 px-4">
-              <select data-order-id="${order.id}" 
-                      class="status-select text-xs font-semibold px-2 py-1 rounded ${this.getStatusClass(order.status)}">
-                <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                <option value="Confirmed" ${order.status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
-                <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
-                <option value="Out for Delivery" ${order.status === 'Out for Delivery' ? 'selected' : ''}>Out for Delivery</option>
-                <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
-                <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-              </select>
-            </td>
-            <td class="py-3 px-4">
               <span class="text-gray-500 hover:text-blue-600 cursor-pointer" onclick="viewOrder('${order.id}')">
                 <i class="fas fa-eye" title="View Details"></i>
               </span>
             </td>
           </tr>
         `).join('');
-
-        // Bind status change events
-        this.bindStatusSelectors();
       }
 
       renderPagination(pagination) {
@@ -419,75 +373,6 @@
         document.getElementById('cancelled-orders').textContent = stats.cancelled;
       }
 
-      bindStatusSelectors() {
-        document.querySelectorAll('.status-select').forEach(select => {
-          select.addEventListener('change', (e) => {
-            const orderId = e.target.dataset.orderId;
-            const newStatus = e.target.value;
-            this.updateOrderStatus(orderId, newStatus, e.target);
-          });
-        });
-      }
-
-      async updateOrderStatus(orderId, status, selectElement) {
-        const originalValue = selectElement.dataset.originalValue || selectElement.value;
-        selectElement.dataset.originalValue = originalValue;
-
-        try {
-          this.showLoading();
-
-          const response = await fetch(`/admin/api/orders/${orderId}/status`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ status })
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-            this.showToast('success', result.message);
-            this.updateStatusStyling(selectElement, status);
-            // Reload to update stats
-            setTimeout(() => this.loadOrders(), 1000);
-          } else {
-            selectElement.value = originalValue;
-            this.showToast('error', result.error || 'Failed to update status');
-          }
-
-        } catch (error) {
-          console.error('Status update error:', error);
-          selectElement.value = originalValue;
-          this.showToast('error', 'Network error. Please try again.');
-        } finally {
-          this.hideLoading();
-        }
-      }
-
-      getStatusClass(status) {
-        switch(status) {
-          case 'Delivered':
-            return 'bg-green-100 text-green-800';
-          case 'Shipped':
-          case 'Out for Delivery':
-            return 'bg-blue-100 text-blue-800';
-          case 'Cancelled':
-            return 'bg-red-100 text-red-800';
-          case 'Processing':
-          case 'Confirmed':
-            return 'bg-purple-100 text-purple-800';
-          default:
-            return 'bg-yellow-100 text-yellow-800';
-        }
-      }
-
-      updateStatusStyling(selectElement, status) {
-        selectElement.className = selectElement.className.replace(/bg-\w+-100|text-\w+-800/g, '');
-        selectElement.classList.add(...this.getStatusClass(status).split(' '));
-      }
-
       changePage(page) {
         this.currentFilters.page = page;
         this.loadOrders();
@@ -498,13 +383,11 @@
           page: 1,
           limit: 20,
           search: '',
-          status: 'all',
           sortBy: 'orderDate',
           order: 'desc'
         };
 
         document.getElementById('search-input').value = '';
-        document.getElementById('status-filter').value = 'all';
         document.getElementById('sort-by').value = 'orderDate';
         document.getElementById('sort-order').value = 'desc';
 
