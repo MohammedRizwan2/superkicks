@@ -45,7 +45,7 @@ router.get('/orders',orderController.renderOrdersPage)
 router.get('/api/orders',orderController.listOrder);
 router.put('/api/orders/:orderId/status',orderController.updateOrderStatus)
 router.put('/api/orders/items/:itemId/status',orderController.updateItemStatus);
-router.get('/orders/:orderId',orderController.getOrderDetails);
+router.get('/orders/:orderId',orderController.getAdminOrderDetails);
 
 
 router.put('/api/orders/items/:itemId/return/approve', orderController.approveReturnRequest);

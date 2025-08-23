@@ -16,7 +16,9 @@ const orderItemSchema = new mongoose.Schema({
   
   returnRequested: { type: Boolean, default: false }, 
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order',  },
-
+  returnApproved: { type: Boolean }, 
+  returnRejectionReason: { type: String }, 
+  returnProcessedDate: { type: Date }, 
   statusHistory: [{ 
     status: String,
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

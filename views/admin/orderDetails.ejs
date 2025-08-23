@@ -239,6 +239,9 @@
                             <% if (item.isReturned) { %>
                               <span class="text-xs text-orange-600 ml-2">(RETURNED)</span>
                             <% } %>
+                            <% if (item.returnApproved== false) { %>
+                              <span class="text-xs text-orange-600 ml-2">(return rejected)</span>
+                            <% } %>
                           </h4>
                           <p class="text-sm text-gray-600">
                             Size: <%= item.size || 'N/A' %> 
@@ -258,6 +261,11 @@
                                 RETURN REQUESTED
                               </span>
                             <% } %>
+                             <% if (item.returnApproved==false) { %>
+                              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                                REJECTECD
+                              </span>
+                            <% } %>
                           </div>
 
                           <!-- Cancellation/Return Reason -->
@@ -265,6 +273,12 @@
                             <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
                               <span class="font-medium text-red-800">Cancellation reason:</span>
                               <span class="text-red-700"><%= item.cancellationReason %></span>
+                            </div>
+                          <% } %>
+                          <% if (item.returnApproved==false) { %>
+                            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                              <span class="font-medium text-red-800">Rejection reason:</span>
+                              <span class="text-red-700"><%= item.returnRejectionReason %></span>
                             </div>
                           <% } %>
 
@@ -277,6 +291,7 @@
                                   Requested: <%= new Date(item.returnRequestDate).toLocaleString('en-IN') %>
                                 </p>
                               <% } %>
+                             
                             </div>
                           <% } %>
                         </div>
@@ -321,15 +336,15 @@
                         </div>
                       <% } %>
                     </div>
-
-                    <!-- Return Request Actions -->
-                    <% if (item.returnRequested && item.status !== 'Returned') { %>
+                    
+                    <!-- Return Request Actions - CORRECTED CONDITION -->
+                    <% if (item.returnRequested && !item.isReturned && item.returnApproved !== true) { %>
                       <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
                         <div class="flex items-start justify-between">
                           <div class="flex-1">
                             <div class="flex items-center gap-2 mb-2">
                               <i class="fas fa-undo text-amber-600"></i>
-                              <span class="font-medium text-amber-800">Return Request Pending</span>
+                              <span class="font-medium text-amber-800">Return Request Pending Admin Approval</span>
                             </div>
                             
                             <% if (item.returnReason) { %>
@@ -351,11 +366,11 @@
                           
                           <!-- Return Action Buttons -->
                           <div class="flex flex-col gap-2 ml-4">
-                            <button onclick="handleReturnRequest('<%= item._id %>', 'approve')"
+                            <button onclick="handleReturnRequest('<%= item.id || item._id %>', 'approve')"
                                     class="return-action-btn bg-green-600 text-white hover:bg-green-700 border-0">
                               <i class="fas fa-check mr-1"></i> Approve Return
                             </button>
-                            <button onclick="handleReturnRequest('<%= item._id %>', 'reject')"
+                            <button onclick="handleReturnRequest('<%= item.id || item._id %>', 'reject')"
                                     class="return-action-btn bg-red-600 text-white hover:bg-red-700 border-0">
                               <i class="fas fa-times mr-1"></i> Reject Return
                             </button>
@@ -364,15 +379,46 @@
                       </div>
                     <% } %>
 
+                    <!-- Show Return Status if Already Processed -->
+                    <% if (item.returnRequested && (item.returnApproved === true || item.returnApproved === false)) { %>
+                      <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                          <i class="fas fa-info-circle text-gray-600"></i>
+                          <span class="font-medium text-gray-800">Return Request Status</span>
+                        </div>
+                        
+                        <% if (item.returnApproved == true) { %>
+                          <p class="text-green-700 text-sm">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            <strong>Return Approved</strong> - Item marked for return processing
+                          </p>
+                        <% } else if (item.returnApproved === false) { %>
+                          <p class="text-red-700 text-sm">
+                            <i class="fas fa-times-circle mr-1"></i>
+                            <strong>Return Rejected</strong>
+                            <% if (item.returnRejectionReason) { %>
+                              - <%= item.returnRejectionReason %>
+                            <% } %>
+                          </p>
+                        <% } %>
+                        
+                        <% if (item.returnProcessedDate) { %>
+                          <p class="text-gray-600 text-xs mt-1">
+                            Processed on: <%= new Date(item.returnProcessedDate).toLocaleDateString('en-IN') %>
+                          </p>
+                        <% } %>
+                      </div>
+                    <% } %>
+
                     <!-- Status History -->
                     <% if (item.statusHistory && item.statusHistory.length > 0) { %>
                       <div class="mt-3 text-xs">
                         <button type="button" 
-                                onclick="toggleStatusHistory('<%= item._id %>')"
+                                onclick="toggleStatusHistory('<%= item.id || item._id %>')"
                                 class="text-blue-600 hover:text-blue-800 font-medium">
                           <i class="fas fa-history mr-1"></i> View Status History
                         </button>
-                        <div id="status-history-<%= item._id %>" class="hidden mt-2 bg-gray-50 rounded p-2 space-y-1">
+                        <div id="status-history-<%= item.id || item._id %>" class="hidden mt-2 bg-gray-50 rounded p-2 space-y-1">
                           <% item.statusHistory.forEach((history, idx) => { %>
                             <div class="flex justify-between items-center text-xs">
                               <span class="font-medium"><%= history.status %></span>
@@ -396,11 +442,11 @@
           </div>
         </div>
 
-        <!-- Order Summary Sidebar - MOVED TO TOP -->
+        <!-- Order Summary Sidebar -->
         <div class="lg:col-span-1">
           <div class="sticky top-6 space-y-6">
             
-            <!-- Payment Summary - NOW FIRST -->
+            <!-- Payment Summary -->
             <div class="bg-white rounded-lg shadow p-6">
               <h3 class="text-lg font-semibold mb-4">Payment Summary</h3>
               
@@ -454,7 +500,7 @@
                   </div>
                 <% }) %>
 
-                <% const returnRequestCount = order.items.filter(item => item.returnRequested && item.status !== 'Returned').length; %>
+                <% const returnRequestCount = order.items.filter(item => item.returnRequested && item.returnApproved !== true && item.returnApproved !== false).length; %>
                 <% if (returnRequestCount > 0) { %>
                   <div class="flex justify-between items-center border-t pt-2 mt-2">
                     <span class="text-amber-600 font-medium">Pending Returns:</span>
@@ -553,7 +599,7 @@
         currentItemIdForReject = null;
       });
 
-      // Global functions for return handling
+    
       window.handleReturnRequest = async function(itemId, action) {
         if (action === 'approve') {
           await processReturnApproval(itemId);
@@ -595,7 +641,7 @@
         }
       }
 
-      // Process return rejection
+      
       async function processReturnRejection(itemId, reason) {
         try {
           showLoading();
@@ -792,20 +838,19 @@
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        document.querySelector('.show-toast')?.remove();
-        const toast = document.createElement('div');
-        toast.className = 'show-toast fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-100 text-green-800 border border-green-200';
-        toast.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Invoice downloaded successfully!';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        const toastDiv = document.createElement('div');
+        toastDiv.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-100 text-green-800 border border-green-200';
+        toastDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Invoice downloaded successfully!';
+        document.body.appendChild(toastDiv);
+        setTimeout(() => toastDiv.remove(), 3000);
         
       } catch (error) {
         console.error('Download invoice error:', error);
-        const toast = document.createElement('div');
-        toast.className = 'show-toast fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-red-100 text-red-800 border border-red-200';
-        toast.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (error.message || 'Failed to download invoice');
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        const toastDiv = document.createElement('div');
+        toastDiv.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-red-100 text-red-800 border border-red-200';
+        toastDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + (error.message || 'Failed to download invoice');
+        document.body.appendChild(toastDiv);
+        setTimeout(() => toastDiv.remove(), 3000);
       } finally {
         document.getElementById('loading-overlay').classList.add('hidden');
       }

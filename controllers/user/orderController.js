@@ -75,7 +75,8 @@ exports.getOrders = async (req, res, next) => {
       isReturned: order.isReturned,
       cancellationReason: order.cancellationReason,
       returnReason: order.returnReason,
-      returnRequestDate: order.returnRequestDate
+      returnRequestDate: order.returnRequestDate,
+    
     }));
 
     return res.json({
@@ -195,7 +196,7 @@ exports.cancelOrder = async (req, res, next) => {
   }
 };
 
-// Cancel specific order item (user side) - Updated
+
 exports.cancelOrderItem = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -239,7 +240,7 @@ exports.cancelOrderItem = async (req, res, next) => {
       orderItem.cancellationReason = reason;
     }
     
-    // ADD: Set statusHistory if it exists (for admin compatibility)
+   
     if (orderItem.statusHistory !== undefined) {
       orderItem.statusHistory = orderItem.statusHistory || [];
       orderItem.statusHistory.push({
@@ -252,14 +253,13 @@ exports.cancelOrderItem = async (req, res, next) => {
     
     await orderItem.save();
 
-    // Restore stock
     const variant = await Variant.findById(orderItem.variantId);
     if (variant) {
       variant.stock += orderItem.quantity;
       await variant.save();
     }
 
-    // Check if all items are cancelled
+   
     const allItems = await OrderItem.find({ _id: { $in: order.orderItems } });
     const allCancelled = allItems.every(item => item.isCancelled);
     
@@ -289,7 +289,7 @@ exports.cancelOrderItem = async (req, res, next) => {
   }
 };
 
-// Request return (user side) - Updated
+
 exports.requestReturn = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -327,7 +327,7 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
-    // Check return window
+
     const deliveryDate = new Date(order.updatedAt);
     const returnWindow = 7 * 24 * 60 * 60 * 1000; 
     const now = new Date();
@@ -339,13 +339,11 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
-    // Update order
     order.status = 'Return Requested';
     order.isReturned = true;
     order.returnReason = reason.trim();
     order.returnRequestDate = new Date();
 
-    // Update order items
     for (const itemId of order.orderItems) {
       const orderItem = await OrderItem.findById(itemId);
       if (orderItem) {
@@ -354,10 +352,10 @@ exports.requestReturn = async (req, res, next) => {
         orderItem.returnReason = reason.trim();
         orderItem.returnRequestDate = new Date();
         
-        // ADD: Set returnRequested flag for admin compatibility
+     
         orderItem.returnRequested = true;
         
-        // ADD: Set statusHistory if it exists (for admin compatibility)
+      
         if (orderItem.statusHistory !== undefined) {
           orderItem.statusHistory = orderItem.statusHistory || [];
           orderItem.statusHistory.push({
@@ -490,8 +488,10 @@ exports.orderDetails = async (req, res, next) => {
           quantity: item.quantity,
           status: item.status,
           itemTotal: item.price * item.quantity,
-          image: (
-  typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png'
+          image: (typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png',
+
+          returnApproved: item.returnApproved ,
+         returnRejectionReason: item.returnRejectionReason || null,
         }))
       },
       totals: {
@@ -578,9 +578,9 @@ exports.returnOrderItem = async (req, res) => {
   try {
     const { orderId, itemId } = req.params;
     const { reason } = req.body;
-    const userId = req.session.user?.id || req.user?.id;
+    const userId = req.session.user?.id;
 
-    console.log('Return item request:', { orderId, itemId, userId, reason }); // Debug log
+    console.log('Return item request:', { orderId, itemId, userId, reason }); 
 
     // Validate input
     if (!reason || reason.trim().length < 10) {
@@ -590,7 +590,7 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-    // Find the order and populate orderItems
+    
     const order = await Order.findOne({
       _id: orderId,
       userId: userId
@@ -606,9 +606,9 @@ exports.returnOrderItem = async (req, res) => {
     console.log('Order found with items:', { 
       orderId: order._id, 
       itemsCount: order.orderItems?.length 
-    }); // Debug log
+    }); 
 
-    // Find the specific order item
+    
     const orderItem = order.orderItems.find(item => item._id.toString() === itemId.toString());
 
     if (!orderItem) {
@@ -642,7 +642,6 @@ exports.returnOrderItem = async (req, res) => {
 
     // Update the order item directly in the database
     await OrderItem.findByIdAndUpdate(itemId, {
-      isReturned: true,
       returnRequested: true,
       status: 'Return Requested',
       returnReason: reason.trim(),
@@ -671,7 +670,7 @@ exports.returnOrderItem = async (req, res) => {
         status: 'Return Requested',
         isReturned: true
       });
-      console.log('Order status updated to Return Requested'); // Debug log
+      console.log('Order status updated to Return Requested');
     }
 
     res.json({

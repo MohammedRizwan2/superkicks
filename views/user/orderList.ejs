@@ -352,7 +352,7 @@ class OrderManager {
           
           <!-- Order Info -->
           <div class="flex-1">
-            <div class="flex items-center gap-3 mb-2">
+           <!-- <div class="flex items-center gap-3 mb-2">
               <h3 class="font-semibold text-lg">Order #${order.referenceNo}</h3>
               <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full 
                          ${this.getStatusClass(order.status)}">
@@ -360,7 +360,7 @@ class OrderManager {
               </span>
               ${order.isCancelled ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">CANCELLED</span>' : ''}
               ${order.isReturned ? '<span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">RETURN REQUESTED</span>' : ''}
-            </div>
+            </div> --!>
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-black/70">
               <div>
