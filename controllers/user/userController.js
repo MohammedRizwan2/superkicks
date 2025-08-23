@@ -725,11 +725,11 @@ exports.logout = (req, res) => {
       return res.redirect('/user/login');
     }
 
-    // Only clear user data, preserve admin and other session data
+  
     req.session.user = null;
     delete req.session.user;
 
-    // Also clean up any user-related temporary data
+
     delete req.session.otp;
     delete req.session.signupData;
     delete req.session.resetToken;

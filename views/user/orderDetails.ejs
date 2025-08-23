@@ -147,6 +147,7 @@
                   <% if (order.isReturned) { %>
                     <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">RETURN REQUESTED</span>
                   <% } %>
+                  
                 </div>
               </div>
               <div class="flex justify-between">
@@ -181,6 +182,7 @@
               <p class="text-xs text-orange-600 mt-1">Requested on: <%= new Date(order.returnRequestDate).toLocaleDateString('en-IN') %></p>
             </div>
           <% } %>
+          
         </div>
 
         <!-- Shipping Address -->
@@ -235,6 +237,9 @@
                         <% if (item.isReturned) { %>
                           <span class="text-xs text-orange-600 ml-2">(RETURN REQUESTED)</span>
                         <% } %>
+                        <% if (item.returnApproved==false) { %>
+                          <span class="text-xs text-orange-600 ml-2">(rejected)</span>
+                        <% } %>
                       </h3>
                       <p class="text-sm text-black/60">Size: <%= item.size %></p>
                       <div class="flex items-center gap-2 mt-1">
@@ -253,6 +258,12 @@
                         <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
                           <span class="font-medium text-red-800">Cancellation reason:</span>
                           <span class="text-red-700"><%= item.cancellationReason %></span>
+                        </div>
+                      <% } %>
+                      <% if (item.returnRejectionReason) { %>
+                        <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                          <span class="font-medium text-red-800">rejection reason:</span>
+                          <span class="text-red-700"><%= item.returnRejectionReason %></span>
                         </div>
                       <% } %>
 

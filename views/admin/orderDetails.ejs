@@ -238,8 +238,9 @@
                             <% } %>
                             <% if (item.isReturned) { %>
                               <span class="text-xs text-orange-600 ml-2">(RETURNED)</span>
+
                             <% } %>
-                            <% if (item.returnApproved== false) { %>
+                            <% if (item.returnApproved==false) { %>
                               <span class="text-xs text-orange-600 ml-2">(return rejected)</span>
                             <% } %>
                           </h4>
@@ -258,7 +259,7 @@
                             </span>
                             <% if (item.returnRequested) { %>
                               <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                                RETURN REQUESTED
+                                RETURN REQUESTED 
                               </span>
                             <% } %>
                              <% if (item.returnApproved==false) { %>

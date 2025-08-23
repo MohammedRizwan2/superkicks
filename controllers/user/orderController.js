@@ -467,7 +467,7 @@ exports.orderDetails = async (req, res, next) => {
     const deliveryCharge = subtotal >= 2999 ? 0 : 129;
     const tax = subtotal * 0.18;
     const total = subtotal + tax + deliveryCharge;
-
+    console.log(order.orderItems[0].returnApproved,"<<<<<<<<<")
     res.render('user/orderDetails', {
       user: req.session.user,
       order: {
@@ -489,9 +489,9 @@ exports.orderDetails = async (req, res, next) => {
           status: item.status,
           itemTotal: item.price * item.quantity,
           image: (typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png',
-
           returnApproved: item.returnApproved ,
-         returnRejectionReason: item.returnRejectionReason || null,
+          returnRejectionReason: item.returnRejectionReason || null,
+          
         }))
       },
       totals: {
