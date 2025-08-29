@@ -440,12 +440,12 @@ exports.searchOrders = async (req, res, next) => {
     });
   }
 };
-////orderdetail pageeee
 exports.orderDetails = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
     const { orderId } = req.params;
     console.log(orderId)
+    
     if (!userId) {
       return res.redirect('/user/login');
     }
@@ -455,7 +455,6 @@ exports.orderDetails = async (req, res, next) => {
         path: 'orderItems',
         populate: {
           path: 'productId variantId',
-         
         }
       });
 
@@ -463,11 +462,60 @@ exports.orderDetails = async (req, res, next) => {
       return res.redirect('/user/orders?error=order-not-found');
     }
 
+    // Calculate offer discounts and prepare items data
+    let totalOfferDiscount = 0;
+    const processedItems = order.orderItems.map(item => {
+      const regularPrice = item.variantId?.regularPrice || item.salePrice;
+      const salePrice = item.variantId?.salePrice;
+      const itemOfferDiscount = Math.max(0, (regularPrice - salePrice) * item.quantity);
+      
+      totalOfferDiscount += itemOfferDiscount;
+
+      return {
+        id: item._id,
+        productName: item.productName,
+        productId: item.productId?._id,
+        variantId: item.variantId?._id,
+        size: item.variantId?.size || 'N/A',
+        price: item.price,
+        regularPrice: regularPrice,
+        quantity: item.quantity,
+        status: item.status,
+        itemTotal: item.price * item.quantity,
+        offerDiscount: itemOfferDiscount,
+        image: (typeof item.productId?.images?.[0] === "string" ? 
+          item.productId.images[0] : 
+          item.productId?.images?.[0]?.url) || '/images/placeholder.png',
+        returnApproved: item.returnApproved,
+        returnRejectionReason: item.returnRejectionReason || null,
+      }
+    });
+
+    // Extract coupon information
+    const couponInfo = order.coupon ? {
+      code: order.coupon.code,
+      type: order.coupon.type,
+      value: order.coupon.value,
+      discountAmount: order.coupon.discountAmount || 0,
+      description: order.coupon.type === 'PERCENT' ? 
+        `${order.coupon.value}% off` : 
+        `₹${order.coupon.value} flat discount`
+    } : null;
+
+    // Calculate totals
     const subtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryCharge = subtotal >= 2999 ? 0 : 129;
-    const tax = subtotal * 0.18;
-    const total = subtotal + tax + deliveryCharge;
-    console.log(order.orderItems[0].returnApproved,"<<<<<<<<<")
+    const deliveryCharge = order.deliveryCharge || (subtotal >= 2999 ? 0 : 129);
+    const tax = order.tax || Math.round(subtotal * 0.18);
+    const couponDiscount = couponInfo ? couponInfo.discountAmount : 0;
+    const total = order.total;
+    const finalAmount = order.finalAmount || total;
+
+    // Calculate savings
+    const totalSavings = totalOfferDiscount + couponDiscount;
+    const originalTotal = subtotal + totalOfferDiscount + deliveryCharge + tax;
+
+    console.log(order.orderItems[0].returnApproved, "<<<<<<<<<");
+
     res.render('user/orderDetails', {
       user: req.session.user,
       order: {
@@ -478,27 +526,22 @@ exports.orderDetails = async (req, res, next) => {
         paymentMethod: order.paymentMethod,
         address: order.address,
         total: order.total,
-        items: order.orderItems.map(item => ({
-          id: item._id,
-          productName: item.productName,
-          productId: item.productId?._id,
-          variantId: item.variantId?._id,
-          size: item.variantId?.size || 'N/A',
-          price: item.price,
-          quantity: item.quantity,
-          status: item.status,
-          itemTotal: item.price * item.quantity,
-          image: (typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png',
-          returnApproved: item.returnApproved ,
-          returnRejectionReason: item.returnRejectionReason || null,
-          
-        }))
+        finalAmount: finalAmount,
+        items: processedItems,
+        coupon: couponInfo
       },
       totals: {
         subtotal,
         deliveryCharge,
         tax,
-        total
+        total,
+        finalAmount,
+        originalTotal
+      },
+      discounts: {
+        totalOfferDiscount,
+        couponDiscount,
+        totalSavings
       }
     });
 
@@ -507,8 +550,6 @@ exports.orderDetails = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 
 

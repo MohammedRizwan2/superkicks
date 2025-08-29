@@ -30,6 +30,8 @@
   
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
   <style>
     html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
@@ -38,6 +40,16 @@
 
 <body class="min-h-full bg-white text-black">
   <%- include('../partials/header') %>
+
+  <!-- Hidden div to store user data -->
+  <div id="user-data-container" 
+       style="display: none;" 
+       data-user="<%- encodeURIComponent(JSON.stringify({
+         id: user?.id || '',
+         name: user?.name || 'Customer',
+         email: user?.email || 'customer@example.com'
+       })) %>">
+  </div>
 
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -89,16 +101,24 @@
             <option value="all">All Status</option>
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
+            <option value="Processing">Processing</option>
             <option value="Shipped">Shipped</option>
             <option value="Delivered">Delivered</option>
             <option value="Cancelled">Cancelled</option>
-            <option value="Return Requested">Return Requested</option>
+          </select>
+
+          <select id="payment-filter" 
+                  class="px-4 py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-white">
+            <option value="all">All Payments</option>
+            <option value="COD">Cash on Delivery</option>
+            <option value="RAZORPAY">Online Payment</option>
+            <option value="WALLET">Wallet Payment</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- Orders will be loaded dynamically -->
+    <!-- Orders Container -->
     <div class="animate-fade-in">
       <div id="orders-container" class="space-y-4">
         <!-- Loading state -->
@@ -108,8 +128,10 @@
         </div>
       </div>
 
-      <!-- Pagination will be inserted here -->
-      <div id="pagination-container" class="mt-8"></div>
+      <!-- Pagination Container -->
+      <div id="pagination-container" class="mt-8 flex items-center justify-between">
+        <!-- Pagination will be inserted here -->
+      </div>
     </div>
   </main>
 
@@ -177,487 +199,540 @@
     </div>
   </div>
 
-  <!-- Updated Order List JavaScript with REST API calls -->
-<script>
-class OrderManager {
-  constructor() {
-    this.loadingOverlay = document.getElementById('loading-overlay');
-    this.cancelModal = document.getElementById('cancel-modal');
-    this.returnModal = document.getElementById('return-modal');
-    this.currentOrderId = null;
-    this.currentAction = null;
-    this.currentPage = 1;
-    this.currentFilters = {
-      search: '',
-      status: 'all'
-    };
-    
-    this.init();
-  }
-
-  init() {
-    this.bindEvents();
-    this.loadOrders();
-  }
-
-  bindEvents() {
-   
-    const searchInput = document.getElementById('search-input');
-    const searchResults = document.getElementById('search-results');
-    let searchTimeout;
-
-    searchInput.addEventListener('input', (e) => {
-      clearTimeout(searchTimeout);
-      const query = e.target.value.trim();
-      
-      if (query.length < 2) {
-        searchResults.classList.add('hidden');
-        return;
+  <!-- Enhanced Order List JavaScript -->
+  <script>
+    class OrderManager {
+      constructor() {
+        this.loadingOverlay = document.getElementById('loading-overlay');
+        this.cancelModal = document.getElementById('cancel-modal');
+        this.returnModal = document.getElementById('return-modal');
+        this.currentOrderId = null;
+        this.currentAction = null;
+        this.currentPage = 1;
+        this.currentFilters = {
+          search: '',
+          status: 'all',
+          paymentMethod: 'all'
+        };
+        
+        // Get user data from hidden div
+        this.userData = this.getUserDataFromDiv();
+        
+        this.init();
       }
 
-      searchTimeout = setTimeout(() => {
-        this.performSearch(query);
-      }, 300);
-    });
-
-   
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#search-form')) {
-        searchResults.classList.add('hidden');
-      }
-    });
-
-    
-    document.getElementById('status-filter').addEventListener('change', (e) => {
-      this.currentFilters.status = e.target.value;
-      this.currentPage = 1;
-      this.loadOrders();
-    });
-
-    // Search form submission
-    document.getElementById('search-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.currentFilters.search = searchInput.value.trim();
-      this.currentPage = 1;
-      this.loadOrders();
-    });
-
-    // Modal controls
-    document.getElementById('cancel-modal-close').addEventListener('click', () => this.closeCancelModal());
-    document.getElementById('return-modal-close').addEventListener('click', () => this.closeReturnModal());
-    document.getElementById('confirm-cancel').addEventListener('click', () => this.confirmCancel());
-    document.getElementById('confirm-return').addEventListener('click', () => this.confirmReturn());
-
-    // Close modals on outside click
-    this.cancelModal.addEventListener('click', (e) => {
-      if (e.target === this.cancelModal) this.closeCancelModal();
-    });
-    this.returnModal.addEventListener('click', (e) => {
-      if (e.target === this.returnModal) this.closeReturnModal();
-    });
-  }
-
-  async performSearch(query) {
-    try {
-      const response = await fetch(`/api/orders/search?q=${encodeURIComponent(query)}`, {
-        credentials: 'include'
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        this.displaySearchResults(result.data);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  }
-
-  displaySearchResults(orders) {
-    const container = document.getElementById('search-results');
-    
-    if (orders.length === 0) {
-      container.innerHTML = '<div class="p-3 text-black/60 text-sm">No orders found</div>';
-    } else {
-      container.innerHTML = orders.map(order => `
-        <a href="/user/orders/${order.id}" 
-           class="block p-3 hover:bg-ash/30 transition border-b border-black/5 last:border-b-0">
-          <div class="font-medium">#${order.referenceNo}</div>
-          <div class="text-sm text-black/60">
-            ${new Date(order.orderDate).toLocaleDateString('en-IN')} • 
-            ${order.status} • 
-            ₹${order.total.toLocaleString('en-IN')}
-          </div>
-        </a>
-      `).join('');
-    }
-    
-    container.classList.remove('hidden');
-  }
-
-  async loadOrders() {
-    try {
-      this.showLoading();
-      
-      const params = new URLSearchParams({
-        page: this.currentPage,
-        limit: 10,
-        ...this.currentFilters
-      });
-
-      const response = await fetch(`/user/api/orders?${params}`, {
-        credentials: 'include'
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        this.renderOrders(result.data.orders);
-        this.renderPagination(result.data.pagination);
-      } else {
-        this.showToast('error', result.error || 'Failed to load orders');
-      }
-      
-    } catch (error) {
-      console.error('Load orders error:', error);
-      this.showToast('error', 'Failed to load orders');
-    } finally {
-      this.hideLoading();
-    }
-  }
-
-  renderOrders(orders) {
-    const container = document.querySelector('.space-y-4');
-    
-    if (orders.length === 0) {
-      container.innerHTML = `
-        <div class="text-center py-12 bg-ash/40 rounded-xl border border-black/10">
-          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-black/5">
-            <svg class="h-8 w-8 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-black mb-2">No orders found</h3>
-          <p class="text-black/60 mb-6">You haven't placed any orders yet</p>
-          <a href="/user/product/list" class="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition">
-            Start Shopping
-          </a>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = orders.map(order => `
-      <div class="bg-ash/40 rounded-xl border border-black/10 p-6 hover:border-black/20 transition">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      getUserDataFromDiv() {
+        try {
+          const dataContainer = document.getElementById('user-data-container');
+          if (!dataContainer) {
+            return { id: '', name: 'Customer', email: 'customer@example.com' };
+          }
           
-          <!-- Order Info -->
-          <div class="flex-1">
-           <!-- <div class="flex items-center gap-3 mb-2">
-              <h3 class="font-semibold text-lg">Order #${order.referenceNo}</h3>
-              <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full 
-                         ${this.getStatusClass(order.status)}">
-                ${order.status}
-              </span>
-              ${order.isCancelled ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">CANCELLED</span>' : ''}
-              ${order.isReturned ? '<span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">RETURN REQUESTED</span>' : ''}
-            </div> --!>
-            
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-black/70">
-              <div>
-                <span class="block font-medium text-black">Order Date</span>
-                ${new Date(order.orderDate).toLocaleDateString('en-IN')}
+          const jsonString = decodeURIComponent(dataContainer.dataset.user);
+          return JSON.parse(jsonString);
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+          return { id: '', name: 'Customer', email: 'customer@example.com' };
+        }
+      }
+
+      init() {
+        this.bindEvents();
+        this.loadOrders();
+      }
+
+      bindEvents() {
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        let searchTimeout;
+
+        searchInput.addEventListener('input', (e) => {
+          clearTimeout(searchTimeout);
+          const query = e.target.value.trim();
+          
+          if (query.length < 2) {
+            searchResults.classList.add('hidden');
+            return;
+          }
+
+          searchTimeout = setTimeout(() => {
+            this.performSearch(query);
+          }, 300);
+        });
+
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('#search-form')) {
+            searchResults.classList.add('hidden');
+          }
+        });
+
+        // Filter change handlers
+        document.getElementById('status-filter').addEventListener('change', (e) => {
+          this.currentFilters.status = e.target.value;
+          this.currentPage = 1;
+          this.loadOrders();
+        });
+
+        document.getElementById('payment-filter').addEventListener('change', (e) => {
+          this.currentFilters.paymentMethod = e.target.value;
+          this.currentPage = 1;
+          this.loadOrders();
+        });
+
+        // Search form submission
+        document.getElementById('search-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          this.currentFilters.search = searchInput.value.trim();
+          this.currentPage = 1;
+          this.loadOrders();
+        });
+
+        // Modal controls
+        document.getElementById('cancel-modal-close').addEventListener('click', () => this.closeCancelModal());
+        document.getElementById('return-modal-close').addEventListener('click', () => this.closeReturnModal());
+        document.getElementById('confirm-cancel').addEventListener('click', () => this.confirmCancel());
+        document.getElementById('confirm-return').addEventListener('click', () => this.confirmReturn());
+
+        // Close modals on outside click
+        this.cancelModal.addEventListener('click', (e) => {
+          if (e.target === this.cancelModal) this.closeCancelModal();
+        });
+        this.returnModal.addEventListener('click', (e) => {
+          if (e.target === this.returnModal) this.closeReturnModal();
+        });
+      }
+
+      async performSearch(query) {
+        try {
+          const response = await fetch(`/user/api/orders/search?q=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+          });
+          const result = await response.json();
+          
+          if (result.success) {
+            this.displaySearchResults(result.data);
+          }
+        } catch (error) {
+          console.error('Search error:', error);
+        }
+      }
+
+      displaySearchResults(orders) {
+        const container = document.getElementById('search-results');
+        
+        if (orders.length === 0) {
+          container.innerHTML = '<div class="p-3 text-black/60 text-sm">No orders found</div>';
+        } else {
+          container.innerHTML = orders.map(order => `
+            <a href="/user/orders/${order.id}" 
+               class="block p-3 hover:bg-ash/30 transition border-b border-black/5 last:border-b-0">
+              <div class="font-medium">#${order.referenceNo}</div>
+              <div class="text-sm text-black/60">
+                ${new Date(order.orderDate).toLocaleDateString('en-IN')} • 
+                ${order.status} • 
+                ₹${order.total.toLocaleString('en-IN')}
               </div>
-              <div>
-                <span class="block font-medium text-black">Items</span>
-                ${order.itemCount} item${order.itemCount !== 1 ? 's' : ''}
+            </a>
+          `).join('');
+        }
+        
+        container.classList.remove('hidden');
+      }
+
+      async loadOrders() {
+        try {
+          this.showLoading();
+          
+          const params = new URLSearchParams({
+            page: this.currentPage,
+            limit: 10,
+            ...this.currentFilters
+          });
+
+          const response = await fetch(`/user/api/orders?${params}`, {
+            credentials: 'include'
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.renderOrders(result.data.orders);
+            this.renderPagination(result.data.pagination);
+          } else {
+            this.showToast('error', result.error || 'Failed to load orders');
+          }
+          
+        } catch (error) {
+          console.error('Load orders error:', error);
+          this.showToast('error', 'Failed to load orders');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      renderOrders(orders) {
+        const container = document.getElementById('orders-container');
+        
+        if (orders.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 bg-ash/40 rounded-xl border border-black/10">
+              <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-black/5">
+                <svg class="h-8 w-8 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-              <div>
-                <span class="block font-medium text-black">Payment</span>
-                ${order.paymentMethod === 'COD' ? 'Cash on Delivery' : order.paymentMethod}
+              <h3 class="text-lg font-semibold text-black mb-2">No orders found</h3>
+              <p class="text-black/60 mb-6">You haven't placed any orders yet</p>
+              <a href="/user/product/list" class="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition">
+                Start Shopping
+              </a>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = orders.map(order => `
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 hover:border-black/20 transition">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              
+              <!-- Order Header -->
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-4">
+                  <h3 class="font-semibold text-lg">Order #${order.referenceNo}</h3>
+                  <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full ${this.getStatusClass(order.status)}">
+                    ${order.status}
+                  </span>
+                  ${order.paymentMethod === 'COD' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">COD</span>' : ''}
+                  ${order.paymentMethod === 'RAZORPAY' ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">PAID</span>' : ''}
+                  ${order.paymentMethod === 'WALLET' ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">WALLET</span>' : ''}
+                  ${order.coupon ? `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">COUPON: ${order.coupon.code}</span>` : ''}
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-black/70">
+                  <div>
+                    <span class="block font-medium text-black">Order Date</span>
+                    ${new Date(order.orderDate).toLocaleDateString('en-IN')}
+                  </div>
+                  <div>
+                    <span class="block font-medium text-black">Items</span>
+                    ${order.itemCount} item${order.itemCount !== 1 ? 's' : ''}
+                  </div>
+                  <div>
+                    <span class="block font-medium text-black">Payment</span>
+                    ${this.getPaymentMethodDisplay(order.paymentMethod)}
+                  </div>
+                  <div>
+                    <span class="block font-medium text-black">Total</span>
+                    <div class="flex flex-col">
+                      ${order.discount > 0 ? `<span class="text-xs text-green-600 line-through">₹${order.total.toLocaleString('en-IN')}</span>` : ''}
+                      <span class="text-lg font-bold text-black">₹${(order.finalAmount || order.total).toLocaleString('en-IN')}</span>
+                      ${order.discount > 0 ? `<span class="text-xs text-green-600">Saved ₹${order.discount.toLocaleString('en-IN')}</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Coupon Information -->
+                ${order.coupon ? `
+                  <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div class="flex items-center gap-2 text-sm">
+                      <i class="fas fa-ticket-alt text-yellow-600"></i>
+                      <span class="font-medium text-yellow-800">Coupon Applied:</span>
+                      <span class="text-yellow-700">${order.coupon.code}</span>
+                      <span class="text-yellow-600">(-₹${order.coupon.discountAmount.toLocaleString('en-IN')})</span>
+                    </div>
+                  </div>
+                ` : ''}
               </div>
-              <div>
-                <span class="block font-medium text-black">Total</span>
-                <span class="text-lg font-bold text-black">₹${order.total.toLocaleString('en-IN')}</span>
+
+              <!-- Action Buttons -->
+              <div class="flex flex-wrap gap-2">
+                <!-- View Details -->
+                <a href="/user/orders/${order.id}" 
+                   class="px-4 py-2 border border-black/20 text-black rounded-lg font-medium hover:bg-black/5 transition text-sm">
+                  View Details
+                </a>
+
+                <!-- Download Invoice -->
+                <button onclick="downloadInvoice('${order.id}')"
+                        class="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-sm">
+                  <i class="fas fa-download mr-1"></i>
+                  Invoice
+                </button>
+
+                ${order.canCancel ? `
+                  <button onclick="showCancelModal('${order.id}', 'order')"
+                          class="px-4 py-2 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition text-sm">
+                    Cancel Order
+                  </button>
+                ` : ''}
+
+                ${order.canReturn ? `
+                  <button onclick="showReturnModal('${order.id}')"
+                          class="px-4 py-2 border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition text-sm">
+                    Return Order
+                  </button>
+                ` : ''}
               </div>
             </div>
           </div>
+        `).join('');
+      }
 
-          <!-- Action Buttons -->
-          <div class="flex flex-wrap gap-2">
-            <!-- View Details -->
-            <a href="/user/orders/${order.id}" 
-               class="px-4 py-2 border border-black/20 text-black rounded-lg font-medium hover:bg-black/5 transition text-sm">
-              View Details
-            </a>
+      renderPagination(pagination) {
+        const container = document.getElementById('pagination-container');
+        if (!container) return;
 
-            <!-- Download Invoice -->
-            <button onclick="downloadInvoice('${order.id}')"
-                    class="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-sm">
-              <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Invoice
-            </button>
+        if (pagination.totalPages <= 1) {
+          container.style.display = 'none';
+          return;
+        }
 
-            ${order.canCancel ? `
-              <button onclick="showCancelModal('${order.id}', 'order')"
-                      class="px-4 py-2 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition text-sm">
-                Cancel Order
+        container.style.display = 'flex';
+        container.innerHTML = `
+          <div class="text-sm text-black/60">
+            Showing orders ${pagination.startIndex}-${pagination.endIndex} of ${pagination.totalOrders}
+          </div>
+          
+          <div class="flex gap-2">
+            ${pagination.hasPrev ? `
+              <button onclick="orderManager.changePage(${pagination.currentPage - 1})"
+                      class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
+                Previous
               </button>
             ` : ''}
-
-            ${order.canReturn ? `
-              <button onclick="showReturnModal('${order.id}')"
-                      class="px-4 py-2 border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition text-sm">
-                Return Order
+            
+            ${Array.from({length: Math.min(5, pagination.totalPages)}, (_, i) => {
+              const page = Math.max(1, pagination.currentPage - 2) + i;
+              if (page > pagination.totalPages) return '';
+              return `
+                <button onclick="orderManager.changePage(${page})"
+                        class="px-4 py-2 ${page === pagination.currentPage ? 'bg-black text-white' : 'border border-black/20 text-black hover:bg-black/5'} rounded-lg transition">
+                  ${page}
+                </button>
+              `;
+            }).join('')}
+            
+            ${pagination.hasNext ? `
+              <button onclick="orderManager.changePage(${pagination.currentPage + 1})"
+                      class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
+                Next
               </button>
             ` : ''}
           </div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  renderPagination(pagination) {
-    const container = document.querySelector('.mt-8.flex.items-center.justify-between');
-    if (!container) return;
-
-    if (pagination.totalPages <= 1) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'flex';
-    container.innerHTML = `
-      <div class="text-sm text-black/60">
-        Showing orders ${((pagination.currentPage - 1) * 10) + 1}-${Math.min(pagination.currentPage * 10, pagination.totalOrders)} 
-        of ${pagination.totalOrders}
-      </div>
-      
-      <div class="flex gap-2">
-        ${pagination.hasPrev ? `
-          <button onclick="orderManager.changePage(${pagination.currentPage - 1})"
-                  class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
-            Previous
-          </button>
-        ` : ''}
-        
-        ${Array.from({length: Math.min(5, pagination.totalPages)}, (_, i) => {
-          const page = Math.max(1, pagination.currentPage - 2) + i;
-          if (page > pagination.totalPages) return '';
-          return `
-            <button onclick="orderManager.changePage(${page})"
-                    class="px-4 py-2 ${page === pagination.currentPage ? 'bg-black text-white' : 'border border-black/20 text-black hover:bg-black/5'} rounded-lg transition">
-              ${page}
-            </button>
-          `;
-        }).join('')}
-        
-        ${pagination.hasNext ? `
-          <button onclick="orderManager.changePage(${pagination.currentPage + 1})"
-                  class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
-            Next
-          </button>
-        ` : ''}
-      </div>
-    `;
-  }
-
-  changePage(page) {
-    this.currentPage = page;
-    this.loadOrders();
-  }
-
-  getStatusClass(status) {
-    switch(status) {
-      case 'Delivered': return 'bg-green-100 text-green-800';
-      case 'Shipped': return 'bg-blue-100 text-blue-800';
-      case 'Cancelled': return 'bg-red-100 text-red-800';
-      case 'Return Requested': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-yellow-100 text-yellow-800';
-    }
-  }
-
-  showLoading() {
-    this.loadingOverlay.classList.remove('hidden');
-  }
-
-  hideLoading() {
-    this.loadingOverlay.classList.add('hidden');
-  }
-
-  showCancelModal(orderId, type = 'order') {
-    this.currentOrderId = orderId;
-    this.currentAction = type;
-    this.cancelModal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  closeCancelModal() {
-    this.cancelModal.classList.add('hidden');
-    document.body.style.overflow = '';
-    document.getElementById('cancel-reason').value = '';
-    this.currentOrderId = null;
-    this.currentAction = null;
-  }
-
-  showReturnModal(orderId) {
-    this.currentOrderId = orderId;
-    this.returnModal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  closeReturnModal() {
-    this.returnModal.classList.add('hidden');
-    document.body.style.overflow = '';
-    document.getElementById('return-reason').value = '';
-    document.getElementById('return-reason-error').classList.add('hidden');
-    this.currentOrderId = null;
-  }
-
-  async confirmCancel() {
-    try {
-      this.showLoading();
-      
-      const reason = document.getElementById('cancel-reason').value.trim();
-      
-      const response = await fetch(`/user/api/orders/${this.currentOrderId}/cancel`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ reason })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        this.showToast('success', result.message);
-        this.closeCancelModal();
-        this.loadOrders(); // Reload orders
-      } else {
-        this.showToast('error', result.error);
+        `;
       }
-      
-    } catch (error) {
-      console.error('Cancel error:', error);
-      this.showToast('error', 'Failed to cancel order');
-    } finally {
-      this.hideLoading();
-    }
-  }
 
-  async confirmReturn() {
-    const reasonInput = document.getElementById('return-reason');
-    const errorElement = document.getElementById('return-reason-error');
-    const reason = reasonInput.value.trim();
-    
-    if (reason.length < 10) {
-      errorElement.classList.remove('hidden');
-      reasonInput.focus();
-      return;
-    }
-    
-    errorElement.classList.add('hidden');
-    
-    try {
-      this.showLoading();
-      
-      const response = await fetch(`/user/api/orders/${this.currentOrderId}/returns`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ reason })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        this.showToast('success', result.message);
-        this.closeReturnModal();
-        this.loadOrders(); 
-      } else {
-        this.showToast('error', result.error);
+      changePage(page) {
+        this.currentPage = page;
+        this.loadOrders();
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      
-    } catch (error) {
-      console.error('Return error:', error);
-      this.showToast('error', 'Failed to submit return request');
-    } finally {
-      this.hideLoading();
+
+      getStatusClass(status) {
+        switch(status) {
+          case 'Delivered': return 'bg-green-100 text-green-800';
+          case 'Shipped': return 'bg-blue-100 text-blue-800';
+          case 'Cancelled': return 'bg-red-100 text-red-800';
+          case 'Processing': return 'bg-yellow-100 text-yellow-800';
+          case 'Confirmed': return 'bg-indigo-100 text-indigo-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+      }
+
+      getPaymentMethodDisplay(method) {
+        switch(method) {
+          case 'COD': return 'Cash on Delivery';
+          case 'RAZORPAY': return 'Online Payment';
+          case 'WALLET': return 'Wallet Payment';
+          default: return method;
+        }
+      }
+
+      showLoading() {
+        this.loadingOverlay.classList.remove('hidden');
+      }
+
+      hideLoading() {
+        this.loadingOverlay.classList.add('hidden');
+      }
+
+      showCancelModal(orderId, type = 'order') {
+        this.currentOrderId = orderId;
+        this.currentAction = type;
+        this.cancelModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      closeCancelModal() {
+        this.cancelModal.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('cancel-reason').value = '';
+        this.currentOrderId = null;
+        this.currentAction = null;
+      }
+
+      showReturnModal(orderId) {
+        this.currentOrderId = orderId;
+        this.returnModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      closeReturnModal() {
+        this.returnModal.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('return-reason').value = '';
+        document.getElementById('return-reason-error').classList.add('hidden');
+        this.currentOrderId = null;
+      }
+
+      async confirmCancel() {
+        try {
+          this.showLoading();
+          
+          const reason = document.getElementById('cancel-reason').value.trim();
+          
+          const response = await fetch(`/user/api/orders/${this.currentOrderId}/cancel`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', result.message);
+            this.closeCancelModal();
+            this.loadOrders();
+          } else {
+            this.showToast('error', result.error);
+          }
+          
+        } catch (error) {
+          console.error('Cancel error:', error);
+          this.showToast('error', 'Failed to cancel order');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      async confirmReturn() {
+        const reasonInput = document.getElementById('return-reason');
+        const errorElement = document.getElementById('return-reason-error');
+        const reason = reasonInput.value.trim();
+        
+        if (reason.length < 10) {
+          errorElement.classList.remove('hidden');
+          reasonInput.focus();
+          return;
+        }
+        
+        errorElement.classList.add('hidden');
+        
+        try {
+          this.showLoading();
+          
+          const response = await fetch(`/user/api/orders/${this.currentOrderId}/returns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', result.message);
+            this.closeReturnModal();
+            this.loadOrders(); 
+          } else {
+            this.showToast('error', result.error);
+          }
+          
+        } catch (error) {
+          console.error('Return error:', error);
+          this.showToast('error', 'Failed to submit return request');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      showToast(type, message) {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
+        
+        if (type === 'success') {
+          toast.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-200');
+        } else {
+          toast.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
+        }
+        
+        toast.innerHTML = `
+          <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+          <span>${message}</span>
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.remove('translate-x-full', 'opacity-0');
+          toast.classList.add('translate-x-0', 'opacity-100');
+        }, 100);
+        
+        setTimeout(() => {
+          toast.classList.add('translate-x-full', 'opacity-0');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
     }
-  }
 
-  showToast(type, message) {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
-    
-    if (type === 'success') {
-      toast.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-200');
-    } else {
-      toast.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
-    }
-    
-    toast.innerHTML = `
-      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
-      <span>${message}</span>
-    `;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.remove('translate-x-full', 'opacity-0');
-      toast.classList.add('translate-x-0', 'opacity-100');
-    }, 100);
-    
-    setTimeout(() => {
-      toast.classList.add('translate-x-full', 'opacity-0');
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  }
-}
-
-// Global functions
-function showCancelModal(orderId, type = 'order') {
-  orderManager.showCancelModal(orderId, type);
-}
-
-function showReturnModal(orderId) {
-  orderManager.showReturnModal(orderId);
-}
-
-async function downloadInvoice(orderId) {
-  try {
-    orderManager.showLoading();
-    
-    const response = await fetch(`/user/orders/${orderId}/invoice`, {
-      method: 'GET',
-      credentials: 'include'
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate invoice');
+    // Global functions
+    function showCancelModal(orderId, type = 'order') {
+      orderManager.showCancelModal(orderId, type);
     }
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `invoice-${orderId}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    orderManager.showToast('success', 'Invoice downloaded successfully!');
-    
-  } catch (error) {
-    console.error('Download error:', error);
-    orderManager.showToast('error', 'Failed to download invoice');
-  } finally {
-    orderManager.hideLoading();
-  }
-}
+    function showReturnModal(orderId) {
+      orderManager.showReturnModal(orderId);
+    }
 
-// Initialize order manager
-const orderManager = new OrderManager();
-</script>
+    async function downloadInvoice(orderId) {
+      try {
+        orderManager.showLoading();
+        
+        const response = await fetch(`/user/orders/${orderId}/invoice`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate invoice');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${orderId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        orderManager.showToast('success', 'Invoice downloaded successfully!');
+        
+      } catch (error) {
+        console.error('Download error:', error);
+        orderManager.showToast('error', 'Failed to download invoice');
+      } finally {
+        orderManager.hideLoading();
+      }
+    }
+
+    // Initialize order manager
+    const orderManager = new OrderManager();
+  </script>
+</body>
+</html>

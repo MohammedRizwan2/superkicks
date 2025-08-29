@@ -177,7 +177,10 @@ router.delete('/api/wishlist',wishListController.clearWishlist)
 router.get('/api/wishlist',wishListController.getWishlist);
 
 
-
+router.post('/api/coupon/apply', checkoutController.applyCoupon);
+router.post('/api/coupon/remove', checkoutController.removeCoupon);
+router.post('/api/order/create-payment', checkoutController.createPaymentOrder);
+router.post('/api/order/verify-payment', checkoutController.verifyPayment);
 
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);

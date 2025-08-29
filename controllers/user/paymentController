@@ -1,0 +1,89 @@
+import { check } from 'express-validator';
+
+const express = require('express');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
+const router = express.Router();
+const Order = require('../../models/order');
+const OrderItem = require('../../models/orderItem');
+const Variant = require('../../models/variant');
+const Cart = require('../../models/cart');
+const Address = require('../../models/address.js')
+
+const oid = (id) => new mongoose.Types.ObjectId(id);
+const razor = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,         
+  key_secret: process.env.RAZORPAY_KEY_SECRET 
+});
+
+
+ async function checkOutintent(userId, addressId) {
+    const cart = Cart.aggregate([
+        {$match:{userId:oid(userId)}},
+        {$unwind:"$items"},
+
+        {$lookup:{
+            from:'variants',
+            localField:'items.variantId',
+            foreignField:'_id',
+            as:'variant'
+
+        }},
+        {$unwind:"variant"},
+
+        {$lookup:{
+            form:"products",
+            localField:'items.productId',
+            foreignField:'_id',
+            as:'product'
+        }},
+        {$unwind:"product"},
+        {$project:{
+            productId:"$product._id",
+            variantId:"$variant._id",
+            productName:"$product.productName",
+            image:{$first:"$product.images"},
+            size:"$variant.size",
+            price:"$variant.salePrice",
+            quantity:'$items.quantity',
+            stock:"$variant.stock"
+
+
+        }},
+        {$group: {
+        _id: '$$ROOT',
+      }
+        }
+    ])
+if(!cart||cart.length ===0){
+  return {item:[],address:null,total:{subtotal:0,tax:0,delivaryCharge:0,total:0}};
+}
+const addresses = await Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
+    
+const items = (await cart).map(x=>({
+    variantId:x.variantId,
+    productId:x.productId,
+    productName:x.ProductName,
+    image:x.image,
+    size:x.size,
+    color:x.size,
+    price:x.price,
+    quantity:x.quantity,
+    stock:x.stock
+
+}));
+const subtotal = items.reduce((s,it)=>s+(it.price))
+
+ }
+
+
+module.exports.checkOutinte= (req,res)=>{
+    const userId = req.session?.user?.id;
+
+    if(!userId){
+        console.log("no userID found")
+        return res.redirect('/user/login')
+    }
+
+    
+}
