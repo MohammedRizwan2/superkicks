@@ -11,7 +11,8 @@ const { avatarUpload } = require('../config/multer');
 const cartController = require('../controllers/user/cartController');
 const checkoutController = require('../controllers/user/checkoutController')
 const orderController = require('../controllers/user/orderController');
-const wishListController = require('../controllers/user/wishListController')
+const wishListController = require('../controllers/user/wishListController');
+const walletController = require('../controllers/user/walletController');
 ;
 const headerload = require('../middleware/header');
 // Middleware to check if user is authenticated
@@ -181,6 +182,11 @@ router.post('/api/coupon/apply', checkoutController.applyCoupon);
 router.post('/api/coupon/remove', checkoutController.removeCoupon);
 router.post('/api/order/create-payment', checkoutController.createPaymentOrder);
 router.post('/api/order/verify-payment', checkoutController.verifyPayment);
+
+
+router.get('/wallet', walletController.renderWallet);
+router.get('/api/wallet/balance', walletController.getWalletBalance);
+router.post('/api/wallet/apply-referral', walletController.applyReferralCode);
 
 // Logout route
 router.get('/logout', isAuthenticated, userController.logout);

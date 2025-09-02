@@ -16,7 +16,6 @@ const couponSchema = new mongoose.Schema({
   isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
-couponSchema.index({ code: 1 }, { unique: true });
 
 couponSchema.pre('validate', function(next) {
   if (this.type === 'PERCENT') {

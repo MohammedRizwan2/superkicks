@@ -16,7 +16,7 @@ const walletSchema = new mongoose.Schema({
     transactionId: { 
       type: String, 
       required: true,
-      unique: true 
+  
     },
     type: { 
       type: String, 
@@ -83,9 +83,6 @@ const walletSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-walletSchema.index({ userId: 1 });
-walletSchema.index({ 'transactions.transactionId': 1 });
-walletSchema.index({ 'transactions.createdAt': -1 });
-walletSchema.index({ 'referralStats.referralCode': 1 });
+
 
 module.exports = mongoose.model('Wallet', walletSchema);

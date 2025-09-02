@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Cart = require('../../models/cart');
 const Address = require('../../models/address');
 const Order = require('../../models/order');
@@ -5,9 +6,9 @@ const OrderItem = require('../../models/orderItem');
 const Product = require('../../models/product');
 const Variant = require('../../models/variant');
 const Coupon = require('../../models/coupon');
+const Wallet= require('../../models/wallet');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -55,7 +56,6 @@ const getAvailableCouponsForUser = async (userId, orderValue) => {
   }
 };
 
-
 const calculateDiscount = (coupon, orderValue) => {
   let discount = 0;
   
@@ -84,6 +84,11 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
   const address = await Address.findOne({ _id: addressId, userId });
   if (!address) {
     throw new Error('Invalid address selected');
+  }
+
+  const wallet = await Wallet.findOne({ userId });
+  if (!wallet) {
+    throw new Error('Wallet not found');
   }
 
   let subtotal = 0;
@@ -116,7 +121,6 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
     await orderItem.save();
     orderItems.push(orderItem._id);
 
-
     variant.stock -= item.quantity;
     await variant.save();
   }
@@ -125,7 +129,6 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
   const tax = Math.round(subtotal * 0.18);
   let discount = 0;
   let couponUsed = null;
-
 
   if (sessionCoupon && sessionCoupon.userId.toString() === userId.toString()) {
     const coupon = await Coupon.findById(sessionCoupon.couponId);
@@ -140,18 +143,23 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
     }
   }
 
-
   const total = Math.max(0, subtotal + tax + deliveryCharge - discount);
-  const referenceNo = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
 
+  if (paymentMethod === 'WALLET') {
+    if (wallet.balance < total) {
+      throw new Error('Insufficient wallet balance');
+    }
+  }
+
+  const referenceNo = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
 
   let orderStatus = 'Pending';
   if (paymentMethod === 'RAZORPAY' && paymentDetails.razorpayPaymentId) {
-    orderStatus = 'Confirmed';
+    orderStatus = 'Pending';
   } else if (paymentMethod === 'COD') {
     orderStatus = 'Pending';
   } else if (paymentMethod === 'WALLET') {
-    orderStatus = 'Confirmed';
+    orderStatus = 'Pending';
   }
 
   const orderData = {
@@ -180,7 +188,6 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
     orderItems
   };
 
-
   if (paymentMethod === 'RAZORPAY' && paymentDetails) {
     orderData.razorpayPaymentId = paymentDetails.razorpayPaymentId;
     orderData.razorpayOrderId = paymentDetails.razorpayOrderId;
@@ -189,18 +196,35 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
 
   const order = new Order(orderData);
   await order.save();
+
+  if (paymentMethod === 'WALLET') {
+    const balanceBefore = wallet.balance;
+    wallet.balance -= total;
+    wallet.transactions.push({
+      transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
+      type: 'DEBIT',
+      amount: total,
+      description: `Payment for order #${referenceNo}`,
+      category: 'ORDER_REFUND',
+      reference: { type: 'ORDER', referenceId: order._id.toString() },
+      status: 'COMPLETED',
+      balanceBefore,
+      balanceAfter: wallet.balance,
+      createdAt: new Date()
+    });
+    await wallet.save();
+  }
+
   if (couponUsed && sessionCoupon) {
     await Coupon.findByIdAndUpdate(sessionCoupon.couponId, {
       $inc: { usedCount: 1 }
     });
   }
 
-
   await OrderItem.updateMany(
     { _id: { $in: orderItems } },
     { $set: { orderId: order._id } }
   );
-
 
   await Cart.findOneAndUpdate(
     { userId },
@@ -209,6 +233,7 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
 
   return order;
 }
+
 exports.placeOrder = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
@@ -228,7 +253,6 @@ exports.placeOrder = async (req, res) => {
       });
     }
 
-
     if (!['COD', 'WALLET'].includes(paymentMethod)) {
       return res.status(400).json({
         success: false,
@@ -236,9 +260,7 @@ exports.placeOrder = async (req, res) => {
       });
     }
 
-    
     const order = await createOrderInDb(userId, addressId, paymentMethod, req.session.coupon);
-
 
     if (req.session.coupon) {
       delete req.session.coupon;
@@ -261,7 +283,6 @@ exports.placeOrder = async (req, res) => {
     });
   }
 };
-
 
 exports.createPaymentOrder = async (req, res) => {
   try {
@@ -287,33 +308,26 @@ exports.createPaymentOrder = async (req, res) => {
       });
     }
 
-    
     let subtotal = 0;
     cart.items.forEach(item => {
       subtotal += item.variantId.salePrice * item.quantity;
     });
 
     const deliveryCharge = subtotal >= 2999 ? 0 : 129;
-  
-    
-    
     let discount = 0;
     if (req.session.coupon && req.session.coupon.userId.toString() === userId.toString()) {
-    
       const coupon = await Coupon.findById(req.session.coupon.couponId);
       if (coupon && subtotal >= coupon.minOrder) {
         discount = calculateDiscount(coupon, subtotal);
       }
     }
-      const taxableAmount =subtotal-discount;
+    const taxableAmount = subtotal - discount;
     const tax = Math.round(taxableAmount * 0.18);
-  
     const total = Math.max(0, subtotal + tax + deliveryCharge - discount);
     const referenceNo = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
 
     console.log('Creating Razorpay order with amount:', total);
 
-    
     const razorpayOrder = await razorpay.orders.create({
       amount: total * 100, 
       currency: 'INR',
@@ -344,6 +358,7 @@ exports.createPaymentOrder = async (req, res) => {
     });
   }
 };
+
 exports.verifyPayment = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
@@ -361,7 +376,6 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-  
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -375,7 +389,6 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    
     const paymentDetails = {
       razorpayPaymentId: razorpay_payment_id,
       razorpayOrderId: razorpay_order_id,
@@ -384,7 +397,6 @@ exports.verifyPayment = async (req, res) => {
 
     const order = await createOrderInDb(userId, addressId, 'RAZORPAY', req.session.coupon, paymentDetails);
 
-  
     if (req.session.coupon) {
       delete req.session.coupon;
     }
@@ -441,7 +453,6 @@ exports.orderSuccess = async (req, res, next) => {
     next(error);
   }
 };
-
 
 exports.applyCoupon = async (req, res) => {
   try {
@@ -527,7 +538,6 @@ exports.applyCoupon = async (req, res) => {
   }
 };
 
-
 exports.removeCoupon = async (req, res) => {
   try {
     delete req.session.coupon;
@@ -566,6 +576,11 @@ exports.renderCheckout = async (req, res, next) => {
 
     if (!cart || cart.items.length === 0) {
       return res.redirect('/cart?error=empty-cart');
+    }
+
+    const wallet = await Wallet.findOne({ userId }).select('balance');
+    if (!wallet) {
+      return res.redirect('/cart?error=wallet-not-found');
     }
 
     const addresses = await Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
@@ -668,7 +683,8 @@ exports.renderCheckout = async (req, res, next) => {
         maxDiscount: coupon.maxDiscount,
         minOrder: coupon.minOrder
       })),
-      razorpayKeyId: process.env.RAZORPAY_KEY_ID
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+      walletBalance: wallet.balance
     });
 
   } catch (error) {
