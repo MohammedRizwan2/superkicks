@@ -6,8 +6,10 @@ const productController = require('../controllers/admin/productController');
 const categoryController = require('../controllers/admin/categoryController');
 const orderController = require('../controllers/admin/orderController')
 const { uploadProductImages } = require('../config/multer');
+const couponController = require('../controllers/admin/couponController')
 
 const adminAuth = require('../middleware/adminAuth');
+const coupon = require('../models/coupon');
 // Login routes
 router.get('/login', adminController.getAdminLogin);
 router.post('/login', adminController.postLogin);
@@ -50,6 +52,17 @@ router.get('/orders/:orderId',orderController.getAdminOrderDetails);
 
 router.put('/api/orders/items/:itemId/return/approve', orderController.approveReturnRequest);
 router.put('/api/orders/items/:itemId/return/reject', orderController.rejectReturnRequest);
+
+
+router.get('/coupons', couponController.renderCouponsPage);
+
+
+router.get('/coupons', couponController.list);
+router.post('/coupons', couponController.create);
+router.get('/coupons/:id', couponController.getOne);
+router.put('/coupons/:id', couponController.update);
+router.patch('/coupons/:id/toggle', couponController.toggle);
+router.patch('/coupons/:id/archive', couponController.archive);
 
 
 router.get('/logout',adminController.logout)

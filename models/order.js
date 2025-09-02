@@ -20,8 +20,18 @@ const orderSchema = new mongoose.Schema({
     type: { type: String, required: true },
   },
   transactionId: { type: String },
-  couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon' },
-  total: { type: Number, required: true, min: 0 },
+    coupon: {
+    code: { type: String },
+    type: { type: String, enum: ['PERCENT', 'FLAT'] },
+    value: { type: Number }, 
+    discountAmount: { type: Number } 
+  },
+
+  razorpayOrderId:String,
+  razorpayPaymentId: String,
+  razorpaySignature: String,
+   
+total: { type: Number, required: true, min: 0 },
   orderItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem', required: true }],
 }, { timestamps: true });
 
