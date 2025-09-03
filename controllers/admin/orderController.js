@@ -3,6 +3,7 @@ const OrderItem = require('../../models/orderItem')
 const Variant = require('../../models/variant');
 const Product = require('../../models/product');
 const User = require('../../models/userSchema');
+const Wallet = require('../../models/wallet');
 
 
 exports.listOrder = async (req , res)=>{
@@ -436,13 +437,19 @@ async function updateOverallOrderStatus(orderId) {
 
 
 
+
+
+
+
 exports.approveReturnRequest = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const adminId = req.session.admin?.id 
+    const adminId = req.session.admin?.id || req.user?.id;
 
-  
-    const orderItem = await OrderItem.findById(itemId);
+    const orderItem = await OrderItem.findById(itemId)
+      .populate('orderId')
+      .populate('variantId');
+      
     if (!orderItem) {
       return res.status(404).json({
         success: false,
@@ -450,7 +457,6 @@ exports.approveReturnRequest = async (req, res) => {
       });
     }
 
-  
     if (!orderItem.returnRequested) {
       return res.status(400).json({
         success: false,
@@ -458,7 +464,6 @@ exports.approveReturnRequest = async (req, res) => {
       });
     }
 
-  
     if (orderItem.status === 'Returned') {
       return res.status(400).json({
         success: false,
@@ -466,13 +471,15 @@ exports.approveReturnRequest = async (req, res) => {
       });
     }
 
-    
+    // Calculate refund amount with proper coupon handling
+    const refundAmount = await calculateItemRefundAmount(orderItem.orderId, orderItem);
+
+    // Update item status
     orderItem.status = 'Returned';
     orderItem.isReturned = true;
     orderItem.returnApproved = true;
     orderItem.returnProcessedDate = new Date();
 
-  
     orderItem.statusHistory.push({
       status: 'Returned',
       updatedBy: adminId,
@@ -481,12 +488,31 @@ exports.approveReturnRequest = async (req, res) => {
     });
 
     await orderItem.save();
-;
+
+    // Restore stock to variant
+    if (orderItem.variantId) {
+      await Variant.findByIdAndUpdate(
+        orderItem.variantId._id,
+        { $inc: { stock: orderItem.quantity } }
+      );
+    }
+
+    // Process wallet refund if payment was not COD
+    if (orderItem.orderId.paymentMethod !== 'COD' && refundAmount > 0) {
+      await processWalletRefund(
+        orderItem.orderId.userId, 
+        refundAmount, 
+        orderItem.orderId._id, 
+        'ITEM_RETURN',
+        orderItem._id
+      );
+    }
 
     res.json({
       success: true,
-      message: 'Return request approved successfully',
-      item: orderItem
+      message: `Return request approved successfully. ${refundAmount > 0 ? `₹${refundAmount} credited to wallet.` : ''}`,
+      item: orderItem,
+      refundAmount
     });
 
   } catch (error) {
@@ -497,6 +523,207 @@ exports.approveReturnRequest = async (req, res) => {
     });
   }
 };
+
+// Helper function to calculate item refund amount with coupon consideration
+async function calculateItemRefundAmount(order, orderItem) {
+  try {
+    const itemSubtotal = orderItem.price * orderItem.quantity;
+    let refundAmount = itemSubtotal;
+
+    // If order has coupon discount, calculate proportional reduction
+    if (order.couponDiscount && order.couponDiscount > 0) {
+      // Calculate total items value before discount
+      const allItems = await OrderItem.find({ orderId: order._id });
+      const totalItemsValue = allItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Calculate this item's share of the coupon discount
+      const itemDiscountShare = (itemSubtotal / totalItemsValue) * order.couponDiscount;
+      
+      // Subtract the proportional discount from refund amount
+      refundAmount = Math.max(0, itemSubtotal - itemDiscountShare);
+    }
+
+    return Math.round(refundAmount * 100) / 100; // Round to 2 decimal places
+  } catch (error) {
+    console.error('Calculate refund amount error:', error);
+    return orderItem.price * orderItem.quantity; // Fallback to full item price
+  }
+}
+
+// Helper function to calculate full order refund amount
+async function calculateOrderRefundAmount(order) {
+  try {
+    let refundAmount = order.total;
+
+    // For full order returns, return the total amount paid
+    // Coupon discount is already factored into order.total
+    
+    return Math.round(refundAmount * 100) / 100;
+  } catch (error) {
+    console.error('Calculate order refund error:', error);
+    return order.total;
+  }
+}
+
+// Updated wallet refund processing function matching your schema
+async function processWalletRefund(userId, amount, orderId, type, itemId = null) {
+  try {
+    // Find or create user wallet
+    let wallet = await Wallet.findOne({ userId });
+    
+    if (!wallet) {
+      wallet = new Wallet({
+        userId,
+        balance: 0,
+        transactions: []
+      });
+    }
+
+    const balanceBefore = wallet.balance;
+    const balanceAfter = balanceBefore + amount;
+
+    // Generate unique transaction ID
+    const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    // Create transaction record matching your schema
+    const transaction = {
+      transactionId: transactionId,
+      type: 'CREDIT',
+      amount: amount,
+      description: getRefundDescription(type, orderId, itemId),
+      category: 'ORDER_REFUND',
+      reference: {
+        type: 'ORDER',
+        referenceId: orderId.toString()
+      },
+      status: 'COMPLETED',
+      balanceBefore: balanceBefore,
+      balanceAfter: balanceAfter,
+      createdAt: new Date()
+    };
+
+    // Add amount to wallet balance
+    wallet.balance = balanceAfter;
+    wallet.transactions.push(transaction);
+    
+    await wallet.save();
+
+    console.log(`Wallet refund processed: ₹${amount} credited to user ${userId}`);
+    
+    return {
+      success: true,
+      amount,
+      newBalance: wallet.balance,
+      transactionId
+    };
+
+  } catch (error) {
+    console.error('Process wallet refund error:', error);
+    throw error;
+  }
+}
+
+// Helper function to generate refund descriptions
+function getRefundDescription(type, orderId, itemId) {
+  const orderRef = orderId.toString().slice(-8).toUpperCase();
+  
+  switch (type) {
+    case 'ITEM_RETURN':
+      return `Refund for returned item in order #${orderRef}`;
+    case 'ORDER_RETURN':
+      return `Refund for returned order #${orderRef}`;
+    case 'ORDER_CANCELLATION':
+      return `Refund for cancelled order #${orderRef}`;
+    case 'ITEM_CANCELLATION':
+      return `Refund for cancelled item in order #${orderRef}`;
+    default:
+      return `Refund for order #${orderRef}`;
+  }
+}
+
+// Method for approving entire order return
+exports.approveOrderReturn = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const adminId = req.session.admin?.id || req.user?.id;
+
+    const order = await Order.findById(orderId).populate('orderItems');
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Calculate total refund amount
+    const refundAmount = await calculateOrderRefundAmount(order);
+
+    // Update all order items to returned
+    await OrderItem.updateMany(
+      { orderId: order._id, returnRequested: true },
+      { 
+        status: 'Returned',
+        isReturned: true,
+        returnApproved: true,
+        returnProcessedDate: new Date(),
+        $push: {
+          statusHistory: {
+            status: 'Returned',
+            updatedBy: adminId,
+            updatedAt: new Date(),
+            reason: 'Return request approved by admin'
+          }
+        }
+      }
+    );
+
+    // Restore stock for all items
+    const orderItems = await OrderItem.find({ orderId: order._id });
+    for (const item of orderItems) {
+      if (item.variantId) {
+        await Variant.findByIdAndUpdate(
+          item.variantId,
+          { $inc: { stock: item.quantity } }
+        );
+      }
+    }
+
+    // Update order status
+    order.status = 'Returned';
+    order.returnApproved = true;
+    order.returnProcessedDate = new Date();
+    await order.save();
+
+    // Process wallet refund if payment was not COD
+    if (order.paymentMethod !== 'COD' && refundAmount > 0) {
+      await processWalletRefund(
+        order.userId, 
+        refundAmount, 
+        order._id, 
+        'ORDER_RETURN'
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Order return approved successfully. ${refundAmount > 0 ? `₹${refundAmount} credited to wallet.` : ''}`,
+      order,
+      refundAmount
+    });
+
+  } catch (error) {
+    console.error('Approve order return error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve order return'
+    });
+  }
+};
+
+
+
+
 
 exports.rejectReturnRequest = async (req, res) => {
   try {

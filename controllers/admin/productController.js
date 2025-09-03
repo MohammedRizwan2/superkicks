@@ -195,7 +195,7 @@ const imagePaths = uploads.map(u => ({
     product.variants = createdVariants;
     await product.save();
 
-
+  await product.calculateAndUpdatePrices();
   req.session.productAdded = true;
   req.session.save((err)=>{
     if(err){
@@ -417,7 +417,7 @@ exports.postEditProduct = async (req, res) => {
     };
 
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
-
+    await updatedProduct.calculateAndUpdatePrices();
     req.session.productEdited = true;
     req.session.save(err => {
       if (err) console.error("Error saving session:", err);

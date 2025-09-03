@@ -401,7 +401,6 @@ exports.cancelOrderItem = async (req, res, next) => {
   }
 };
 
-
 exports.requestReturn = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -432,13 +431,20 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
-    if (order.status !== 'Delivered' || order.isReturned) {
+    if (order.status !== 'Delivered') {
       return res.status(400).json({
         success: false,
         error: 'Only delivered orders can be returned'
       });
     }
 
+    // Check if return request already exists
+    if (order.status === 'Return Requested') {
+      return res.status(400).json({
+        success: false,
+        error: 'Return request already submitted for this order'
+      });
+    }
 
     const deliveryDate = new Date(order.updatedAt);
     const returnWindow = 7 * 24 * 60 * 60 * 1000; 
@@ -451,23 +457,23 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
+    
     order.status = 'Return Requested';
-    order.isReturned = true;
+  
     order.returnReason = reason.trim();
     order.returnRequestDate = new Date();
 
+
     for (const itemId of order.orderItems) {
       const orderItem = await OrderItem.findById(itemId);
-      if (orderItem) {
+      if (orderItem && orderItem.status === 'Delivered') {
         orderItem.status = 'Return Requested';
-        orderItem.isReturned = true;
+        orderItem.returnRequested = true;
         orderItem.returnReason = reason.trim();
         orderItem.returnRequestDate = new Date();
         
-     
-        orderItem.returnRequested = true;
+        // DO NOT set isReturned = true here
         
-      
         if (orderItem.statusHistory !== undefined) {
           orderItem.statusHistory = orderItem.statusHistory || [];
           orderItem.statusHistory.push({
@@ -486,7 +492,7 @@ exports.requestReturn = async (req, res, next) => {
 
     return res.json({
       success: true,
-      message: 'Return request submitted successfully',
+      message: 'Return request submitted successfully. We will review and respond within 24-48 hours.',
       data: {
         orderId: order._id,
         status: order.status,
@@ -726,14 +732,14 @@ exports.downloadInvoice = async (req, res, next) => {
 };
 
 
-
 exports.returnOrderItem = async (req, res) => {
   try {
+    console.log("here")
     const { orderId, itemId } = req.params;
     const { reason } = req.body;
     const userId = req.session.user?.id;
 
-    console.log('Return item request:', { orderId, itemId, userId, reason }); 
+    console.log('Return item request:', { orderId, itemId, userId, reason });
 
     // Validate input
     if (!reason || reason.trim().length < 10) {
@@ -743,7 +749,6 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-    
     const order = await Order.findOne({
       _id: orderId,
       userId: userId
@@ -759,9 +764,8 @@ exports.returnOrderItem = async (req, res) => {
     console.log('Order found with items:', { 
       orderId: order._id, 
       itemsCount: order.orderItems?.length 
-    }); 
+    });
 
-    
     const orderItem = order.orderItems.find(item => item._id.toString() === itemId.toString());
 
     if (!orderItem) {
@@ -775,8 +779,9 @@ exports.returnOrderItem = async (req, res) => {
       itemId: orderItem._id, 
       status: orderItem.status,
       isReturned: orderItem.isReturned,
-      isCancelled: orderItem.isCancelled
-    }); // Debug log
+      isCancelled: orderItem.isCancelled,
+      returnRequested: orderItem.returnRequested
+    });
 
     // Check if item can be returned
     if (orderItem.status !== 'Delivered') {
@@ -786,19 +791,48 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-    if (orderItem.isReturned || orderItem.isCancelled) {
+    if (orderItem.isCancelled) {
       return res.status(400).json({
         success: false,
-        error: 'Item has already been returned or cancelled'
+        error: 'Cancelled items cannot be returned'
       });
     }
 
-    // Update the order item directly in the database
+  
+    if (orderItem.returnRequested) {
+      return res.status(400).json({
+        success: false,
+        error: 'Return request already submitted for this item'
+      });
+    }
+
+  
+    if (orderItem.isReturned || orderItem.status === 'Returned') {
+      return res.status(400).json({
+        success: false,
+        error: 'Item has already been returned'
+      });
+    }
+
+    
+    const deliveryDate = new Date(order.updatedAt);
+    const returnWindow = 7 * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    
+    if (now - deliveryDate > returnWindow) {
+      return res.status(400).json({
+        success: false,
+        error: 'Return window has expired (7 days from delivery)'
+      });
+    }
+
+    
     await OrderItem.findByIdAndUpdate(itemId, {
       returnRequested: true,
-      status: 'Return Requested',
+      status: 'Return Requested', 
       returnReason: reason.trim(),
       returnRequestDate: new Date(),
+    
       $push: {
         statusHistory: {
           status: 'Return Requested',
@@ -809,26 +843,32 @@ exports.returnOrderItem = async (req, res) => {
       }
     });
 
-    console.log('Order item updated successfully'); 
+    console.log('Order item updated successfully - return requested');
 
-    
+  
     const updatedOrder = await Order.findById(orderId).populate('orderItems');
-    const allItemsReturnedOrCancelled = updatedOrder.orderItems.every(item => 
-      item.isReturned || item.isCancelled
+    
+  
+    const deliveredItems = updatedOrder.orderItems.filter(item => 
+      item.status === 'Delivered' || item.status === 'Return Requested'
+    );
+    const allDeliveredItemsHaveReturnRequests = deliveredItems.every(item => 
+      item.returnRequested || item.isCancelled
     );
 
-    
-    if (allItemsReturnedOrCancelled) {
+  
+    if (allDeliveredItemsHaveReturnRequests && deliveredItems.length > 0) {
       await Order.findByIdAndUpdate(orderId, {
         status: 'Return Requested',
-        isReturned: true
+      
+        returnRequestDate: new Date()
       });
       console.log('Order status updated to Return Requested');
     }
 
     res.json({
       success: true,
-      message: 'Item return request submitted successfully. We will process your request soon.'
+      message: 'Item return request submitted successfully. We will process your request soon and notify you of the decision.'
     });
 
   } catch (error) {

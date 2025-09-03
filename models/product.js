@@ -6,25 +6,24 @@ const productSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   brand: { type: String, required: true },
   offer: { type: Number, default: 0, min: 0, max: 100 },
-    images: {
+  images: {
     type: [mongoose.Schema.Types.Mixed], 
     required: true
   },
-
   isListed: { type: Boolean, default: true },
   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }]
 }, { timestamps: true });
 
-
 productSchema.methods.updateVariantPrices = async function() {
-  const product = this.populated('categoryId') || await this.populate('categoryId');
+  const Category = mongoose.model('Category');
   const Variant = mongoose.model('Variant');
   
-  const variants = await Variant.find({ productId: product._id });
+  const category = await Category.findById(this.categoryId);
+  const variants = await Variant.find({ productId: this._id });
   
   await Promise.all(
     variants.map(async variant => {
-      const effectiveDiscount = product.categoryId?.getEffectiveDiscount?.(product.offer) || product.offer;
+      const effectiveDiscount = category?.getEffectiveDiscount?.(this.offer) || this.offer;
       const salePrice = parseFloat(
         (variant.regularPrice * (1 - (Math.min(effectiveDiscount, 100) / 100))).toFixed(2)
       );
@@ -37,7 +36,21 @@ productSchema.methods.updateVariantPrices = async function() {
   );
 };
 
+productSchema.methods.calculateAndUpdatePrices = async function() {
+
+  if (this.variants && this.variants.length > 0) {
+    await this.updateVariantPrices();
+  }
+};
+
+
 productSchema.pre('save', async function(next) {
+
+  if (this.isNew && (!this.variants || this.variants.length === 0)) {
+    return next();
+  }
+  
+
   if (this.variants?.length > 0 || this.isModified("offer")) {
     try {
       await this.updateVariantPrices();
