@@ -6,6 +6,7 @@
   <title>My Orders — Superkicks</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -16,11 +17,16 @@
           },
           animation: {
             'fade-in': 'fade-in 0.6s ease-out',
+            'pulse-red': 'pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           },
           keyframes: {
             'fade-in': {
               '0%': { opacity: '0', transform: 'translateY(10px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' }
+            },
+            'pulse-red': {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.7' }
             }
           }
         }
@@ -35,6 +41,32 @@
   <style>
     html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
+    .failed-payment-border {
+      background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
+      border: 2px solid #ef4444;
+      position: relative;
+    }
+    .failed-payment-border::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #ef4444, #dc2626, #ef4444);
+      border-radius: inherit;
+      z-index: -1;
+      animation: pulse-red 2s ease-in-out infinite;
+    }
+    .retry-payment-btn {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+      transition: all 0.3s ease;
+    }
+    .retry-payment-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+    }
   </style>
 </head>
 
@@ -105,6 +137,7 @@
             <option value="Shipped">Shipped</option>
             <option value="Delivered">Delivered</option>
             <option value="Cancelled">Cancelled</option>
+            <option value="Payment Failed">Payment Failed</option>
           </select>
 
           <select id="payment-filter" 
@@ -394,7 +427,18 @@
         }
 
         container.innerHTML = orders.map(order => `
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 hover:border-black/20 transition">
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 hover:border-black/20 transition ${order.status === 'Payment Failed' ? 'failed-payment-border' : ''}">
+            ${order.status === 'Payment Failed' ? `
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-exclamation-triangle text-red-600"></i>
+                  <span class="text-red-800 font-medium">Payment Failed</span>
+                  <span class="text-red-600 text-sm">• Payment can be retried anytime</span>
+                </div>
+                <p class="text-red-700 text-sm mt-1">Your payment could not be processed. Please retry the payment to confirm your order.</p>
+              </div>
+            ` : ''}
+            
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               
               <!-- Order Header -->
@@ -405,7 +449,8 @@
                     ${order.status}
                   </span>
                   ${order.paymentMethod === 'COD' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">COD</span>' : ''}
-                  ${order.paymentMethod === 'RAZORPAY' ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">PAID</span>' : ''}
+                  ${order.paymentMethod === 'RAZORPAY' && order.status !== 'Payment Failed' ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">PAID</span>' : ''}
+                  ${order.paymentMethod === 'RAZORPAY' && order.status === 'Payment Failed' ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">UNPAID</span>' : ''}
                   ${order.paymentMethod === 'WALLET' ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">WALLET</span>' : ''}
                   ${order.coupon ? `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">COUPON: ${order.coupon.code}</span>` : ''}
                 </div>
@@ -426,8 +471,8 @@
                   <div>
                     <span class="block font-medium text-black">Total</span>
                     <div class="flex flex-col">
-                      ${order.discount > 0 ? `<span class="text-xs text-green-600 line-through">₹${order.total.toLocaleString('en-IN')}</span>` : ''}
-                      <span class="text-lg font-bold text-black">₹${(order.finalAmount || order.total).toLocaleString('en-IN')}</span>
+                      ${order.discount > 0 ? `<span class="text-xs text-green-600 line-through">₹${(order.total + order.discount).toLocaleString('en-IN')}</span>` : ''}
+                      <span class="text-lg font-bold text-black">₹${order.total.toLocaleString('en-IN')}</span>
                       ${order.discount > 0 ? `<span class="text-xs text-green-600">Saved ₹${order.discount.toLocaleString('en-IN')}</span>` : ''}
                     </div>
                   </div>
@@ -454,12 +499,23 @@
                   View Details
                 </a>
 
-                <!-- Download Invoice -->
-                <button onclick="downloadInvoice('${order.id}')"
-                        class="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-sm">
-                  <i class="fas fa-download mr-1"></i>
-                  Invoice
-                </button>
+                <!-- Download Invoice (only for successful orders) -->
+                ${order.status !== 'Payment Failed' ? `
+                  <button onclick="downloadInvoice('${order.id}')"
+                          class="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-sm">
+                    <i class="fas fa-download mr-1"></i>
+                    Invoice
+                  </button>
+                ` : ''}
+
+                <!-- Retry Payment Button (always available for Payment Failed orders) -->
+                ${order.canRetryPayment ? `
+                  <button onclick="retryPayment('${order.id}')"
+                          class="retry-payment-btn px-4 py-2 text-white rounded-lg font-medium text-sm flex items-center gap-2">
+                    <i class="fas fa-redo-alt"></i>
+                    Retry Payment
+                  </button>
+                ` : ''}
 
                 ${order.canCancel ? `
                   <button onclick="showCancelModal('${order.id}', 'order')"
@@ -536,6 +592,7 @@
           case 'Delivered': return 'bg-green-100 text-green-800';
           case 'Shipped': return 'bg-blue-100 text-blue-800';
           case 'Cancelled': return 'bg-red-100 text-red-800';
+          case 'Payment Failed': return 'bg-red-100 text-red-800 animate-pulse-red';
           case 'Processing': return 'bg-yellow-100 text-yellow-800';
           case 'Confirmed': return 'bg-indigo-100 text-indigo-800';
           default: return 'bg-gray-100 text-gray-800';
@@ -548,6 +605,103 @@
           case 'RAZORPAY': return 'Online Payment';
           case 'WALLET': return 'Wallet Payment';
           default: return method;
+        }
+      }
+
+      // Retry Payment Functionality (No Time Limit)
+      async retryPayment(orderId) {
+        try {
+          this.showLoading();
+          
+          const response = await fetch(`/user/api/order/retry-payment/${orderId}`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.hideLoading();
+            this.initiateRazorpayRetryPayment(result.data, orderId);
+          } else {
+            this.showToast('error', result.error || 'Unable to retry payment at this time');
+          }
+          
+        } catch (error) {
+          console.error('Retry payment error:', error);
+          this.showToast('error', 'Failed to initiate payment retry');
+        } finally {
+          this.hideLoading();
+        }
+      }
+
+      initiateRazorpayRetryPayment(paymentData, orderId) {
+        const options = {
+          key: paymentData.razorpayKeyId,
+          amount: paymentData.amount,
+          currency: 'INR',
+          name: 'Superkicks',
+          description: 'Retry Order Payment',
+          order_id: paymentData.razorpayOrderId,
+          retry: { enabled: false },
+          handler: async (response) => {
+            await this.verifyRetryPayment({
+              orderId: orderId,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            });
+          },
+          prefill: {
+            name: this.userData.name,
+            email: this.userData.email,
+            contact: this.userData.phone || '9999999999'
+          },
+          theme: { color: '#000000' },
+          modal: {
+            ondismiss: () => {
+              this.showToast('info', 'Payment cancelled. You can retry anytime from your orders.');
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        
+        rzp.on('payment.failed', (response) => {
+          console.log('Payment failed:', response);
+          this.showToast('error', 'Payment failed. Please try again or contact support.');
+        });
+
+        rzp.open();
+      }
+
+      async verifyRetryPayment(paymentData) {
+        try {
+          this.showLoading();
+          
+          const response = await fetch('/user/api/order/verify-retry-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(paymentData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', 'Payment successful! Your order has been confirmed.');
+            setTimeout(() => {
+              window.location.href = `/user/order-success/${result.data.orderId}`;
+            }, 2000);
+          } else {
+            this.showToast('error', 'Payment verification failed. Please contact support.');
+          }
+          
+        } catch (error) {
+          console.error('Verify retry payment error:', error);
+          this.showToast('error', 'Payment verification failed');
+        } finally {
+          this.hideLoading();
         }
       }
 
@@ -666,12 +820,14 @@
         
         if (type === 'success') {
           toast.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-200');
+        } else if (type === 'info') {
+          toast.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-200');
         } else {
           toast.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
         }
         
         toast.innerHTML = `
-          <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+          <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-circle'} mr-2"></i>
           <span>${message}</span>
         `;
 
@@ -685,7 +841,7 @@
         setTimeout(() => {
           toast.classList.add('translate-x-full', 'opacity-0');
           setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        }, 4000);
       }
     }
 
@@ -696,6 +852,10 @@
 
     function showReturnModal(orderId) {
       orderManager.showReturnModal(orderId);
+    }
+
+    function retryPayment(orderId) {
+      orderManager.retryPayment(orderId);
     }
 
     async function downloadInvoice(orderId) {

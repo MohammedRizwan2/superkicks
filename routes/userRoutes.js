@@ -169,6 +169,13 @@ router.get('/api/orders/search',orderController.searchOrders);
 router.post('/api/orders/:orderId/returns',orderController.requestReturn);
 router.put('/api/orders/:orderId/items/:itemId/return', orderController.returnOrderItem);
 
+// Payment failure page routes (both GET and POST)
+router.get('/payment-failure', isAuthenticated, checkUserBlocked, checkoutController.paymentFailure);
+router.post('/payment-failure', isAuthenticated, checkUserBlocked, checkoutController.paymentFailure);
+
+// Payment retry routes
+router.post('/api/order/retry-payment/:orderId', isAuthenticated, checkUserBlocked, checkoutController.retryPayment);
+router.post('/api/order/verify-retry-payment', isAuthenticated, checkUserBlocked, checkoutController.verifyRetryPayment);
 
 router.post('/api/wishlist/:variantId',wishListController.addToWishlist)
 router.delete('/api/wishlist/:variantId',wishListController.removeFromWishlist);
@@ -182,6 +189,10 @@ router.post('/api/coupon/apply', checkoutController.applyCoupon);
 router.post('/api/coupon/remove', checkoutController.removeCoupon);
 router.post('/api/order/create-payment', checkoutController.createPaymentOrder);
 router.post('/api/order/verify-payment', checkoutController.verifyPayment);
+router.post('/api/order/payment-failed', isAuthenticated, checkUserBlocked, checkoutController.createPaymentFailedOrder);
+router.post('/api/order/retry-payment/:orderId', isAuthenticated, checkUserBlocked, checkoutController.retryPayment);
+router.post('/api/order/verify-retry-payment', isAuthenticated, checkUserBlocked, checkoutController.verifyRetryPayment);
+
 
 
 router.get('/wallet', walletController.renderWallet);

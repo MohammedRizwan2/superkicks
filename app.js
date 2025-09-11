@@ -31,6 +31,8 @@ app.set('views', path.join(__dirname, 'views'));
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI ,
   collection: 'sessions',
+  dbName:'superkicks'
+
 });
 store.on('error', (error) => {
   console.error('Session store error:', error);
@@ -55,10 +57,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost/superkicks', {
-
+mongoose.connect(process.env.MONGO_URI , {
+dbName:'superkicks'
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('Connected to MongoDB',mongoose.connection.name))
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // passport

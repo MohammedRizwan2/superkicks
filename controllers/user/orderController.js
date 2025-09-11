@@ -5,6 +5,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const Wallet = require('../../models/wallet'); 
+
 // Helper function to process wallet refund
 const processWalletRefund = async (userId, amount, orderId, type) => {
   try {
@@ -89,7 +90,6 @@ const calculateItemRefund = async (order, cancelledItem) => {
   return Math.round(refundAmount * 100) / 100; // Round to 2 decimal places
 };
 
-
 exports.orderList = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -133,14 +133,12 @@ exports.getOrders = async (req, res, next) => {
       query.status = status;
     }
 
-   
     const orders = await Order.find(query)
       .populate('orderItems')
       .sort({ orderDate: -1 })
       .limit(parseInt(limit))
       .skip(skip);
 
-  
     const totalOrders = await Order.countDocuments(query);
     const totalPages = Math.ceil(totalOrders / limit);
 
@@ -159,7 +157,6 @@ exports.getOrders = async (req, res, next) => {
       cancellationReason: order.cancellationReason,
       returnReason: order.returnReason,
       returnRequestDate: order.returnRequestDate,
-    
     }));
 
     return res.json({
@@ -184,11 +181,6 @@ exports.getOrders = async (req, res, next) => {
     });
   }
 };
-
-
-
-
-
 
 exports.cancelOrder = async (req, res, next) => {
   try {
@@ -295,6 +287,7 @@ exports.cancelOrder = async (req, res, next) => {
   }
 };
 
+// **NEW: Cancel Individual Order Item with Payment Failed Check**
 exports.cancelOrderItem = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -313,6 +306,14 @@ exports.cancelOrderItem = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         error: 'Order not found'
+      });
+    }
+
+  
+    if (order.status === 'Payment Failed') {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot cancel items from orders with failed payments. Please retry payment or contact support.'
       });
     }
 
@@ -457,12 +458,9 @@ exports.requestReturn = async (req, res, next) => {
       });
     }
 
-    
     order.status = 'Return Requested';
-  
     order.returnReason = reason.trim();
     order.returnRequestDate = new Date();
-
 
     for (const itemId of order.orderItems) {
       const orderItem = await OrderItem.findById(itemId);
@@ -510,8 +508,7 @@ exports.requestReturn = async (req, res, next) => {
   }
 };
 
-
-//Search ordersss
+//Search orders
 exports.searchOrders = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -558,6 +555,7 @@ exports.searchOrders = async (req, res, next) => {
     });
   }
 };
+
 exports.orderDetails = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -606,6 +604,12 @@ exports.orderDetails = async (req, res, next) => {
           item.productId?.images?.[0]?.url) || '/images/placeholder.png',
         returnApproved: item.returnApproved,
         returnRejectionReason: item.returnRejectionReason || null,
+        isCancelled: item.isCancelled,
+        isReturned: item.isReturned,
+        returnRequested: item.returnRequested,
+        cancellationReason: item.cancellationReason,
+        returnReason: item.returnReason,
+        returnRequestDate: item.returnRequestDate
       }
     });
 
@@ -646,7 +650,10 @@ exports.orderDetails = async (req, res, next) => {
         total: order.total,
         finalAmount: finalAmount,
         items: processedItems,
-        coupon: couponInfo
+        coupon: couponInfo,
+        cancellationReason: order.cancellationReason,
+        returnReason: order.returnReason,
+        returnRequestDate: order.returnRequestDate
       },
       totals: {
         subtotal,
@@ -669,10 +676,7 @@ exports.orderDetails = async (req, res, next) => {
   }
 };
 
-
-
-
-///invoiceeee
+///invoice
 exports.downloadInvoice = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -730,7 +734,6 @@ exports.downloadInvoice = async (req, res, next) => {
     res.status(500).json({ success: false, error: 'Failed to generate invoice' });
   }
 };
-
 
 exports.returnOrderItem = async (req, res) => {
   try {
@@ -798,7 +801,6 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-  
     if (orderItem.returnRequested) {
       return res.status(400).json({
         success: false,
@@ -806,7 +808,6 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-  
     if (orderItem.isReturned || orderItem.status === 'Returned') {
       return res.status(400).json({
         success: false,
@@ -814,7 +815,6 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-    
     const deliveryDate = new Date(order.updatedAt);
     const returnWindow = 7 * 24 * 60 * 60 * 1000;
     const now = new Date();
@@ -826,13 +826,11 @@ exports.returnOrderItem = async (req, res) => {
       });
     }
 
-    
     await OrderItem.findByIdAndUpdate(itemId, {
       returnRequested: true,
       status: 'Return Requested', 
       returnReason: reason.trim(),
       returnRequestDate: new Date(),
-    
       $push: {
         statusHistory: {
           status: 'Return Requested',
@@ -845,10 +843,8 @@ exports.returnOrderItem = async (req, res) => {
 
     console.log('Order item updated successfully - return requested');
 
-  
     const updatedOrder = await Order.findById(orderId).populate('orderItems');
     
-  
     const deliveredItems = updatedOrder.orderItems.filter(item => 
       item.status === 'Delivered' || item.status === 'Return Requested'
     );
@@ -856,11 +852,9 @@ exports.returnOrderItem = async (req, res) => {
       item.returnRequested || item.isCancelled
     );
 
-  
     if (allDeliveredItemsHaveReturnRequests && deliveredItems.length > 0) {
       await Order.findByIdAndUpdate(orderId, {
         status: 'Return Requested',
-      
         returnRequestDate: new Date()
       });
       console.log('Order status updated to Return Requested');
