@@ -55,15 +55,6 @@ exports.postLogin = async (req, res) => {
   }
 };
 
-// Render admin dashboard
-exports.getDashboard = async (req, res) => {
-  try {
-    res.render('admin/dashboard', { title: 'Admin Dashboard' });
-  } catch (err) {
-    console.error(err);
-    res.render('error/500', { title: 'Server Error' });
-  }
-};
 
 
 exports.logout = (req, res) => {
