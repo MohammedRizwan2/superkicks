@@ -167,7 +167,7 @@ const imagePaths = uploads.map(u => ({
     const product = new Product({
       productName: productName.trim(),
       description: description.trim(),
-      brand: brand.trim(),
+      brand: brand.trim().toUpperCase(),
       categoryId,
       offer: offer ? Number(offer) : 0,
       images: imagePaths,
@@ -407,7 +407,7 @@ exports.postEditProduct = async (req, res) => {
     
     const updateData = {
       productName: productName.trim(),
-      brand: brand.trim(),
+      brand: brand.trim().toUpperCase(),
       categoryId,
       description: description.trim(),
       offer: Math.min(100, Math.max(0, Number(offer)) || 0),

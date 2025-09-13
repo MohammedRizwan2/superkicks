@@ -109,16 +109,16 @@
         </div>
 
         <div>
-          <label class="block text-gray-600 font-medium mb-1">Status</label>
-          <div class="flex items-center">
-            <input type="radio" id="listed" name="isListed" value="true"
-              <%= ((old && old.isListed === true) || (!old && product.isListed === true)) ? 'checked' : '' %> class="mr-2">
-            <label for="listed" class="mr-4">Listed</label>
-            <input type="radio" id="unlisted" name="isListed" value="false"
-              <%= ((old && old.isListed === false) || (!old && product.isListed === false)) ? 'checked' : '' %> class="mr-2">
-            <label for="unlisted">Unlisted</label>
-          </div>
-        </div>
+    <label class="block text-gray-600 font-medium mb-1">Status</label>
+    <div class="flex items-center">
+        <input type="radio" id="listed" name="isListed" value="true"
+            <%= (old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
+        <label for="listed" class="mr-4">Listed</label>
+        <input type="radio" id="unlisted" name="isListed" value="false"
+            <%= !(old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
+        <label for="unlisted">Unlisted</label>
+    </div>
+</div>
 
         <!-- Image Upload Section -->
         <div>

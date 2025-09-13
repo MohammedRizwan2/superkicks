@@ -23,6 +23,7 @@ router.post('/login', adminController.postLogin);
 router.use(adminAuth)
 
 router.get('/dashboard',dashboardController.getDashboard);
+router.get('/dashboard/ledger',dashboardController.generateLedger)
 // Customers
 router.get('/customers', customerController.getUsers);
 router.post('/customers/:id/toggle', customerController.toggleBlockStatus);
