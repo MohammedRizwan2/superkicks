@@ -52,7 +52,7 @@ exports.getDashboard = async (req, res) => {
             bestBrands,
             latestOrders
         ] = await Promise.all([
-            // Total Statistics
+        
             Order.aggregate([
                 { $match: { ...dateFilter, status: { $ne: 'Cancelled' } } },
                 {
@@ -64,7 +64,7 @@ exports.getDashboard = async (req, res) => {
                 }
             ]),
 
-            // Sales Data for Charts
+            
             Order.aggregate([
                 { $match: { ...dateFilter, status: { $ne: 'Cancelled' } } },
                 {
@@ -108,7 +108,7 @@ exports.getDashboard = async (req, res) => {
                 },
                 { $sort: { totalQuantity: -1 } },
                 { $limit: 10 },
-                // Optional: lookup product for brand info
+            
                 {
                     $lookup: {
                         from: 'products',
@@ -175,7 +175,7 @@ exports.getDashboard = async (req, res) => {
                 { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
                 {
                     $project: {
-                        categoryName: { $ifNull: ['$category.name', 'Unknown'] }, // ✅ Adjust field name
+                        categoryName: { $ifNull: ['$category.name', 'Unknown'] }, 
                         totalQuantity: 1,
                         totalRevenue: 1
                     }
@@ -261,7 +261,7 @@ exports.getDashboard = async (req, res) => {
     } catch (err) {
         console.error("Error in dashboard render:", err);
         
-        // Render with default values to prevent EJS errors
+    
         res.render('admin/dashboard', {
             totalStats: {
                 totalSales: 0,
@@ -283,7 +283,7 @@ exports.getDashboard = async (req, res) => {
     }
 };
 
-// Generate Ledger function
+
 exports.generateLedger = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;

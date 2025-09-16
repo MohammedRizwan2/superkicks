@@ -51,9 +51,24 @@ exports.renderWallet = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
+    const transactions = walletPlain.transactions||0;
     
+    const totalSpent = transactions.filter(tx=>tx.type==="DEBIT"&&tx.category==="ORDER_REFUND")
+    .reduce((sum,tx)=>sum+=tx.amount,0);
+    
+    const refundsReceived = transactions.filter(tx=>tx.type==="CREDIT"&&tx.category==="ORDER_REFUND")
+    .reduce((sum,tx)=>sum+=tx.amount,0);
+
+    const referralBonus = transactions.filter(tx=>tx.type==="CREDIT"&&tx.category==="REFERRAL_BONUS")
+    .reduce((sum,tx)=>sum+=tx.amount,0);
+
+
+
     const walletData = {
       balance: walletPlain.balance || 0,
+      totalSpent,
+      refundsReceived,
+      referralBonus,
       transactions: walletPlain.transactions.map(tx => ({
         transactionId: tx.transactionId,
         type: tx.type.toLowerCase(), 

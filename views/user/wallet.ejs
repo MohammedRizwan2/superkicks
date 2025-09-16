@@ -145,7 +145,7 @@
               <div>
                 <p class="text-sm font-medium text-yellow-800">How it works:</p>
                 <p class="text-xs text-yellow-700 mt-1">
-                  Share your referral code. When a friend signs up and makes their first purchase, 
+                  Share your referral code. When a friend signs up 
                   you get ₹200 and they get ₹100 credited to your wallets!
                 </p>
               </div>
@@ -447,15 +447,15 @@
           }
         });
         
-        document.getElementById('total-spent').textContent = `₹${this.formatINR(totalSpent)}`;
-        document.getElementById('total-refunds').textContent = `₹${this.formatINR(totalRefunds)}`;
-        document.getElementById('referral-bonus').textContent = `₹${this.formatINR(referralBonus)}`;
+        document.getElementById('total-spent').textContent = `₹${this.formatINR(wallet.totalSpent)}`;
+        document.getElementById('total-refunds').textContent = `₹${this.formatINR(wallet.refundsReceived)}`;
+        document.getElementById('referral-bonus').textContent = `₹${this.formatINR(wallet.referralBonus)}`;
         document.getElementById('total-transactions').textContent = wallet.transactions.length;
       }
 
       renderReferralInfo() {
         const { wallet } = this.data;
-        
+        console.log(wallet)
         document.getElementById('referral-earnings').textContent = `₹${this.formatINR(wallet.referralEarnings || 0)}`;
         document.getElementById('referral-count').textContent = wallet.referralCount || 0;
         document.getElementById('referral-code').textContent = wallet.referralCode || 'LOADING...';
