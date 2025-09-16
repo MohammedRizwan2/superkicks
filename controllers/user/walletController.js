@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const Wallet = require('../../models/wallet'); // Adjust the path to your Wallet model
-const User = require('../../models/userSchema'); // Adjust the path to your User model
+const Wallet = require('../../models/wallet'); 
+const User = require('../../models/userSchema'); 
 
 // Generate unique referral code
 async function generateUniqueReferralCode() {
@@ -13,18 +13,18 @@ async function generateUniqueReferralCode() {
   return code;
 }
 
-// Render Wallet Page
 exports.renderWallet = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
     if (!userId) {
-      return res.redirect('/login'); // Redirect to login if user is not authenticated
+      return res.redirect('/login'); 
     }
 
-    // Fetch wallet data (non-lean to allow updates)
+     
     let wallet = await Wallet.findOne({ userId });
+  
     if (!wallet) {
-      // If wallet doesn't exist, create one with default values
+      
       wallet = new Wallet({
         userId,
         balance: 0,
@@ -38,25 +38,25 @@ exports.renderWallet = async (req, res, next) => {
       });
       await wallet.save();
     } else if (!wallet.referralStats.referralCode) {
-      // Generate referral code if not set
+      
       wallet.referralStats.referralCode = await generateUniqueReferralCode();
       await wallet.save();
     }
 
     const walletPlain = wallet.toObject();
 
-    // Fetch user data
+    
     const user = await User.findById(userId).select('name email phone').lean();
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    // Transform wallet data for frontend
+    
     const walletData = {
       balance: walletPlain.balance || 0,
       transactions: walletPlain.transactions.map(tx => ({
         transactionId: tx.transactionId,
-        type: tx.type.toLowerCase(), // Convert to lowercase for frontend consistency
+        type: tx.type.toLowerCase(), 
         amount: tx.amount,
         description: tx.description,
         category: tx.category,
@@ -71,7 +71,7 @@ exports.renderWallet = async (req, res, next) => {
       hasBeenReferred: !!walletPlain.referralStats.referredBy,
     };
 console.log(walletData)
-    // Render wallet page
+
     res.render('user/wallet', {
       user,
       wallet: walletData,
@@ -85,7 +85,7 @@ console.log(walletData)
   }
 };
 
-// API: Get Wallet Balance
+
 exports.getWalletBalance = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
@@ -105,7 +105,7 @@ exports.getWalletBalance = async (req, res) => {
   }
 };
 
-// API: Apply Referral Code
+
 exports.applyReferralCode = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
@@ -136,7 +136,7 @@ exports.applyReferralCode = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Cannot use your own referral code' });
     }
 
-    // Update referred user's wallet
+
     const referredBalanceBefore = referredWallet.balance;
     referredWallet.balance += 100;
     referredWallet.referralStats.referredBy = referrerWallet.userId;
@@ -154,7 +154,7 @@ exports.applyReferralCode = async (req, res) => {
     });
     await referredWallet.save();
 
-    // Update referrer's wallet
+
     const referrerBalanceBefore = referrerWallet.balance;
     referrerWallet.balance += 200;
     referrerWallet.referralStats.totalReferrals += 1;

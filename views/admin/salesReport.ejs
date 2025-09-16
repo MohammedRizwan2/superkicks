@@ -248,7 +248,6 @@
                 <th class="py-3 px-4 text-left">Status</th>
                 <th class="py-3 px-4 text-left">Payment Method</th>
                 <th class="py-3 px-4 text-left">Subtotal</th>
-                <th class="py-3 px-4 text-left">Product Offers</th>
                 <th class="py-3 px-4 text-left">Coupon Discount</th>
                 <th class="py-3 px-4 text-left">Total</th>
                 <th class="py-3 px-4 text-left">Items</th>
@@ -268,7 +267,6 @@
     </main>
   </div>
 
-  <!-- Sales Report JavaScript -->
   <script>
     class AdminSalesReportManager {
       constructor() {
@@ -287,7 +285,111 @@
       init() {
         this.bindEvents();
         this.setDefaultDates();
+        this.setupDateValidation();
         this.generateReport();
+      }
+
+      // ✅ NEW: Date Validation Function
+      validateDateRange(startDate, endDate) {
+        // Check if both dates are provided
+        if (!startDate || !endDate) {
+          return { valid: false, message: 'Both start and end dates are required.' };
+        }
+
+        // Convert strings to Date objects
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+
+        // Check for invalid dates
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          return { valid: false, message: 'Invalid date format. Please use YYYY-MM-DD format.' };
+        }
+
+        // Validate that end date is not before start date
+        if (end < start) {
+          return { valid: false, message: 'End date cannot be before start date.' };
+        }
+
+        // Check if start date is too far in the future
+        if (start > today) {
+          return { valid: false, message: 'Start date cannot be in the future.' };
+        }
+
+        // Check if end date is too far in the future
+        if (end > today) {
+          return { valid: false, message: 'End date cannot be in the future.' };
+        }
+
+        // Check maximum date range (e.g., 1 year)
+        const maxRangeDays = 365;
+        const daysDifference = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        
+        if (daysDifference > maxRangeDays) {
+          return { valid: false, message: `Date range cannot exceed ${maxRangeDays} days.` };
+        }
+
+        return { valid: true };
+      }
+
+      
+      setupDateValidation() {
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+
+        const validateAndStyle = () => {
+          const startDate = startDateInput.value;
+          const endDate = endDateInput.value;
+
+          if (startDate && endDate) {
+            const validation = this.validateDateRange(startDate, endDate);
+            
+            if (!validation.valid) {
+              endDateInput.setCustomValidity(validation.message);
+              endDateInput.style.borderColor = '#ef4444';
+              startDateInput.style.borderColor = '#ef4444';
+              
+              // Show error tooltip
+              this.showValidationError(validation.message);
+            } else {
+              endDateInput.setCustomValidity('');
+              endDateInput.style.borderColor = '#d1d5db';
+              startDateInput.style.borderColor = '#d1d5db';
+              
+              // Hide error tooltip
+              this.hideValidationError();
+            }
+          } else {
+            // Reset styling if either date is empty
+            endDateInput.setCustomValidity('');
+            endDateInput.style.borderColor = '#d1d5db';
+            startDateInput.style.borderColor = '#d1d5db';
+          }
+        };
+
+        startDateInput?.addEventListener('change', validateAndStyle);
+        endDateInput?.addEventListener('change', validateAndStyle);
+      }
+
+      // ✅ NEW: Show/Hide Validation Error
+      showValidationError(message) {
+        this.hideValidationError(); // Remove existing error first
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'date-validation-error';
+        errorDiv.className = 'mt-2 p-2 bg-red-100 border border-red-300 text-red-700 text-sm rounded';
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i>${message}`;
+        
+        const endDateContainer = document.getElementById('end-date-container');
+        endDateContainer.appendChild(errorDiv);
+      }
+
+      hideValidationError() {
+        const existingError = document.getElementById('date-validation-error');
+        if (existingError) {
+          existingError.remove();
+        }
       }
 
       bindEvents() {
@@ -296,6 +398,11 @@
           this.currentFilters.reportType = e.target.value;
           this.toggleDateInputs(e.target.value === 'custom');
           this.setDefaultDates();
+          
+          // Auto-generate report for non-custom types
+          if (e.target.value !== 'custom') {
+            this.generateReport();
+          }
         });
 
         // Date inputs
@@ -337,6 +444,7 @@
         } else {
           startContainer.classList.add('hidden');
           endContainer.classList.add('hidden');
+          this.hideValidationError();
         }
       }
 
@@ -375,10 +483,26 @@
         
         document.getElementById('start-date').value = startDate;
         document.getElementById('end-date').value = endDate;
+        
+        // Set max attribute to today's date
+        document.getElementById('start-date').setAttribute('max', today.toISOString().split('T')[0]);
+        document.getElementById('end-date').setAttribute('max', today.toISOString().split('T')[0]);
       }
 
+      // ✅ ENHANCED: Generate Report with Validation
       async generateReport() {
         try {
+          // Validate dates before generating report
+          const validation = this.validateDateRange(
+            this.currentFilters.startDate, 
+            this.currentFilters.endDate
+          );
+
+          if (!validation.valid) {
+            this.showToast('error', validation.message);
+            return;
+          }
+
           this.showLoading();
 
           const params = new URLSearchParams(this.currentFilters);
@@ -400,7 +524,7 @@
 
         } catch (error) {
           console.error('Generate report error:', error);
-          this.showToast('error', 'Failed to generate sales report');
+          this.showToast('error', 'Failed to generate sales report. Please try again.');
         } finally {
           this.hideLoading();
         }
@@ -411,10 +535,11 @@
         document.getElementById('total-sales').textContent = `₹${summary.totalSalesAmount.toLocaleString('en-IN')}`;
         document.getElementById('total-discounts').textContent = `₹${summary.totalDiscounts.toLocaleString('en-IN')}`;
         document.getElementById('avg-order-value').textContent = `₹${summary.averageOrderValue.toLocaleString('en-IN')}`;
-        document.getElementById('product-offers').textContent = `₹${summary.totalProductOffers.toLocaleString('en-IN')}`;
+        document.getElementById('product-offers').textContent= `₹${summary.totalProductOffers.toLocaleString('en-IN')}`;
         document.getElementById('coupon-discounts').textContent = `₹${summary.totalCouponDiscounts.toLocaleString('en-IN')}`;
       }
 
+      // ✅ ENHANCED: Chart Rendering with Better Data Processing
       renderSalesChart(data) {
         const ctx = document.getElementById('salesChart').getContext('2d');
         
@@ -423,7 +548,7 @@
         }
 
         // Generate chart data based on orders
-        const chartData = this.generateChartData(data.orders, data.reportType);
+        const chartData = this.generateChartData(data.orders, data.reportType || this.currentFilters.reportType);
 
         this.salesChart = new Chart(ctx, {
           type: 'line',
@@ -434,9 +559,14 @@
               data: chartData.data,
               borderColor: 'rgb(59, 130, 246)',
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderWidth: 2,
+              borderWidth: 3,
               fill: true,
-              tension: 0.4
+              tension: 0.4,
+              pointBackgroundColor: 'rgb(59, 130, 246)',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 8
             }]
           },
           options: {
@@ -445,29 +575,74 @@
             plugins: {
               legend: {
                 display: true,
-                position: 'top'
+                position: 'top',
+                labels: {
+                  font: {
+                    size: 14,
+                    weight: 'bold'
+                  }
+                }
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
               }
             },
             scales: {
+              x: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Time Period',
+                  font: {
+                    size: 14,
+                    weight: 'bold'
+                  }
+                },
+                grid: {
+                  display: false
+                }
+              },
               y: {
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Sales Amount (₹)',
+                  font: {
+                    size: 14,
+                    weight: 'bold'
+                  }
+                },
                 beginAtZero: true,
                 ticks: {
                   callback: function(value) {
                     return '₹' + value.toLocaleString('en-IN');
                   }
+                },
+                grid: {
+                  color: 'rgba(0, 0, 0, 0.1)'
                 }
               }
             },
             interaction: {
               intersect: false,
               mode: 'index'
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeInOutQuart'
             }
           }
         });
       }
 
+      // ✅ ENHANCED: Better Chart Data Generation
       generateChartData(orders, reportType) {
-        // This is a simplified version - you might want to group by actual dates
         const groupedData = {};
         
         orders.forEach(order => {
@@ -476,14 +651,19 @@
           
           switch (reportType) {
             case 'daily':
-              key = date.getHours() + ':00';
+              key = `${String(date.getHours()).padStart(2, '0')}:00`;
               break;
             case 'weekly':
+              const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              key = weekdays[date.getDay()];
+              break;
             case 'monthly':
-              key = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+              key = date.getDate().toString();
               break;
             case 'yearly':
-              key = date.toLocaleDateString('en-IN', { month: 'short' });
+              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              key = months[date.getMonth()];
               break;
             default:
               key = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -495,11 +675,21 @@
           groupedData[key] += order.total;
         });
 
+        // Sort keys for proper chronological order
+        const sortedKeys = Object.keys(groupedData).sort((a, b) => {
+          if (reportType === 'daily') {
+            return parseInt(a) - parseInt(b);
+          }
+          return 0; // Keep original order for other types
+        });
+
         return {
-          labels: Object.keys(groupedData),
-          data: Object.values(groupedData)
+          labels: sortedKeys,
+          data: sortedKeys.map(key => groupedData[key])
         };
       }
+
+      // ... (rest of your existing methods remain the same)
 
       renderSalesTable(orders) {
         const tbody = document.getElementById('sales-table-body');
@@ -536,7 +726,6 @@
             </td>
             <td class="py-3 px-4">${order.paymentMethod}</td>
             <td class="py-3 px-4 font-medium">₹${order.subtotal.toLocaleString('en-IN')}</td>
-            <td class="py-3 px-4 text-green-600">-₹${order.productOffers.toLocaleString('en-IN')}</td>
             <td class="py-3 px-4 text-blue-600">-₹${order.couponDiscount.toLocaleString('en-IN')}</td>
             <td class="py-3 px-4 font-bold">₹${order.total.toLocaleString('en-IN')}</td>
             <td class="py-3 px-4">${order.itemCount}</td>
@@ -643,6 +832,17 @@
 
       async downloadReport(format) {
         try {
+          // Validate dates before download
+          const validation = this.validateDateRange(
+            this.currentFilters.startDate, 
+            this.currentFilters.endDate
+          );
+
+          if (!validation.valid) {
+            this.showToast('error', validation.message);
+            return;
+          }
+
           this.showLoading();
 
           const params = new URLSearchParams({
@@ -720,6 +920,4 @@
 
     // Initialize admin sales report manager
     const adminSalesReportManager = new AdminSalesReportManager();
-  </script>
-</body>
-</html>
+</script>

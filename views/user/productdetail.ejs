@@ -157,7 +157,7 @@
             </div>
         </div>
 <!-- ░░ REVIEWS SECTION ░░ -->
-    <section class="border-t border-gray-200 pt-16 mb-16">
+    <!-- <section class="border-t border-gray-200 pt-16 mb-16">
       <h3 class="text-2xl font-bold mb-8">Customer Reviews</h3>
       
       <% if (reviews.length === 0) { %>
@@ -186,10 +186,10 @@
             </div>
           <% }) %>
         </div>
-      <% } %>
+      <% } %> -->
 
       <!-- Add Review Form -->
-      <% if (user) { %>
+      <!-- <% if (user) { %>
         <div class="bg-white border border-gray-200 rounded-lg p-6">
           <h4 class="text-lg font-semibold mb-4">Write a Review</h4>
           <form action="/products/<%= product._id %>/review" method="POST" class="space-y-4">
@@ -220,9 +220,9 @@
           </a>
         </div>
       <% } %>
-    </section>
-
-    <!-- ░░ RELATED PRODUCTS ░░ -->
+    </section> -->
+<!-- 
+    ░░ RELATED PRODUCTS ░░ -->
     <% if (relatedProducts && relatedProducts.length > 0) { %>
       <section>
         <h3 class="text-2xl font-bold mb-8">You May Also Like</h3>
@@ -239,10 +239,10 @@
                   <h4 class="font-semibold text-gray-900 truncate group-hover:text-gray-600 transition"><%= rp.productName %></h4>
                   <p class="text-sm text-gray-600 mt-1 uppercase tracking-wide"><%= rp.brand || 'Unknown Brand' %></p>
                   <p class="text-lg font-bold mt-2">
-                    ₹<%= (rp.variants && rp.variants[0] && typeof rp.variants.regularPrice === 'number')
-                          ? (rp.variants.salePrice && rp.variants.salePrice < rp.variants.regularPrice
-                              ? rp.variants.salePrice.toFixed(2)
-                              : rp.variants.regularPrice.toFixed(2))
+                    ₹<%= (rp.variants && rp.variants[0] && typeof rp.variants[0].regularPrice === 'number')
+                          ? (rp.variants[0].salePrice && rp.variants[0].salePrice < rp.variants[0].regularPrice
+                              ? rp.variants[0].salePrice.toFixed(2)
+                              : rp.variants[0].regularPrice.toFixed(2))
                           : '0.00' %>
                   </p>
                 </div>

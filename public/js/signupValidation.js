@@ -8,54 +8,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('submit', (event) => {
     // Remove previous error messages
-    const previousErrors = document.querySelectorAll('.client-error');
-    previousErrors.forEach(error => error.remove());
-
+    document.querySelectorAll('.client-error').forEach(error => error.remove());
     let isValid = true;
 
-    function showError(input, message) {
+    const showError = (input, message) => {
       isValid = false;
       const errorEl = document.createElement('p');
       errorEl.className = 'client-error text-red-600 text-sm mt-1';
       errorEl.textContent = message;
       input.parentNode.appendChild(errorEl);
-    }
+    };
 
     // Validate full name
-    if (!fullNameInput.value.trim()) {
-      showError(fullNameInput, 'Full Name is required');
-    } else if (fullNameInput.value.trim().length < 2) {
+    if (!fullNameInput.value.trim() || fullNameInput.value.trim().length < 2) {
       showError(fullNameInput, 'Full Name must be at least 2 characters');
     }
 
-    // Validate email format (basic check)
-    if (!emailInput.value.trim()) {
+    // Validate email format
+    const emailValue = emailInput.value.trim();
+    if (!emailValue) {
       showError(emailInput, 'Email is required');
     } else {
-      const emailPattern = /^\S+@\S+\.\S+$/;
-      if (!emailPattern.test(emailInput.value.trim())) {
-        showError(emailInput, 'Invalid email format');
+      // A more robust regex for basic email validation
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(emailValue)) {
+        showError(emailInput, 'Invalid email format (e.g., user@example.com)');
       }
     }
 
-    // Validate phone number (digits only, 7-15 length)
-    if (!phoneInput.value.trim()) {
+    // Validate phone number
+    const phoneValue = phoneInput.value.trim();
+    if (!phoneValue) {
       showError(phoneInput, 'Phone number is required');
     } else {
       const phonePattern = /^\d{7,15}$/;
-      if (!phonePattern.test(phoneInput.value.trim())) {
+      if (!phonePattern.test(phoneValue)) {
         showError(phoneInput, 'Phone number must be 7 to 15 digits');
       }
     }
 
-    // Validate password length and special character
-    if (!passwordInput.value) {
+    // Validate password
+    const passwordValue = passwordInput.value;
+    if (!passwordValue) {
       showError(passwordInput, 'Password is required');
-    } else if (passwordInput.value.length < 6) {
+    } else if (passwordValue.length < 6) {
       showError(passwordInput, 'Password must be at least 6 characters');
     } else {
       const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
-      if (!specialCharPattern.test(passwordInput.value)) {
+      if (!specialCharPattern.test(passwordValue)) {
         showError(passwordInput, 'Password must include at least one special character');
       }
     }
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!isValid) {
-      event.preventDefault(); // Prevent form submission if validation fails
+      event.preventDefault(); // Stop submission
     }
   });
 });

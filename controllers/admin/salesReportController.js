@@ -4,7 +4,7 @@ const ExcelJS = require('exceljs');
 
 class SalesReportController {
   
-  
+  // Render the sales report page
   static async renderSalesReportPage(req, res) {
     try {
       res.render('admin/salesReport', {
@@ -16,7 +16,7 @@ class SalesReportController {
     }
   }
 
-  
+  // Generate sales report data
   static async generateSalesReport(req, res) {
     try {
       const {
@@ -27,24 +27,25 @@ class SalesReportController {
         limit = 50
       } = req.query;
 
-      console.log('Query params:', req.query); // Debug log
+      console.log('Query params:', req.query);
 
-    
+   
       const dateRange = SalesReportController.calculateDateRange(reportType, startDate, endDate);
       
-    
+     
       const pipeline = SalesReportController.buildSalesAggregationPipeline(dateRange, parseInt(page), parseInt(limit));
       
-      // Execute aggregation
+      
       const [reportData, totalCount] = await Promise.all([
         Order.aggregate(pipeline),
         SalesReportController.getTotalOrdersCount(dateRange)
       ]);
 
-    
+      // Calculate summary metrics
       const summaryMetrics = await SalesReportController.calculateSummaryMetrics(dateRange);
-
-      // Prepare response
+ console.log(reportData,"<<<");
+ console.log(summaryMetrics,"summereeerrr")
+      // Return response
       const response = {
         success: true,
         data: {
@@ -74,7 +75,7 @@ class SalesReportController {
     }
   }
 
-  
+  // Download PDF report
   static async downloadPDF(req, res) {
     try {
       const {
@@ -94,25 +95,28 @@ class SalesReportController {
       
       doc.pipe(res);
       
-    
+      // PDF Header
       doc.fontSize(20).text('SUPERKICKS - Sales Report', { align: 'center' });
       doc.fontSize(14).text(`Report Period: ${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`, { align: 'center' });
       doc.moveDown();
 
-      
+      // Summary section
       doc.fontSize(16).text('Summary', { underline: true });
       doc.fontSize(12);
       doc.text(`Total Orders: ${reportData.summary.totalOrders}`);
-      doc.text(`Total Sales Amount: ₹${reportData.summary.totalSalesAmount.toLocaleString('en-IN')}`);
-      doc.text(`Total Discounts Given: ₹${reportData.summary.totalDiscounts.toLocaleString('en-IN')}`);
-      doc.text(`Average Order Value: ₹${reportData.summary.averageOrderValue.toLocaleString('en-IN')}`);
+      doc.text(`Total Sales Amount: Rs ${reportData.summary.totalSalesAmount.toLocaleString('en-IN')}`);
+      doc.text(`Total Product Offers: Rs ${reportData.summary.totalProductOffers.toLocaleString('en-IN')}`);
+      doc.text(`Total Coupon Discounts: Rs ${reportData.summary.totalCouponDiscounts.toLocaleString('en-IN')}`);
+      doc.text(`Total Discounts: Rs ${reportData.summary.totalDiscounts.toLocaleString('en-IN')}`);
+      doc.text(`Average Order Value: Rs ${reportData.summary.averageOrderValue.toLocaleString('en-IN')}`);
       doc.moveDown();
 
       // Orders table
+      doc.fontSize(14).text('Orders Details', { underline: true });
+      doc.fontSize(10);
       reportData.orders.forEach((order, index) => {
-        const y = doc.y;
-        doc.text(`${order.referenceNo} - ₹${order.total.toLocaleString('en-IN')}`, 50, y);
-        doc.moveDown(0.5);
+        doc.text(`${order.referenceNo} - ${order.customerName} - Rs ${order.total.toLocaleString('en-IN')} - ${order.status}`);
+        doc.moveDown(0.3);
       });
 
       doc.end();
@@ -123,7 +127,7 @@ class SalesReportController {
     }
   }
 
-  // Download sales report as Excel
+  // Download Excel report
   static async downloadExcel(req, res) {
     try {
       const {
@@ -137,22 +141,24 @@ class SalesReportController {
       
       const workbook = new ExcelJS.Workbook();
       
-    
+      // Summary sheet
       const summarySheet = workbook.addWorksheet('Summary');
       summarySheet.addRow(['Sales Report Summary']);
       summarySheet.addRow(['Report Period:', `${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`]);
       summarySheet.addRow([]);
       summarySheet.addRow(['Metric', 'Value']);
       summarySheet.addRow(['Total Orders', reportData.summary.totalOrders]);
-      summarySheet.addRow(['Total Sales Amount', `₹${reportData.summary.totalSalesAmount.toLocaleString('en-IN')}`]);
-      summarySheet.addRow(['Total Discounts Given', `₹${reportData.summary.totalDiscounts.toLocaleString('en-IN')}`]);
-      summarySheet.addRow(['Average Order Value', `₹${reportData.summary.averageOrderValue.toLocaleString('en-IN')}`]);
+      summarySheet.addRow(['Total Sales Amount', `Rs ${reportData.summary.totalSalesAmount.toLocaleString('en-IN')}`]);
+      summarySheet.addRow(['Total Product Offers', `Rs ${reportData.summary.totalProductOffers.toLocaleString('en-IN')}`]);
+      summarySheet.addRow(['Total Coupon Discounts', `Rs ${reportData.summary.totalCouponDiscounts.toLocaleString('en-IN')}`]);
+      summarySheet.addRow(['Total Discounts', `Rs ${reportData.summary.totalDiscounts.toLocaleString('en-IN')}`]);
+      summarySheet.addRow(['Average Order Value', `Rs ${reportData.summary.averageOrderValue.toLocaleString('en-IN')}`]);
 
-    
+      // Orders sheet
       const ordersSheet = workbook.addWorksheet('Orders');
       ordersSheet.addRow([
         'Order ID', 'Reference No', 'Order Date', 'Customer', 'Status', 
-        'Payment Method', 'Subtotal', 'Discounts', 'Total Amount', 'Items Count'
+        'Payment Method', 'Subtotal', 'Product Offers', 'Coupon Discount', 'Total Amount', 'Items Count'
       ]);
 
       reportData.orders.forEach(order => {
@@ -164,7 +170,8 @@ class SalesReportController {
           order.status,
           order.paymentMethod,
           order.subtotal || 0,
-          order.totalDiscount || 0,
+          order.productOffers || 0,
+          order.couponDiscount || 0,
           order.total,
           order.itemCount || 0
         ]);
@@ -183,7 +190,7 @@ class SalesReportController {
     }
   }
 
-  
+  // Calculate date range based on report type
   static calculateDateRange(reportType, startDate, endDate) {
     const now = new Date();
     let start, end;
@@ -225,11 +232,12 @@ class SalesReportController {
     return { start, end };
   }
 
+  // Build aggregation pipeline for sales data (using your existing offerDiscount field)
   static buildSalesAggregationPipeline(dateRange, page, limit) {
     const skip = (page - 1) * limit;
     
     return [
-    
+      // Match orders in date range
       {
         $match: {
           orderDate: {
@@ -240,32 +248,68 @@ class SalesReportController {
         }
       },
       
-      
+      // Lookup order items (they already have offerDiscount calculated)
       {
         $lookup: {
-          from: 'users',
-          localField: 'userId',
+          from: 'orderitems',
+          localField: 'orderItems',
           foreignField: '_id',
-          as: 'customer'
+          as: 'orderItemDetails'
         }
       },
       
-    
+      // Calculate totals from existing fields
       {
         $addFields: {
-          customerName: { $arrayElemAt: ['$customer.fullName', 0] },
-          productOffers: { $ifNull: ['$offerDiscount', 0] },
+          customerName: '$address.name',
+          
+          // Sum up the already calculated offer discounts
+          productOffers: {
+            $sum: {
+              $map: {
+                input: '$orderItemDetails',
+                in: { $multiply: ['$$this.offerDiscount', '$$this.quantity'] }
+              }
+            }
+          },
+          
+          // Coupon discount
           couponDiscount: { $ifNull: ['$coupon.discountAmount', 0] },
+          
+          // Total discount
           totalDiscount: {
             $add: [
-              { $ifNull: ['$offerDiscount', 0] },
+              {
+                $sum: {
+                  $map: {
+                    input: '$orderItemDetails',
+                    in: { $multiply: ['$$this.offerDiscount', '$$this.quantity'] }
+                  }
+                }
+              },
+              { $ifNull: ['$coupon.discountAmount', 0] }
+            ]
+          },
+          
+          // Subtotal (total + all discounts)
+          subtotal: {
+            $add: [
+              '$total',
+              {
+                $sum: {
+                  $map: {
+                    input: '$orderItemDetails',
+                    in: { $multiply: ['$$this.offerDiscount', '$$this.quantity'] }
+                  }
+                }
+              },
               { $ifNull: ['$coupon.discountAmount', 0] }
             ]
           }
         }
       },
       
-      
+      // Project required fields
       {
         $project: {
           _id: 1,
@@ -275,9 +319,7 @@ class SalesReportController {
           status: 1,
           paymentMethod: 1,
           total: 1,
-          subtotal: { $ifNull: ['$subtotal', 0] },
-          deliveryCharge: { $ifNull: ['$deliveryCharge', 0] },
-          tax: { $ifNull: ['$tax', 0] },
+          subtotal: 1,
           productOffers: 1,
           couponDiscount: 1,
           totalDiscount: 1,
@@ -295,58 +337,170 @@ class SalesReportController {
   }
 
   static async calculateSummaryMetrics(dateRange) {
-    const pipeline = [
-      {
-        $match: {
-          orderDate: {
-            $gte: dateRange.start,
-            $lte: dateRange.end
-          },
-          status: { $ne: 'Cancelled' }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalOrders: { $sum: 1 },
-          totalSalesAmount: { $sum: '$total' },
-          totalProductOffers: { $sum: { $ifNull: ['$offerDiscount', 0] } },
-          totalCouponDiscounts: { $sum: { $ifNull: ['$coupon.discountAmount', 0] } },
-          averageOrderValue: { $avg: '$total' }
-        }
-      },
-      {
-        $addFields: {
-          totalDiscounts: {
-            $add: ['$totalProductOffers', '$totalCouponDiscounts']
+  const pipeline = [
+    // Match orders in date range (excluding cancelled)
+    {
+      $match: {
+        orderDate: {
+          $gte: dateRange.start,
+          $lte: dateRange.end
+        },
+        status: { $ne: 'Cancelled' }
+      }
+    },
+    
+    // Lookup order items
+    {
+      $lookup: {
+        from: 'orderitems',
+        localField: 'orderItems',
+        foreignField: '_id',
+        as: 'orderItemDetails'
+      }
+    },
+    
+    // Calculate product offers per order using $reduce
+    {
+      $addFields: {
+        orderProductOffers: {
+          $reduce: {
+            input: { $ifNull: ['$orderItemDetails', []] },
+            initialValue: 0,
+            in: {
+              $add: [
+                '$$value',
+                { $multiply: [
+                    { $ifNull: ['$$this.offerDiscount', 0] },
+                    { $ifNull: ['$$this.quantity', 1] }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        
+        // Calculate subtotal per order (before any discounts)
+        orderSubtotal: {
+          $reduce: {
+            input: { $ifNull: ['$orderItemDetails', []] },
+            initialValue: 0,
+            in: {
+              $add: [
+                '$$value',
+                { $multiply: [
+                    { $add: [
+                        { $ifNull: ['$$this.price', 0] },
+                        { $ifNull: ['$$this.offerDiscount', 0] }
+                      ]
+                    },
+                    { $ifNull: ['$$this.quantity', 1] }
+                  ]
+                }
+              ]
+            }
           }
         }
       }
-    ];
-
-    const result = await Order.aggregate(pipeline);
+    },
     
-    if (result.length === 0) {
-      return {
-        totalOrders: 0,
-        totalSalesAmount: 0,
-        totalProductOffers: 0,
-        totalCouponDiscounts: 0,
-        totalDiscounts: 0,
-        averageOrderValue: 0
-      };
+    // Group all orders to calculate totals
+    {
+      $group: {
+        _id: null,
+        totalOrders: { $sum: 1 },
+        totalSalesAmount: { $sum: '$total' },
+        totalSubtotalAmount: { $sum: '$orderSubtotal' },
+        totalProductOffers: { $sum: '$orderProductOffers' },
+        totalCouponDiscounts: { $sum: { $ifNull: ['$coupon.discountAmount', 0] } },
+        averageOrderValue: { $avg: '$total' },
+        
+        // Additional metrics
+        minOrderValue: { $min: '$total' },
+        maxOrderValue: { $max: '$total' },
+        totalItemsCount: {
+          $sum: { $size: { $ifNull: ['$orderItems', []] } }
+        }
+      }
+    },
+    
+    // Add calculated fields
+    {
+      $addFields: {
+        totalDiscounts: {
+          $add: ['$totalProductOffers', '$totalCouponDiscounts']
+        },
+        
+        // Discount percentage of total sales
+        discountPercentage: {
+          $cond: {
+            if: { $gt: ['$totalSubtotalAmount', 0] },
+            then: {
+              $multiply: [
+                { $divide: [
+                    { $add: ['$totalProductOffers', '$totalCouponDiscounts'] },
+                    '$totalSubtotalAmount'
+                  ]
+                },
+                100
+              ]
+            },
+            else: 0
+          }
+        },
+        
+        // Average items per order
+        averageItemsPerOrder: {
+          $cond: {
+            if: { $gt: ['$totalOrders', 0] },
+            then: { $divide: ['$totalItemsCount', '$totalOrders'] },
+            else: 0
+          }
+        }
+      }
     }
+  ];
 
+  const result = await Order.aggregate(pipeline);
+  
+  // Handle empty result
+  if (result.length === 0) {
     return {
-      totalOrders: result[0].totalOrders,
-      totalSalesAmount: Math.round(result[0].totalSalesAmount * 100) / 100,
-      totalProductOffers: Math.round(result[0].totalProductOffers * 100) / 100,
-      totalCouponDiscounts: Math.round(result[0].totalCouponDiscounts * 100) / 100,
-      totalDiscounts: Math.round(result[0].totalDiscounts * 100) / 100,
-      averageOrderValue: Math.round(result[0].averageOrderValue * 100) / 100
+      totalOrders: 0,
+      totalSalesAmount: 0,
+      totalSubtotalAmount: 0,
+      totalProductOffers: 0,
+      totalCouponDiscounts: 0,
+      totalDiscounts: 0,
+      averageOrderValue: 0,
+      minOrderValue: 0,
+      maxOrderValue: 0,
+      discountPercentage: 0,
+      averageItemsPerOrder: 0,
+      totalItemsCount: 0
     };
   }
 
+  const data = result[0];
+  
+  // Return properly rounded values
+  return {
+    totalOrders: data.totalOrders || 0,
+    totalSalesAmount: Math.round((data.totalSalesAmount || 0) * 100) / 100,
+    totalSubtotalAmount: Math.round((data.totalSubtotalAmount || 0) * 100) / 100,
+    totalProductOffers: Math.round((data.totalProductOffers || 0) * 100) / 100,
+    totalCouponDiscounts: Math.round((data.totalCouponDiscounts || 0) * 100) / 100,
+    totalDiscounts: Math.round((data.totalDiscounts || 0) * 100) / 100,
+    averageOrderValue: Math.round((data.averageOrderValue || 0) * 100) / 100,
+    minOrderValue: Math.round((data.minOrderValue || 0) * 100) / 100,
+    maxOrderValue: Math.round((data.maxOrderValue || 0) * 100) / 100,
+    discountPercentage: Math.round((data.discountPercentage || 0) * 100) / 100,
+    averageItemsPerOrder: Math.round((data.averageItemsPerOrder || 0) * 100) / 100,
+    totalItemsCount: data.totalItemsCount || 0
+  };
+}
+
+
+  // Get total orders count for pagination
   static async getTotalOrdersCount(dateRange) {
     return await Order.countDocuments({
       orderDate: {
@@ -357,6 +511,7 @@ class SalesReportController {
     });
   }
 
+  // Get complete sales report data
   static async getSalesReportData(dateRange) {
     const pipeline = SalesReportController.buildSalesAggregationPipeline(dateRange, 1, 100000);
     const [orders, summary] = await Promise.all([
@@ -368,7 +523,7 @@ class SalesReportController {
   }
 }
 
-// Export functions correctly
+// ✅ Correct module export syntax
 module.exports = {
   renderSalesReportPage: SalesReportController.renderSalesReportPage,
   generateSalesReport: SalesReportController.generateSalesReport,

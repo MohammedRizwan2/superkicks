@@ -15,7 +15,7 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// Helper function to get available coupons
+
 const getAvailableCouponsForUser = async (userId, orderValue) => {
   try {
     const today = new Date();
@@ -50,7 +50,6 @@ const getAvailableCouponsForUser = async (userId, orderValue) => {
   }
 };
 
-// Helper function to calculate discount
 const calculateDiscount = (coupon, orderValue) => {
   let discount = 0;
   if (coupon.type === 'PERCENT') {
@@ -64,7 +63,6 @@ const calculateDiscount = (coupon, orderValue) => {
   return Math.min(discount, orderValue);
 };
 
-// Helper function to calculate order totals
 const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
   let subtotal = 0;
   
@@ -98,7 +96,7 @@ const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
     couponUsed
   };
 };
-// Centralized order creation function - FIXED
+
 async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon = null, paymentDetails = {}) {
   console.log("inside the create orderedb ")
   const session = await mongoose.startSession();
@@ -143,6 +141,7 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
         productId: product._id,
         variantId: variant._id,
         price: variant.salePrice,
+        offerDiscount:variant.regularPrice-variant.salePrice,
         quantity: item.quantity,
         status: paymentMethod === 'PAYMENT_FAILED' ? 'Payment Failed' : 'Pending'
       });
@@ -150,29 +149,31 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
       await orderItem.save({ session });
       orderItems.push(orderItem._id);
 
-      // Only deduct stock for successful payments (not failed payments)
+      
       if (paymentMethod !== 'PAYMENT_FAILED') {
         variant.stock -= item.quantity;
         await variant.save({ session });
       }
     }
 
-    // Calculate totals
+
     const totals = calculateOrderTotals(cart.items, sessionCoupon);
 
-    // Validate wallet balance for wallet payments
+    
     if (paymentMethod === 'WALLET' && wallet.balance < totals.total) {
       throw new Error('Insufficient wallet balance');
     }
 
     const referenceNo = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
 
-    // Determine order status
+  
     let orderStatus = 'Pending';
     if (paymentMethod === 'PAYMENT_FAILED') {
       orderStatus = 'Payment Failed';
     }
-
+     if(totals.total>1000&&paymentMethod=='COD'){
+       throw new Error("COD not available for purchase greater that 1000")  
+     }
     const orderData = {
       userId,
       referenceNo,

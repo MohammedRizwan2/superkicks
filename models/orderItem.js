@@ -13,7 +13,7 @@ const orderItemSchema = new mongoose.Schema({
   isReturned: { type: Boolean, default: false },
   isCancelled: { type: Boolean, default: false },
   
-  
+  offerDiscount:{type:Number,required:true,min:0},
   returnRequested: { type: Boolean, default: false }, 
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order',  },
   returnApproved: { type: Boolean }, 

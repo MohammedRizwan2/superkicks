@@ -241,6 +241,67 @@
     function closeCreate() { createModal.classList.add('hidden'); }
     function closeEdit() { editModal.classList.add('hidden'); }
 
+    // ✅ Date Validation Function
+    function validateCouponDates(startDateStr, endDateStr) {
+      if (!startDateStr || !endDateStr) {
+        return { valid: false, message: 'Both start date and end date are required' };
+      }
+
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
+
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return { valid: false, message: 'Please enter valid dates' };
+      }
+
+      // Check if end date is before start date
+      if (endDate < startDate) {
+        return { valid: false, message: 'End date cannot be before start date' };
+      }
+
+      // Optional: Check if start date is in the past (uncomment if needed)
+      // if (startDate < today) {
+      //   return { valid: false, message: 'Start date cannot be in the past' };
+      // }
+
+      return { valid: true };
+    }
+
+    // ✅ Real-time validation for Create Form
+    function setupDateValidation(formPrefix) {
+      const startDateField = document.getElementById(`${formPrefix}startDate`);
+      const endDateField = document.getElementById(`${formPrefix}endDate`);
+      
+      function validateDates() {
+        const startDate = startDateField.value;
+        const endDate = endDateField.value;
+        
+        if (startDate && endDate) {
+          const validation = validateCouponDates(startDate, endDate);
+          if (!validation.valid) {
+            endDateField.setCustomValidity(validation.message);
+            endDateField.style.borderColor = '#ef4444';
+          } else {
+            endDateField.setCustomValidity('');
+            endDateField.style.borderColor = '#d1d5db';
+          }
+        } else {
+          endDateField.setCustomValidity('');
+          endDateField.style.borderColor = '#d1d5db';
+        }
+      }
+
+      startDateField?.addEventListener('change', validateDates);
+      endDateField?.addEventListener('change', validateDates);
+    }
+
+    // Setup validation for both forms
+    setupDateValidation(''); // For create form (no prefix)
+    setupDateValidation('edit-'); // For edit form
+
     async function openEdit(id) {
       const r = await fetch(`/admin/coupons/${id}`);
       const j = await r.json();
@@ -263,49 +324,97 @@
       editModal.classList.remove('hidden');
     }
 
-    document.getElementById('open-create')?.addEventListener('click', () => createModal.classList.remove('hidden'));
-
-    document.getElementById('create-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
-      body.isActive = !!fd.get('isActive');
-
-      const resp = await fetch('/admin/coupons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const j = await resp.json();
-      if (!j.success) {
-        const msg = Array.isArray(j.error) ? j.error.join('\n') : (j.error || 'Create failed');
-        return Toast.fire({ icon: 'error', title: msg });
-      }
-      Toast.fire({ icon: 'success', title: 'Coupon created' });
-      closeCreate();
-      window.location.href = '/admin/coupons?flash=Coupon+created';
+    document.getElementById('open-create')?.addEventListener('click', () => {
+      // Set default start date to today
+      const today = new Date().toISOString().slice(0, 10);
+      document.querySelector('[name="startDate"]').value = today;
+      createModal.classList.remove('hidden');
     });
 
-    document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+    // ✅ Enhanced Create Form Submit Handler
+    document.getElementById('create-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
       const fd = new FormData(e.target);
-      const id = fd.get('id');
+      const startDate = fd.get('startDate');
+      const endDate = fd.get('endDate');
+
+      // Validate dates before submission
+      const validation = validateCouponDates(startDate, endDate);
+      if (!validation.valid) {
+        return Swal.fire({
+          icon: 'error',
+          title: 'Invalid Dates',
+          text: validation.message
+        });
+      }
+
       const body = Object.fromEntries(fd.entries());
       body.isActive = !!fd.get('isActive');
 
-      const resp = await fetch(`/admin/coupons/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const j = await resp.json();
-      if (!j.success) {
-        const msg = Array.isArray(j.error) ? j.error.join('\n') : (j.error || 'Update failed');
-        return Toast.fire({ icon: 'error', title: msg });
+      try {
+        const resp = await fetch('/admin/coupons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await resp.json();
+        
+        if (!j.success) {
+          const msg = Array.isArray(j.error) ? j.error.join('\n') : (j.error || 'Create failed');
+          return Toast.fire({ icon: 'error', title: msg });
+        }
+        
+        Toast.fire({ icon: 'success', title: 'Coupon created successfully!' });
+        closeCreate();
+        e.target.reset(); // Clear form
+        window.location.href = '/admin/coupons?flash=Coupon+created';
+      } catch (error) {
+        Toast.fire({ icon: 'error', title: 'Network error. Please try again.' });
       }
-      Toast.fire({ icon: 'success', title: 'Coupon updated' });
-      closeEdit();
-      window.location.href = '/admin/coupons?flash=Coupon+updated';
+    });
+
+    // ✅ Enhanced Edit Form Submit Handler
+    document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fd = new FormData(e.target);
+      const id = fd.get('id');
+      const startDate = fd.get('startDate');
+      const endDate = fd.get('endDate');
+
+    
+      const validation = validateCouponDates(startDate, endDate);
+      if (!validation.valid) {
+        return Swal.fire({
+          icon: 'error',
+          title: 'Invalid Dates',
+          text: validation.message
+        });
+      }
+
+      const body = Object.fromEntries(fd.entries());
+      body.isActive = !!fd.get('isActive');
+
+      try {
+        const resp = await fetch(`/admin/coupons/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await resp.json();
+        
+        if (!j.success) {
+          const msg = Array.isArray(j.error) ? j.error.join('\n') : (j.error || 'Update failed');
+          return Toast.fire({ icon: 'error', title: msg });
+        }
+        
+        Toast.fire({ icon: 'success', title: 'Coupon updated successfully!' });
+        closeEdit();
+        window.location.href = '/admin/coupons?flash=Coupon+updated';
+      } catch (error) {
+        Toast.fire({ icon: 'error', title: 'Network error. Please try again.' });
+      }
     });
 
     document.addEventListener('click', (e) => {
@@ -326,47 +435,69 @@
 
     function confirmToggle(id, isActive, code) {
       Swal.fire({
-        title: 'Confirm',
+        title: 'Confirm Action',
         text: `${isActive ? 'Activate' : 'Deactivate'} coupon ${code}?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes',
+        cancelButtonText: 'Cancel'
       }).then(async (res) => {
         if (res.isConfirmed) {
-          const r = await fetch(`/admin/coupons/${id}/toggle`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive })
-          });
-          const j = await r.json();
-          if (!j.success) return Toast.fire({ icon: 'error', title: j.error || 'Failed' });
-          Toast.fire({ icon: 'success', title: `Coupon ${isActive ? 'activated' : 'deactivated'}` });
-          window.location.reload();
+          try {
+            const r = await fetch(`/admin/coupons/${id}/toggle`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isActive })
+            });
+            const j = await r.json();
+            
+            if (!j.success) return Toast.fire({ icon: 'error', title: j.error || 'Failed' });
+            Toast.fire({ icon: 'success', title: `Coupon ${isActive ? 'activated' : 'deactivated'}` });
+            window.location.reload();
+          } catch (error) {
+            Toast.fire({ icon: 'error', title: 'Network error. Please try again.' });
+          }
         }
       });
     }
 
     function confirmArchive(id, isDeleted, code) {
       Swal.fire({
-        title: 'Confirm',
+        title: 'Confirm Action',
         text: `${isDeleted ? 'Archive' : 'Restore'} coupon ${code}?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes',
+        cancelButtonText: 'Cancel'
       }).then(async (res) => {
         if (res.isConfirmed) {
-          const r = await fetch(`/admin/coupons/${id}/archive`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isDeleted })
-          });
-          const j = await r.json();
-          if (!j.success) return Toast.fire({ icon: 'error', title: j.error || 'Failed' });
-          Toast.fire({ icon: 'success', title: `Coupon ${isDeleted ? 'archived' : 'restored'}` });
-          window.location.reload();
+          try {
+            const r = await fetch(`/admin/coupons/${id}/archive`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isDeleted })
+            });
+            const j = await r.json();
+            
+            if (!j.success) return Toast.fire({ icon: 'error', title: j.error || 'Failed' });
+            Toast.fire({ icon: 'success', title: `Coupon ${isDeleted ? 'archived' : 'restored'}` });
+            window.location.reload();
+          } catch (error) {
+            Toast.fire({ icon: 'error', title: 'Network error. Please try again.' });
+          }
         }
       });
     }
-  </script>
-</body>
-</html>
+
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Set minimum date for create form
+      const createStartDate = document.querySelector('#create-modal [name="startDate"]');
+      const createEndDate = document.querySelector('#create-modal [name="endDate"]');
+      
+      if (createStartDate) createStartDate.setAttribute('min', today);
+      if (createEndDate) createEndDate.setAttribute('min', today);
+    });
+</script>
