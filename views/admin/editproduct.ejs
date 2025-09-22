@@ -109,23 +109,22 @@
         </div>
 
         <div>
-    <label class="block text-gray-600 font-medium mb-1">Status</label>
-    <div class="flex items-center">
-        <input type="radio" id="listed" name="isListed" value="true"
-            <%= (old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
-        <label for="listed" class="mr-4">Listed</label>
-        <input type="radio" id="unlisted" name="isListed" value="false"
-            <%= !(old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
-        <label for="unlisted">Unlisted</label>
-    </div>
-</div>
+          <label class="block text-gray-600 font-medium mb-1">Status</label>
+          <div class="flex items-center">
+            <input type="radio" id="listed" name="isListed" value="true"
+                <%= (old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
+            <label for="listed" class="mr-4">Listed</label>
+            <input type="radio" id="unlisted" name="isListed" value="false"
+                <%= !(old?.isListed ?? product.isListed) ? 'checked' : '' %> class="mr-2">
+            <label for="unlisted">Unlisted</label>
+          </div>
+        </div>
 
         <!-- Image Upload Section -->
         <div>
           <label class="block text-gray-600 font-medium mb-1">Product Images <span class="text-red-500">*</span></label>
           <p class="text-sm text-gray-500 mb-3">
-            Current images: <span id="image-count">0</span> | 
-          
+            Current images: <span id="image-count">0</span>
           </p>
           
           <input type="file" id="file-input" name="images" accept="image/*" style="display: none;" multiple>
@@ -167,7 +166,7 @@
           <div id="image-data" data-images='<%= JSON.stringify(product.images) %>' style="display: none;"></div>
         </div>
 
-        <!-- Variants Section -->
+        <!-- CORRECTED Variants Section -->
         <div>
           <label class="block text-gray-600 font-medium mb-2">Variants (Size, Price, Stock)</label>
           <div id="variants-area">
@@ -182,12 +181,16 @@
                 <input type="number" min="0" name="variants[<%= i %>][stock]" placeholder="Stock"
                   value="<%= variant.stock %>"
                   class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500">
-                <input type="hidden" name="variants[<%= i %>][id]" value="<%= variant._id %>">
+                <!-- FIXED: Changed from [id] to [_id] -->
+                <input type="hidden" name="variants[<%= i %>][_id]" value="<%= variant._id %>">
                 <button type="button" onclick="removeVariantRow(this)" class="bg-red-500 text-white px-2 rounded hover:bg-red-700 font-bold">-</button>
               </div>
             <% }) %>
           </div>
           <button type="button" id="add-variant-btn" class="mt-1 px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Variant</button>
+          
+          <!-- FIXED: Moved outside the loop -->
+          <input type="hidden" name="deletedVariants" id="deleted-variants" value="[]">
         </div>
 
         <div class="flex justify-between items-center mt-8">
@@ -212,6 +215,7 @@
     const existingImages = JSON.parse(document.getElementById('image-data').dataset.images || '[]');
     const deletedImages = [];
     const newImages = [];
+    let deletedVariants = []; // Global variable for tracking deleted variants
 
     // Helper functions for image type detection
     function isCloudinaryImage(img) {
@@ -394,7 +398,6 @@
           updateNewImagesInput();
         }
         
-        
         if (imageType === 'cloudinary') {
           axios.delete(`/admin/delete-temp-image`, { data: { publicId: imageId } })
             .catch(err => console.warn('Cleanup failed:', err));
@@ -411,7 +414,7 @@
       updateImageCount();
     }
 
-    // Variant management
+    // CORRECTED Variant management
     document.getElementById('add-variant-btn').addEventListener('click', function() {
       const area = document.getElementById('variants-area');
       const index = area.querySelectorAll('.variant-row').length;
@@ -429,21 +432,29 @@
       area.appendChild(row);
     });
 
-    // FIXED: Track variant deletion
+    // CORRECTED: Track variant deletion properly
     function removeVariantRow(btn) {
       const row = btn.closest('.variant-row');
-      const variantId = row.querySelector('[name*="_id"]')?.value;
+      const variantIdInput = row.querySelector('[name*="[_id]"]');
+      const variantId = variantIdInput ? variantIdInput.value : null;
       
-      // If this is an existing variant, track it for deletion
-      if (variantId) {
+      // If this is an existing variant (has valid ID), track it for deletion
+      if (variantId && variantId.trim() !== '' && variantId.length === 24) {
+        console.log('Adding variant to delete list:', variantId);
         deletedVariants.push(variantId);
-        document.getElementById('deleted-variants').value = JSON.stringify(deletedVariants);
+        
+        // Update hidden input
+        const deletedVariantsInput = document.getElementById('deleted-variants');
+        if (deletedVariantsInput) {
+          deletedVariantsInput.value = JSON.stringify(deletedVariants);
+          console.log('Updated deletedVariants:', deletedVariants);
+        }
       }
       
       row.remove();
     }
 
-    // Form submission
+    // CORRECTED Form submission
     document.getElementById('edit-product-form').addEventListener('submit', async function(e) {
       e.preventDefault();
       const form = e.target;
@@ -460,17 +471,23 @@
       updateHiddenInputs();
       updateNewImagesInput();
       
-      // Prepare FormData
-      const formData = new FormData(form);
+      // Update deletedVariants hidden input
+      document.getElementById('deleted-variants').value = JSON.stringify(deletedVariants);
       
-      const variants = [];
+      // Validate variants
+      const variantRows = document.querySelectorAll('.variant-row');
       let variantError = null;
-      document.querySelectorAll('.variant-row').forEach((row, idx) => {
+      
+      if (variantRows.length === 0) {
+        alert('Please add at least one variant.');
+        return;
+      }
+
+      variantRows.forEach((row, idx) => {
         const size = row.querySelector('[name*="size"]').value.trim();
         const price = parseFloat(row.querySelector('[name*="price"]').value);
         const stockVal = row.querySelector('[name*="stock"]').value;
         const stock = stockVal !== '' ? parseInt(stockVal, 10) : 0;
-        const variantId = row.querySelector('[name*="_id"]')?.value || null;
 
         if (!size) {
           variantError = `Variant ${idx + 1}: Size is required.`;
@@ -479,24 +496,24 @@
         } else if (isNaN(stock) || stock < 0) {
           variantError = `Variant ${idx + 1}: Stock must be zero or a positive number.`;
         }
-
-        variants.push({ _id: variantId, size, price, stock });
       });
 
       if (variantError) {
         alert(variantError);
         return;
       }
-
-      if (variants.length === 0) {
-        alert('Please add at least one variant.');
-        return;
-      }
+      
       // Update button state
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
       
       try {
+        const formData = new FormData(form);
+        
+        // Debug log
+        console.log('Submitting with deletedVariants:', deletedVariants);
+        console.log('Form deletedVariants value:', formData.get('deletedVariants'));
+        
         const response = await axios.post(form.action, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });

@@ -5,50 +5,46 @@ const Product = require('../../models/product');
 const User = require('../../models/userSchema');
 const Wallet = require('../../models/wallet');
 
+exports.listOrder = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = '', status = 'all', sortBy = 'orderDate', order = 'desc' } = req.query;
 
-exports.listOrder = async (req , res)=>{
-    try{
-      const {page = 1,limit=10,search='',status='all',sortBy='orderDate',order='desc'}=req.query;
+    const skip = (page - 1) * limit;
 
-      const skip= (page-1)* limit;
+    let query = {};
 
-      let query ={};
+    if (search) {
+      const user = await User.find({
+        $or: [
+          { fullName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
 
-      if(search){
-        const user = await User.find({
-            $or:[
-                {fullName:{$regex:search,$options:'i' }},
-                {email:{$regex:search,$options:'i'}},
-                {phone:{$regex:search,$options:'i'}}
-            ]
-        }).select('_id');
-
-        query = {
-            $or:[
-                {referenceNo:{$regex:search,$options:'i'}},
-                {userId:{$in:user.map(u =>u._id)}}
-            ]
-        }
+      query = {
+        $or: [
+          { referenceNo: { $regex: search, $options: 'i' } },
+          { userId: { $in: user.map(u => u._id) } }
+        ]
       }
+    }
 
-      if(status && status !=='all'){
-        query.status = status;
-      }
+    if (status && status !== 'all') {
+      query.status = status;
+    }
 
+    const total = await Order.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
-      const total = await Order.countDocuments(query);
-      const totalPages = Math.ceil(total/limit);
-
-
-      const orders = await Order.find(query)
-      .populate('userId','fullName email phone')
+    const orders = await Order.find(query)
+      .populate('userId', 'fullName email phone')
       .populate('orderItems')
-      .sort({[sortBy]:order ==='desc'? -1:1})
+      .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
       .skip(parseInt(skip))
       .limit(parseInt(limit));
 
-
- const processedOrders = orders.map(order => ({
+    const processedOrders = orders.map(order => ({
       id: order._id,
       referenceNo: order.referenceNo,
       orderDate: order.orderDate,
@@ -105,15 +101,11 @@ exports.renderOrdersPage = async (req, res) => {
   }
 };
 
-
-
-
-module.exports.updateOrderStatus = async (req, res) => {
+exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status, reason } = req.body;
 
-    // Valid order statuses
     const validStatuses = [
       'Pending', 'Confirmed', 'Processing', 'Shipped', 
       'Out for Delivery', 'Delivered', 'Cancelled'
@@ -134,7 +126,6 @@ module.exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-  
     const statusFlow = {
       'Pending': ['Confirmed', 'Cancelled'],
       'Confirmed': ['Processing', 'Cancelled'], 
@@ -145,7 +136,6 @@ module.exports.updateOrderStatus = async (req, res) => {
       'Cancelled': [] 
     };
 
-  
     if (!statusFlow[order.status]?.includes(status)) {
       if (order.status === 'Delivered' && status === 'Cancelled') {
         const hasReturnRequest = await OrderItem.exists({
@@ -169,19 +159,8 @@ module.exports.updateOrderStatus = async (req, res) => {
 
     const oldStatus = order.status;
     order.status = status;
-    
-  
-    order.statusHistory = order.statusHistory || [];
-    order.statusHistory.push({
-      status: status,
-      updatedBy: req.user.id,
-      updatedAt: new Date(),
-      reason: reason || null
-    });
 
-  
     if (status === 'Cancelled') {
-  
       await OrderItem.updateMany(
         { 
           orderId: order._id, 
@@ -189,19 +168,10 @@ module.exports.updateOrderStatus = async (req, res) => {
         },
         { 
           status: 'Cancelled',
-          cancellationReason: reason || 'Order cancelled by admin',
-          $push: {
-            statusHistory: {
-              status: 'Cancelled',
-              updatedBy: req.user.id,
-              updatedAt: new Date(),
-              reason: reason || 'Order cancelled by admin'
-            }
-          }
+          cancellationReason: reason || 'Order cancelled by admin'
         }
       );
 
-      
       const itemsToCancel = await OrderItem.find({
         orderId: order._id,
         status: { $nin: ['Delivered', 'Cancelled', 'Returned'] }
@@ -217,23 +187,13 @@ module.exports.updateOrderStatus = async (req, res) => {
       }
     }
 
-  
     if (status === 'Delivered') {
       await OrderItem.updateMany(
         { 
           orderId: order._id, 
           status: { $nin: ['Cancelled', 'Returned'] }
         },
-        { 
-          status: 'Delivered',
-          $push: {
-            statusHistory: {
-              status: 'Delivered',
-              updatedBy: req.user.id,
-              updatedAt: new Date()
-            }
-          }
-        }
+        { status: 'Delivered' }
       );
     }
 
@@ -258,12 +218,11 @@ module.exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-module.exports.updateItemStatus = async (req, res) => {
+exports.updateItemStatus = async (req, res) => {
   try {
     const { itemId } = req.params;
     const { status, reason } = req.body;
 
-  
     const validStatuses = [
       'Pending', 'Confirmed', 'Processing', 'Shipped', 
       'Out for Delivery', 'Delivered', 'Cancelled',
@@ -288,7 +247,6 @@ module.exports.updateItemStatus = async (req, res) => {
       });
     }
 
-    
     if ((orderItem.status === 'Delivered' || orderItem.status === 'Cancelled') && 
         !orderItem.returnRequested && status !== orderItem.status) {
       return res.status(400).json({
@@ -297,39 +255,8 @@ module.exports.updateItemStatus = async (req, res) => {
       });
     }
 
-
-    const itemStatusFlow = {
-      'Pending': ['Confirmed', 'Cancelled'],
-      'Confirmed': ['Processing', 'Cancelled'], 
-      'Processing': ['Shipped', 'Cancelled'],
-      'Shipped': ['Out for Delivery', 'Delivered', 'Cancelled'],
-      'Out for Delivery': ['Delivered', 'Cancelled'],
-      'Delivered': ['Cancelled'], 
-      'Cancelled': [], 
-      'Return Processing': ['Return Approved', 'Cancelled'],
-      'Return Approved': ['Returned'],
-      'Returned': [] 
-    };
-
-  
-    const allowedTransitions = itemStatusFlow[orderItem.status] || [];
-    
-    if (!allowedTransitions.includes(status)) {
-      
-      if (orderItem.returnRequested && 
-          ['Return Processing', 'Return Approved', 'Returned'].includes(status)) {
-      
-      } else {
-        return res.status(400).json({
-          success: false,
-          error: `Cannot change item status from ${orderItem.status} to ${status}`
-        });
-      }
-    }
-
     const oldStatus = orderItem.status;
 
-    
     if ((status === 'Cancelled' && oldStatus !== 'Cancelled') || 
         (status === 'Returned' && oldStatus !== 'Returned')) {
       if (orderItem.variantId) {
@@ -340,18 +267,7 @@ module.exports.updateItemStatus = async (req, res) => {
       }
     }
 
-   
     orderItem.status = status;
-    
-   
-    orderItem.statusHistory = orderItem.statusHistory || [];
-    orderItem.statusHistory.push({
-      status: status,
-      updatedBy: req.user.id,
-      updatedAt: new Date(),
-      reason: reason || null
-    });
-
     
     if (status === 'Cancelled') {
       orderItem.cancellationReason = reason || 'Cancelled by admin';
@@ -359,7 +275,6 @@ module.exports.updateItemStatus = async (req, res) => {
 
     await orderItem.save();
 
-  
     await updateOverallOrderStatus(orderItem.orderId._id);
 
     return res.json({
@@ -381,6 +296,108 @@ module.exports.updateItemStatus = async (req, res) => {
   }
 };
 
+// Helper function for calculating item refund with your existing model
+async function calculateItemRefundAmount(order, orderItem) {
+  try {
+    console.log('Calculating refund for item:', orderItem._id);
+
+    const allOrderItems = await OrderItem.find({ orderId: order._id });
+    const itemSubtotal = orderItem.price * orderItem.quantity;
+    
+    const orderSubtotal = allOrderItems.reduce((sum, item) => 
+      sum + (item.price * item.quantity), 0
+    );
+    
+    const itemProportion = itemSubtotal / orderSubtotal;
+    let refundAmount = itemSubtotal;
+    let couponDiscountDeduction = 0;
+    let taxRefund = 0;
+    let deliveryRefund = 0;
+
+    // 1. Apply proportional coupon discount deduction
+    let orderCouponDiscount = 0;
+    if (order.coupon && order.coupon.discountAmount) {
+      orderCouponDiscount = order.coupon.discountAmount;
+    }
+    
+    if (orderCouponDiscount > 0) {
+      couponDiscountDeduction = Math.round(orderCouponDiscount * itemProportion * 100) / 100;
+      refundAmount -= couponDiscountDeduction;
+    }
+    
+    // 2. Calculate proportional tax refund
+    if (order.tax && order.tax > 0) {
+      const itemAfterDiscount = itemSubtotal - couponDiscountDeduction;
+      const orderAfterDiscount = orderSubtotal - orderCouponDiscount;
+      
+      if (orderAfterDiscount > 0) {
+        const taxProportion = itemAfterDiscount / orderAfterDiscount;
+        taxRefund = Math.round(order.tax * taxProportion * 100) / 100;
+        refundAmount += taxRefund;
+      }
+    }
+    
+    // 3. Calculate delivery charge from existing total
+    const calculatedDeliveryCharge = order.total - orderSubtotal - (order.tax || 0) + orderCouponDiscount;
+    
+    if (calculatedDeliveryCharge > 0) {
+      const activeItems = allOrderItems.filter(item => 
+        !['Cancelled', 'Returned'].includes(item.status) && 
+        item._id.toString() !== orderItem._id.toString()
+      );
+      
+      if (activeItems.length === 0) {
+        deliveryRefund = calculatedDeliveryCharge;
+      } else {
+        const remainingOrderValue = activeItems.reduce((sum, item) => 
+          sum + (item.price * item.quantity), 0
+        );
+        
+        if (remainingOrderValue < 2999) {
+          deliveryRefund = Math.round(calculatedDeliveryCharge * itemProportion * 100) / 100;
+        }
+      }
+      
+      if (deliveryRefund > 0) {
+        refundAmount += deliveryRefund;
+      }
+    }
+    
+    const finalRefund = Math.max(0, Math.round(refundAmount * 100) / 100);
+    
+    console.log('Refund breakdown:', {
+      itemPrice: itemSubtotal,
+      couponDiscount: -couponDiscountDeduction,
+      taxRefund: taxRefund,
+      deliveryRefund: deliveryRefund,
+      finalRefund: finalRefund
+    });
+    
+    return finalRefund;
+
+  } catch (error) {
+    console.error('Calculate refund amount error:', error);
+    const basicRefund = orderItem.price * orderItem.quantity;
+    if (order.coupon && order.coupon.discountAmount) {
+      const allItems = await OrderItem.find({ orderId: order._id });
+      const totalValue = allItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const proportion = basicRefund / totalValue;
+      const discountDeduction = order.coupon.discountAmount * proportion;
+      return Math.max(0, basicRefund - discountDeduction);
+    }
+    return basicRefund;
+  }
+}
+
+async function calculateOrderRefundAmount(order) {
+  try {
+    return Math.round(order.total * 100) / 100;
+  } catch (error) {
+    console.error('Calculate order refund error:', error);
+    return order.total;
+  }
+}
+
 async function updateOverallOrderStatus(orderId) {
   try {
     const order = await Order.findById(orderId);
@@ -391,7 +408,6 @@ async function updateOverallOrderStatus(orderId) {
     const itemStatuses = orderItems.map(item => item.status);
     let newOrderStatus = order.status;
 
-  
     if (itemStatuses.every(status => status === 'Delivered')) {
       newOrderStatus = 'Delivered';
     }
@@ -415,16 +431,8 @@ async function updateOverallOrderStatus(orderId) {
       newOrderStatus = 'Confirmed';
     }
 
-  
     if (newOrderStatus !== order.status) {
       order.status = newOrderStatus;
-      order.statusHistory = order.statusHistory || [];
-      order.statusHistory.push({
-        status: newOrderStatus,
-        updatedBy: 'system',
-        updatedAt: new Date(),
-        reason: 'Auto-updated based on item statuses'
-      });
       await order.save();
     }
 
@@ -432,14 +440,6 @@ async function updateOverallOrderStatus(orderId) {
     console.error('Update overall order status error:', error);
   }
 }
-
-
-
-
-
-
-
-
 
 exports.approveReturnRequest = async (req, res) => {
   try {
@@ -471,25 +471,15 @@ exports.approveReturnRequest = async (req, res) => {
       });
     }
 
-    // Calculate refund amount with proper coupon handling
     const refundAmount = await calculateItemRefundAmount(orderItem.orderId, orderItem);
 
-    // Update item status
     orderItem.status = 'Returned';
     orderItem.isReturned = true;
     orderItem.returnApproved = true;
     orderItem.returnProcessedDate = new Date();
 
-    orderItem.statusHistory.push({
-      status: 'Returned',
-      updatedBy: adminId,
-      updatedAt: new Date(),
-      reason: 'Return request approved by admin'
-    });
-
     await orderItem.save();
 
-    // Restore stock to variant
     if (orderItem.variantId) {
       await Variant.findByIdAndUpdate(
         orderItem.variantId._id,
@@ -497,22 +487,41 @@ exports.approveReturnRequest = async (req, res) => {
       );
     }
 
-    // Process wallet refund if payment was not COD
+    let refundProcessed = false;
     if (orderItem.orderId.paymentMethod !== 'COD' && refundAmount > 0) {
-      await processWalletRefund(
-        orderItem.orderId.userId, 
-        refundAmount, 
-        orderItem.orderId._id, 
-        'ITEM_RETURN',
-        orderItem._id
-      );
+      try {
+        await processWalletRefund(
+          orderItem.orderId.userId, 
+          refundAmount, 
+          orderItem.orderId._id, 
+          'ITEM_RETURN',
+          orderItem._id
+        );
+        refundProcessed = true;
+      } catch (refundError) {
+        console.error('Refund processing failed:', refundError);
+      }
     }
+
+    await updateOverallOrderStatus(orderItem.orderId._id);
+
+    const message = orderItem.orderId.paymentMethod === 'COD' 
+      ? 'Return request approved successfully.' 
+      : refundProcessed 
+        ? `Return request approved successfully. ₹${refundAmount} credited to wallet.`
+        : `Return request approved successfully. Refund of ₹${refundAmount} will be processed separately.`;
 
     res.json({
       success: true,
-      message: `Return request approved successfully. ${refundAmount > 0 ? `₹${refundAmount} credited to wallet.` : ''}`,
-      item: orderItem,
-      refundAmount
+      message,
+      item: {
+        id: orderItem._id,
+        status: orderItem.status,
+        returnApproved: orderItem.returnApproved,
+        returnProcessedDate: orderItem.returnProcessedDate
+      },
+      refundAmount,
+      refundProcessed
     });
 
   } catch (error) {
@@ -524,51 +533,8 @@ exports.approveReturnRequest = async (req, res) => {
   }
 };
 
-// Helper function to calculate item refund amount with coupon consideration
-async function calculateItemRefundAmount(order, orderItem) {
-  try {
-    const itemSubtotal = orderItem.price * orderItem.quantity;
-    let refundAmount = itemSubtotal;
-
-    // If order has coupon discount, calculate proportional reduction
-    if (order.couponDiscount && order.couponDiscount > 0) {
-      // Calculate total items value before discount
-      const allItems = await OrderItem.find({ orderId: order._id });
-      const totalItemsValue = allItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      
-      // Calculate this item's share of the coupon discount
-      const itemDiscountShare = (itemSubtotal / totalItemsValue) * order.couponDiscount;
-      
-      // Subtract the proportional discount from refund amount
-      refundAmount = Math.max(0, itemSubtotal - itemDiscountShare);
-    }
-
-    return Math.round(refundAmount * 100) / 100; // Round to 2 decimal places
-  } catch (error) {
-    console.error('Calculate refund amount error:', error);
-    return orderItem.price * orderItem.quantity; // Fallback to full item price
-  }
-}
-
-// Helper function to calculate full order refund amount
-async function calculateOrderRefundAmount(order) {
-  try {
-    let refundAmount = order.total;
-
-    // For full order returns, return the total amount paid
-    // Coupon discount is already factored into order.total
-    
-    return Math.round(refundAmount * 100) / 100;
-  } catch (error) {
-    console.error('Calculate order refund error:', error);
-    return order.total;
-  }
-}
-
-// Updated wallet refund processing function matching your schema
 async function processWalletRefund(userId, amount, orderId, type, itemId = null) {
   try {
-    // Find or create user wallet
     let wallet = await Wallet.findOne({ userId });
     
     if (!wallet) {
@@ -581,11 +547,8 @@ async function processWalletRefund(userId, amount, orderId, type, itemId = null)
 
     const balanceBefore = wallet.balance;
     const balanceAfter = balanceBefore + amount;
-
-    // Generate unique transaction ID
     const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    // Create transaction record matching your schema
     const transaction = {
       transactionId: transactionId,
       type: 'CREDIT',
@@ -602,14 +565,11 @@ async function processWalletRefund(userId, amount, orderId, type, itemId = null)
       createdAt: new Date()
     };
 
-    // Add amount to wallet balance
     wallet.balance = balanceAfter;
     wallet.transactions.push(transaction);
     
     await wallet.save();
 
-    console.log(`Wallet refund processed: ₹${amount} credited to user ${userId}`);
-    
     return {
       success: true,
       amount,
@@ -623,7 +583,6 @@ async function processWalletRefund(userId, amount, orderId, type, itemId = null)
   }
 }
 
-// Helper function to generate refund descriptions
 function getRefundDescription(type, orderId, itemId) {
   const orderRef = orderId.toString().slice(-8).toUpperCase();
   
@@ -641,96 +600,10 @@ function getRefundDescription(type, orderId, itemId) {
   }
 }
 
-// Method for approving entire order return
-exports.approveOrderReturn = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const adminId = req.session.admin?.id || req.user?.id;
-
-    const order = await Order.findById(orderId).populate('orderItems');
-    
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        error: 'Order not found'
-      });
-    }
-
-    // Calculate total refund amount
-    const refundAmount = await calculateOrderRefundAmount(order);
-
-    // Update all order items to returned
-    await OrderItem.updateMany(
-      { orderId: order._id, returnRequested: true },
-      { 
-        status: 'Returned',
-        isReturned: true,
-        returnApproved: true,
-        returnProcessedDate: new Date(),
-        $push: {
-          statusHistory: {
-            status: 'Returned',
-            updatedBy: adminId,
-            updatedAt: new Date(),
-            reason: 'Return request approved by admin'
-          }
-        }
-      }
-    );
-
-    // Restore stock for all items
-    const orderItems = await OrderItem.find({ orderId: order._id });
-    for (const item of orderItems) {
-      if (item.variantId) {
-        await Variant.findByIdAndUpdate(
-          item.variantId,
-          { $inc: { stock: item.quantity } }
-        );
-      }
-    }
-
-    // Update order status
-    order.status = 'Returned';
-    order.returnApproved = true;
-    order.returnProcessedDate = new Date();
-    await order.save();
-
-    // Process wallet refund if payment was not COD
-    if (order.paymentMethod !== 'COD' && refundAmount > 0) {
-      await processWalletRefund(
-        order.userId, 
-        refundAmount, 
-        order._id, 
-        'ORDER_RETURN'
-      );
-    }
-
-    res.json({
-      success: true,
-      message: `Order return approved successfully. ${refundAmount > 0 ? `₹${refundAmount} credited to wallet.` : ''}`,
-      order,
-      refundAmount
-    });
-
-  } catch (error) {
-    console.error('Approve order return error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to approve order return'
-    });
-  }
-};
-
-
-
-
-
 exports.rejectReturnRequest = async (req, res) => {
   try {
     const { itemId } = req.params;
     const { reason } = req.body;
-    const adminId = req.session.admin?.id || req.user?.id;
-
 
     if (!reason || reason.trim().length < 3) {
       return res.status(400).json({
@@ -739,7 +612,6 @@ exports.rejectReturnRequest = async (req, res) => {
       });
     }
 
-  
     const orderItem = await OrderItem.findById(itemId);
     if (!orderItem) {
       return res.status(404).json({
@@ -755,7 +627,6 @@ exports.rejectReturnRequest = async (req, res) => {
       });
     }
 
-    
     if (orderItem.returnApproved === false) {
       return res.status(400).json({
         success: false,
@@ -768,16 +639,8 @@ exports.rejectReturnRequest = async (req, res) => {
     orderItem.returnRejectionReason = reason.trim();
     orderItem.returnProcessedDate = new Date();
 
-    orderItem.statusHistory.push({
-      status: orderItem.status, 
-      updatedBy: adminId,
-      updatedAt: new Date(),
-      reason: `Return request rejected: ${reason.trim()}`
-    });
-     console.log(orderItem,"<<<<<<<")
     await orderItem.save();
     
-
     res.json({
       success: true,
       message: 'Return request rejected successfully',
@@ -792,6 +655,7 @@ exports.rejectReturnRequest = async (req, res) => {
     });
   }
 };
+
 exports.getAdminOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -816,7 +680,7 @@ exports.getAdminOrderDetails = async (req, res) => {
       id: item._id,
       _id: item._id,
       productName: item.productName,
-      image:(typeof item.productId?.images?.[0] === "string"? item.productId.images[0]: item.productId?.images?.[0]?.url) || '/images/placeholder.png',
+      image: (typeof item.productId?.images?.[0] === "string" ? item.productId.images[0] : item.productId?.images?.[0]?.url) || '/images/placeholder.png',
       size: item.variantId?.size || 'N/A',
       color: item.variantId?.color || null,
       quantity: item.quantity,
@@ -837,19 +701,16 @@ exports.getAdminOrderDetails = async (req, res) => {
 
     const totals = {
       subtotal: order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      deliveryCharge: 0,
-      tax: 0
+      deliveryCharge: Math.max(0, order.total - order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) - (order.tax || 0) + (order.coupon?.discountAmount || 0)),
+      tax: order.tax || 0,
+      discount: order.coupon?.discountAmount || 0
     };
-
-    totals.tax = Math.round(totals.subtotal * 0.18);
 
     const orderWithProcessedItems = {
       ...order.toObject(),
       items: processedItems,
       orderItems: processedItems
     };
-
-    console.log('Return requests found:', processedItems.filter(item => item.returnRequested).length); // Debug log
 
     res.render('admin/orderDetails', { 
       order: orderWithProcessedItems, 
@@ -865,3 +726,5 @@ exports.getAdminOrderDetails = async (req, res) => {
     });
   }
 };
+
+module.exports = exports;

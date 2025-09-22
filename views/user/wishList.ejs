@@ -343,10 +343,15 @@
       async confirmRemoveItem() {
         if (!this.variantToRemove) return;
 
+        await this.removeFromWishlist(this.variantToRemove);
+        this.closeRemoveModal();
+      }
+
+      async removeFromWishlist(variantId) {
         try {
           this.showLoading();
 
-          const response = await fetch(`/user/api/wishlist/${this.variantToRemove}`, {
+          const response = await fetch(`/user/api/wishlist/${variantId}`, {
             method: 'DELETE',
             credentials: 'include'
           });
@@ -355,7 +360,6 @@
 
           if (result.success) {
             this.showToast('success', 'Item removed from wishlist');
-            this.closeRemoveModal();
             await this.loadWishlist();
           } else {
             this.showToast('error', result.error || 'Failed to remove item');
@@ -424,6 +428,8 @@
             if (cartCounter) {
               cartCounter.textContent = result.data.totalItems || '0';
             }
+            // Remove from wishlist dynamically
+            await this.removeFromWishlist(variantId);
           } else {
             this.showToast('error', result.error || 'Failed to add to cart');
           }

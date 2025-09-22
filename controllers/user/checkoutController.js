@@ -49,9 +49,9 @@ const getAvailableCouponsForUser = async (userId, orderValue) => {
     return [];
   }
 };
-
 const calculateDiscount = (coupon, orderValue) => {
   let discount = 0;
+  console.log(orderValue,"<<<<<<<<<<")
   if (coupon.type === 'PERCENT') {
     discount = Math.round((orderValue * coupon.value) / 100);
     if (coupon.maxDiscount > 0) {
@@ -60,23 +60,29 @@ const calculateDiscount = (coupon, orderValue) => {
   } else if (coupon.type === 'FLAT') {
     discount = coupon.value;
   }
+
   return Math.min(discount, orderValue);
 };
 
 const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
   let subtotal = 0;
   
+  // Calculate subtotal
   cartItems.forEach(item => {
-    subtotal += item.variantId.salePrice * item.quantity;
+    if (item.variantId && item.variantId.salePrice) {
+      subtotal += item.variantId.salePrice * item.quantity;
+    } else {
+      console.warn('Invalid item in cart totals calculation:', item);
+    }
   });
 
-  const deliveryCharge = subtotal >= 2999 ? 0 : 129;
-  const tax = Math.round(subtotal * 0.18);
   let discount = 0;
   let couponUsed = null;
 
   if (sessionCoupon) {
     discount = sessionCoupon.discountAmount || 0;
+    discount = Math.min(discount, subtotal);
+    
     couponUsed = {
       code: sessionCoupon.code,
       type: sessionCoupon.type,
@@ -84,18 +90,24 @@ const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
       discountAmount: discount
     };
   }
+  
+  // Apply discount to subtotal
+  const finalSubtotal = subtotal - discount;
 
-  const total = Math.max(0, subtotal + tax + deliveryCharge - discount);
+  const deliveryCharge = finalSubtotal >= 2999 ? 0 : 129;
+  const tax = Math.round(finalSubtotal * 0.18);
+  const total = finalSubtotal + tax + deliveryCharge;
 
   return {
     subtotal,
+    discount,
     deliveryCharge,
     tax,
-    discount,
     total,
     couponUsed
   };
 };
+
 
 async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon = null, paymentDetails = {}) {
   console.log("inside the create orderedb ")
@@ -105,7 +117,7 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
   try {
     const cart = await Cart.findOne({ userId }).populate({
       path: 'items.variantId',
-      populate: { path: 'productId' }
+      populate: 'productId'
     }).session(session);
 
     if (!cart || !cart.items?.length) {
@@ -128,8 +140,9 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
       const variant = item.variantId;
       const product = variant?.productId;
       
-      if (!variant || !product) {
-        throw new Error('Invalid product or variant in cart');
+      if (!variant || !product || !variant.salePrice) {
+        console.warn('Skipping invalid cart item:', item);
+        continue;
       }
       
       if (!product.isListed || variant.stock < item.quantity) {
@@ -141,7 +154,7 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
         productId: product._id,
         variantId: variant._id,
         price: variant.salePrice,
-        offerDiscount:variant.regularPrice-variant.salePrice,
+        offerDiscount: variant.regularPrice - variant.salePrice,
         quantity: item.quantity,
         status: paymentMethod === 'PAYMENT_FAILED' ? 'Payment Failed' : 'Pending'
       });
@@ -156,6 +169,9 @@ async function createOrderInDb(userId, addressId, paymentMethod, sessionCoupon =
       }
     }
 
+    if (orderItems.length === 0) {
+      throw new Error('No valid items in cart');
+    }
 
     const totals = calculateOrderTotals(cart.items, sessionCoupon);
 
@@ -329,7 +345,7 @@ exports.createPaymentOrder = async (req, res) => {
 
     const cart = await Cart.findOne({ userId }).populate({
       path: 'items.variantId',
-      populate: { path: 'productId' }
+      populate: 'productId'
     });
 
     if (!cart || !cart.items?.length) {
@@ -339,8 +355,19 @@ exports.createPaymentOrder = async (req, res) => {
       });
     }
 
-    // Calculate totals
+    // Validate cart items
+    for (const item of cart.items) {
+      if (!item.variantId || !item.variantId.salePrice) {
+        console.warn('Invalid cart item found:', item);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid items in cart'
+        });
+      }
+    }
+
     const totals = calculateOrderTotals(cart.items, req.session.coupon);
+    console.log(totals,"totalssssssssss")
     const referenceNo = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
 
     const razorpayOrder = await razorpay.orders.create({
@@ -352,7 +379,7 @@ exports.createPaymentOrder = async (req, res) => {
         addressId: addressId
       }
     });
-
+console.log(razorpayOrder,"this sssssssss")
     res.json({
       success: true,
       data: {
@@ -360,7 +387,6 @@ exports.createPaymentOrder = async (req, res) => {
         amount: totals.total * 100,
         orderId: referenceNo,
         currency: 'INR',
-        addressId: addressId,
         discount: totals.discount
       }
     });
@@ -618,9 +644,12 @@ exports.verifyRetryPayment = async (req, res) => {
       // Deduct stock for retry payment
       const orderItems = await OrderItem.find({ orderId: updatedOrder._id }).session(session);
       for (const item of orderItems) {
-        await Variant.findByIdAndUpdate(item.variantId, {
-          $inc: { stock: -item.quantity }
-        }).session(session);
+        const variant = await Variant.findById(item.variantId).session(session);
+        if (!variant || variant.stock < item.quantity) {
+          throw new Error('Insufficient stock for item');
+        }
+        variant.stock -= item.quantity;
+        await variant.save({ session });
       }
 
       // Clear cart
@@ -819,6 +848,25 @@ exports.renderCheckout = async (req, res, next) => {
       return res.redirect('/user/cart?error=empty-cart');
     }
 
+    // Filter out invalid items
+    const validItems = cart.items.filter(item => {
+      return item.variantId &&
+             item.variantId.productId &&
+             item.variantId.productId.isListed &&
+             item.variantId.productId.categoryId &&
+             item.variantId.productId.categoryId.isListed &&
+             item.variantId.salePrice !== undefined;
+    });
+
+    if (validItems.length !== cart.items.length) {
+      cart.items = validItems;
+      await cart.save();
+    }
+
+    if (validItems.length === 0) {
+      return res.redirect('/user/cart?error=empty-cart');
+    }
+
     const wallet = await Wallet.findOne({ userId }).select('balance');
     if (!wallet) {
       return res.redirect('/user/cart?error=wallet-not-found');
@@ -827,13 +875,12 @@ exports.renderCheckout = async (req, res, next) => {
     const addresses = await Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
 
     // Calculate totals
-    const totals = calculateOrderTotals(cart.items, req.session.coupon);
+    const totals = calculateOrderTotals(validItems, req.session.coupon);
     
-    const cartItems = cart.items.map(item => {
+    const cartItems = validItems.map(item => {
       const variant = item.variantId;
       const product = variant.productId;
       const itemTotal = variant.salePrice * item.quantity;
-
       return {
         variantId: variant._id.toString(),
         productId: product._id.toString(),

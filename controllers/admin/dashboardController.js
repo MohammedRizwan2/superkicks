@@ -6,6 +6,7 @@ const Category = require('../../models/category');
 const moment = require('moment');
 const PDFDocument = require('pdfkit');
 
+
 function getDateFilter(period, year, month) {
     let startDate, endDate;
     const now = new Date();
@@ -127,7 +128,7 @@ exports.getDashboard = async (req, res) => {
                     }
                 }
             ]),
-
+        
             // Best Selling Categories
             Order.aggregate([
                 { $match: { status: { $ne: 'Cancelled' } } },
@@ -216,6 +217,8 @@ exports.getDashboard = async (req, res) => {
                         }
                     }
                 },
+
+            
                 { $match: { _id: { $ne: null } } }, // Filter out null brands
                 { $sort: { totalQuantity: -1 } },
                 { $limit: 10 }
@@ -231,6 +234,8 @@ exports.getDashboard = async (req, res) => {
                     select: 'productName' // ✅ productName is in orderitem
                 })
         ]);
+
+                  
 
         console.log('Aggregation completed successfully');
         console.log('Total Stats:', totalStats);
@@ -283,7 +288,6 @@ exports.getDashboard = async (req, res) => {
     }
 };
 
-
 exports.generateLedger = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
@@ -310,27 +314,152 @@ exports.generateLedger = async (req, res) => {
             { $sort: { "_id.date": 1 } }
         ]);
 
-        const doc = new PDFDocument();
+        const PDFDocument = require('pdfkit');
+        const doc = new PDFDocument({ 
+            margin: 50,
+            bufferPages: true // Important: prevent immediate page flushing
+        });
+        
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=ledger_${startDate}_to_${endDate}.pdf`);
-
         doc.pipe(res);
-        doc.fontSize(20).text('SUPERKICKS - LEDGER BOOK', { align: 'center' });
-        doc.fontSize(12).text(`Period: ${startDate} to ${endDate}`, { align: 'center' });
-        doc.moveDown();
 
-        ledgerData.forEach(day => {
-            doc.fontSize(14).text(`Date: ${day._id.date}`, { underline: true });
-            doc.fontSize(10).text(`Total Sales: Rs ${day.totalSales.toLocaleString('en-IN')}`);
-            doc.fontSize(10).text(`Total Orders: ${day.totalOrders}`);
+        // Page dimensions
+        const pageHeight = doc.page.height;
+        const margin = 50;
+        const usableHeight = pageHeight - (margin * 2);
+        const bottomMargin = pageHeight - margin;
+
+        // Header
+        doc.fontSize(24).font('Helvetica-Bold').text('SUPERKICKS - LEDGER BOOK', { align: 'center' });
+        doc.fontSize(14).font('Helvetica').text(`Period: ${startDate} to ${endDate}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Calculate totals
+        const grandTotal = ledgerData.reduce((sum, day) => sum + day.totalSales, 0);
+        const totalOrdersCount = ledgerData.reduce((sum, day) => sum + day.totalOrders, 0);
+
+        // Summary section
+        doc.fontSize(16).font('Helvetica-Bold').text('SUMMARY', { underline: true });
+        doc.moveDown(0.5);
+        
+        doc.fontSize(12).font('Helvetica');
+        doc.text('Total Revenue:', 50, doc.y);
+        doc.text(`Rs ${grandTotal.toLocaleString('en-IN')}`, 200, doc.y - 12);
+        doc.text('Total Orders:', 50, doc.y);
+        doc.text(`${totalOrdersCount}`, 200, doc.y - 12);
+        
+        doc.moveDown(2);
+
+        // Main table header
+        doc.fontSize(16).font('Helvetica-Bold').text('DAILY BREAKDOWN', { underline: true });
+        doc.moveDown(1);
+
+        ledgerData.forEach((day, dayIndex) => {
+            // Calculate space needed for this day's content
+            const ordersCount = day.orders.length;
+            const spaceNeeded = 80 + (ordersCount * 20) + 25; // Header + orders + total row
+
+            // Check if we need a new page BEFORE starting this section
+            if (doc.y + spaceNeeded > bottomMargin) {
+                doc.addPage();
+            }
+
+            // Day header
+            const dayHeaderY = doc.y;
+            doc.fontSize(14).font('Helvetica-Bold')
+               .fillColor('#2563eb')
+               .text(`${day._id.date}`, 50, dayHeaderY);
+            
+            doc.fontSize(10).font('Helvetica')
+               .fillColor('#666666')
+               .text(`Daily Total: Rs ${day.totalSales.toLocaleString('en-IN')} | Orders: ${day.totalOrders}`, 200, dayHeaderY);
+            
             doc.moveDown(0.5);
 
-            day.orders.forEach(order => {
-                doc.fontSize(8).text(`  Order #${order.referenceNo} - Rs ${order.total.toLocaleString('en-IN')} - ${order.status}`);
+            // Table headers for orders
+            const tableTop = doc.y;
+            const orderNoX = 50;
+            const referenceX = 120;
+            const statusX = 220;
+            const amountX = 300;
+            const customerX = 380;
+
+            // Draw header background
+            doc.rect(50, tableTop - 5, 492, 25).fillAndStroke('#f3f4f6', '#d1d5db');
+            
+            // Header text
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#374151');
+            doc.text('S.No', orderNoX, tableTop);
+            doc.text('Order Ref', referenceX, tableTop);
+            doc.text('Status', statusX, tableTop);
+            doc.text('Amount (Rs)', amountX, tableTop);
+            doc.text('Customer', customerX, tableTop);
+
+            // Set Y position for order rows
+            doc.y = tableTop + 25;
+
+            // Order rows
+            day.orders.forEach((order, orderIndex) => {
+                const currentY = doc.y;
+
+                // Alternate row background
+                if (orderIndex % 2 === 0) {
+                    doc.rect(50, currentY - 3, 492, 20).fill('#f9fafb');
+                }
+
+                doc.fontSize(9).font('Helvetica').fillColor('#111827');
+                
+                // Order data
+                doc.text(`${orderIndex + 1}`, orderNoX, currentY);
+                doc.text(order.referenceNo || 'N/A', referenceX, currentY);
+                
+                // Status with color coding
+                const statusColor = getStatusColor(order.status);
+                doc.fillColor(statusColor).text(order.status, statusX, currentY);
+                
+                doc.fillColor('#111827').text(order.total.toLocaleString('en-IN'), amountX, currentY);
+                
+                // Customer name (truncated if too long)
+                const customerName = order.address?.name || 'Guest';
+                const truncatedName = customerName.length > 15 ? customerName.substring(0, 15) + '...' : customerName;
+                doc.text(truncatedName, customerX, currentY);
+
+                // Move to next row
+                doc.y = currentY + 20;
             });
 
-            doc.moveDown();
+            // Day total row
+            const totalRowY = doc.y;
+            doc.rect(50, totalRowY, 492, 25).fillAndStroke('#e5e7eb', '#9ca3af');
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#1f2937');
+            doc.text('Daily Total:', referenceX, totalRowY + 5);
+            doc.text(`Rs ${day.totalSales.toLocaleString('en-IN')}`, amountX, totalRowY + 5);
+            doc.text(`${day.totalOrders} orders`, customerX, totalRowY + 5);
+
+            // Set Y position after total row
+            doc.y = totalRowY + 35; // 25 for row height + 10 for spacing
         });
+
+        // Check if we need a new page for grand total
+        if (doc.y + 60 > bottomMargin) {
+            doc.addPage();
+        }
+
+        // Grand total footer
+        const grandTotalY = doc.y + 10;
+        doc.rect(50, grandTotalY, 492, 30).fillAndStroke('#1f2937', '#111827');
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#ffffff');
+        doc.text('GRAND TOTAL:', 200, grandTotalY + 8);
+        doc.text(`Rs ${grandTotal.toLocaleString('en-IN')}`, 300, grandTotalY + 8);
+        doc.text(`${totalOrdersCount} Total Orders`, 380, grandTotalY + 8);
+
+        // Footer
+        doc.fontSize(8).fillColor('#6b7280').text(
+            `Generated on: ${new Date().toLocaleString('en-IN')} | SuperKicks Admin Panel`,
+            50, doc.page.height - 30,
+            { align: 'center' }
+        );
 
         doc.end();
 
@@ -339,3 +468,23 @@ exports.generateLedger = async (req, res) => {
         res.status(500).json({ error: 'Failed to generate ledger' });
     }
 };
+
+// Helper function for status colors
+function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+        case 'delivered':
+            return '#10b981'; // green
+        case 'shipped':
+        case 'out for delivery':
+            return '#3b82f6'; // blue
+        case 'cancelled':
+            return '#ef4444'; // red
+        case 'pending':
+            return '#f59e0b'; // yellow
+        case 'confirmed':
+        case 'processing':
+            return '#8b5cf6'; // purple
+        default:
+            return '#6b7280'; // gray
+    }
+}

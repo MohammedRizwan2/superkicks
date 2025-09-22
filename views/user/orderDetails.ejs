@@ -379,7 +379,39 @@
       </div>
     </div>
   </div>
+<!-- Individual Item Cancel Modal -->
+<div id="item-cancel-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold mb-4">Cancel Item</h3>
+        <p class="text-black/70 mb-2">Item: <span id="item-cancel-name" class="font-medium"></span></p>
+        <p class="text-black/70 mb-4">Please provide a reason for cancelling this specific item.</p>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Cancellation Reason *</label>
+          <textarea id="item-cancel-reason" 
+                    placeholder="Please describe why you want to cancel this item (minimum 10 characters)..."
+                    rows="4"
+                    class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                    required></textarea>
+          <div class="text-xs text-red-600 hidden" id="item-cancel-reason-error">Cancellation reason is required (minimum 10 characters)</div>
+        </div>
 
+        <div class="flex gap-3">
+          <button id="item-cancel-modal-close"
+                  class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+            Cancel
+          </button>
+          <button id="confirm-item-cancel"
+                  class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+            Confirm Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- JavaScript -->
   <script>
     class UserOrderDetailsManager {
@@ -389,6 +421,7 @@
         this.cancelModal = document.getElementById('cancel-modal');
         this.returnModal = document.getElementById('return-modal');
         this.itemReturnModal = document.getElementById('item-return-modal');
+        this.itemCancelModal = document.getElementById('item-cancel-modal');
         this.currentItemId = null;
         
         this.init();
@@ -426,6 +459,7 @@
         this.renderDiscountBreakdown();
         this.bindEvents();
         this.updateActionButtons();
+        
       }
 
       formatINR(amount) {
@@ -671,6 +705,17 @@
                         </div>
                       </div>
                     ` : ''}
+
+                    <!-- Inside the order item template -->
+                   ${(['Pending', 'Confirmed'].includes(item.status) && !item.isCancelled) ? `
+               <div class="mt-3 no-print">
+                 <button onclick="window.userOrderDetailsManager.showItemCancelModal('${item.id}', '${item.productName}')"
+                              class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition mr-2">
+                <i class="fas fa-times"></i>
+                    Cancel This Item
+               </button>
+             </div>
+                       ` : ''}
                   </div>
                   
                   <!-- Pricing -->
@@ -853,7 +898,7 @@
       }
 
       bindEvents() {
-        // Download invoice
+      
         const downloadBtn = document.getElementById('download-invoice');
         if (downloadBtn) {
           downloadBtn.addEventListener('click', () => this.downloadInvoice());
@@ -877,6 +922,9 @@
           returnBtn.addEventListener('click', () => this.showReturnModal());
         }
 
+        document.getElementById('item-cancel-modal-close')?.addEventListener('click', () => this.closeItemCancelModal());
+        document.getElementById('confirm-item-cancel')?.addEventListener('click', () => this.confirmItemCancel());
+
         // Modal controls
         document.getElementById('cancel-modal-close')?.addEventListener('click', () => this.closeCancelModal());
         document.getElementById('return-modal-close')?.addEventListener('click', () => this.closeReturnModal());
@@ -899,7 +947,7 @@
         });
       }
 
-      // NEW: Retry Payment Functionality
+      
       async retryPayment() {
         try {
           this.showLoading();
@@ -1147,6 +1195,61 @@
         }
       }
 
+      showItemCancelModal(itemId, itemName) {
+  this.currentItemId = itemId;
+  document.getElementById('item-cancel-name').textContent = itemName;
+  this.itemCancelModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+closeItemCancelModal() {
+  this.itemCancelModal.classList.add('hidden');
+  document.body.style.overflow = '';
+  document.getElementById('item-cancel-reason').value = '';
+  document.getElementById('item-cancel-reason-error').classList.add('hidden');
+  this.currentItemId = null;
+}
+
+async confirmItemCancel() {
+  const reasonInput = document.getElementById('item-cancel-reason');
+  const errorElement = document.getElementById('item-cancel-reason-error');
+  const reason = reasonInput.value.trim();
+  
+  if (reason.length < 10) {
+    errorElement.classList.remove('hidden');
+    reasonInput.focus();
+    return;
+  }
+  
+  errorElement.classList.add('hidden');
+  
+  try {
+    this.showLoading();
+    
+    const response = await fetch(`/user/api/orders/${this.data.order.id}/items/${this.currentItemId}/cancel`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ reason })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      this.showToast('success', result.message);
+      this.closeItemCancelModal();
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      this.showToast('error', result.error);
+    }
+    
+  } catch (error) {
+    console.error('Item cancel error:', error);
+    this.showToast('error', 'Failed to cancel item');
+  } finally {
+    this.hideLoading();
+  }
+}
       async downloadInvoice() {
         try {
           this.showLoading();

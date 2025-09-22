@@ -217,21 +217,17 @@ const imagePaths = uploads.map(u => ({
 
 
 
-
-
 exports.getEditProduct = async (req, res) => {
   try {
-
     const product = await Product.findById(req.params.id)
       .populate('categoryId', 'name')
-      .populate('variants'); 
+      .populate('variants');
 
     if (!product) {
       return res.status(404).render('error/404', { title: 'Product Not Found' });
     }
 
     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
-console.log(product.categoryId);
     res.render('admin/editproduct', {
       product,
       categories,
@@ -257,30 +253,30 @@ exports.postEditProduct = async (req, res) => {
       isListed,
       deletedImages = '[]',
       newImages = '[]',
-      variants = '[]',
-      deletedVariants = '[]'   
+      variants, // Correctly receive variants as an array from FormData
+      deletedVariants = '[]'
     } = req.body;
 
-  
     const parsedDeletedImages = JSON.parse(deletedImages);
     const parsedNewImages = Array.isArray(newImages) ? newImages : JSON.parse(newImages);
-  
 
-    const currentProduct = await Product.findById(id);
+    const currentProduct = await Product.findById(id).populate('variants');
     if (!currentProduct) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    
+    // --- Image Handling ---
     let finalImages = currentProduct.images.filter(img => {
       if (typeof img === 'string') {
         return !parsedDeletedImages.includes(img);
       } else {
-        return !parsedDeletedImages.includes(img.publicId) &&
-               !parsedDeletedImages.includes(img.url);
+        return !parsedDeletedImages.includes(img.publicId);
       }
     });
 
+    if (parsedNewImages.length > 0) {
+      finalImages = [...finalImages, ...parsedNewImages];
+    }
     
     if (req.files && req.files.length > 0) {
       const uploads = await Promise.all(
@@ -293,11 +289,6 @@ exports.postEditProduct = async (req, res) => {
       finalImages = [...finalImages, ...uploadedImages];
     }
 
-  
-    if (parsedNewImages.length > 0) {
-      finalImages = [...finalImages, ...parsedNewImages];
-    }
-
     if (finalImages.length === 0) {
       return res.status(400).json({
         success: false,
@@ -305,64 +296,41 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-    
     await Promise.all(
       parsedDeletedImages.map(async identifier => {
         if (!identifier) return;
-        if (identifier.startsWith('/uploads/')) {
-          const filename = identifier.split('/').pop();
-          const filepath = path.join(__dirname, '../../public/uploads/products', filename);
-          if (fs.existsSync(filepath)) {
-            await unlinkAsync(filepath);
-          }
-        } else {
-          try {
-            await cloudinary.uploader.destroy(identifier);
-          } catch (err) {
-            console.error('Cloudinary delete failed:', identifier, err.message);
-          }
+        try {
+          // Cloudinary images have a publicId
+          await cloudinary.uploader.destroy(identifier);
+        } catch (err) {
+          console.error('Cloudinary delete failed:', identifier, err.message);
         }
       })
     );
 
-    let parsedVariants, parsedDeletedVariants;
-    try {
-      parsedVariants = Array.isArray(variants) ? variants : JSON.parse(variants);
-      parsedDeletedVariants = Array.isArray(deletedVariants) ? deletedVariants : JSON.parse(deletedVariants);
-    } catch (e) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid JSON for variants',
-        errors: ['Variants data is malformed']
-      });
-    }
-
+    // --- Validation ---
     const errors = [];
-
-
-    if (!productName  || !productName.trim()) errors.push('Product name is required.');
-    if (!brand        || !brand.trim())       errors.push('Brand is required.');
-    if (!categoryId)                       errors.push('Category is required.');
-    if (!description  || !description.trim()) errors.push('Description is required.');
-
+    if (!productName || !productName.trim()) errors.push('Product name is required.');
+    if (!brand || !brand.trim()) errors.push('Brand is required.');
+    if (!categoryId) errors.push('Category is required.');
+    if (!description || !description.trim()) errors.push('Description is required.');
     
-    if (offer !== '' && offer != null) {
-      const numOffer = Number(offer);
-      if (isNaN(numOffer)) errors.push('Offer must be a number.');
-      else if (numOffer < 0 || numOffer > 100) errors.push('Offer must be between 0 and 100.');
+    const numOffer = Number(offer);
+    if (isNaN(numOffer) || numOffer < 0 || numOffer > 100) {
+      errors.push('Offer must be a number between 0 and 100.');
     }
 
-    
-    if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+    // The variants field is already an array from FormData
+    const parsedVariants = variants || [];
+    if (parsedVariants.length === 0) {
       errors.push('At least one variant is required.');
     } else {
       parsedVariants.forEach((v, i) => {
         if (!v.size || !v.size.trim()) errors.push(`Variant ${i+1}: Size is required.`);
-        if (v.price == null || v.price === '' || isNaN(v.price) || v.price < 0)errors.push(`Variant ${i+1}: Price must be a non-negative number.`);
+        if (v.price == null || isNaN(v.price) || v.price < 0) errors.push(`Variant ${i+1}: Price must be a non-negative number.`);
         if (v.stock != null && (isNaN(v.stock) || v.stock < 0)) errors.push(`Variant ${i+1}: Stock must be a non-negative number.`);
       });
     }
-
     
     if (errors.length > 0) {
       return res.status(400).json({
@@ -372,25 +340,27 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-    
+    // --- Variant Deletion, Update, and Creation ---
+    const parsedDeletedVariants = Array.isArray(deletedVariants) ? deletedVariants : JSON.parse(deletedVariants || '[]');
     if (parsedDeletedVariants.length > 0) {
-      await Variant.deleteMany({ 
-        _id: { $in: parsedDeletedVariants }, 
-        productId: id 
+      await Variant.deleteMany({
+        _id: { $in: parsedDeletedVariants },
+        productId: id
       });
     }
 
-    
     const finalVariantIds = [];
     for (const v of parsedVariants) {
       if (v._id) {
-        await Variant.findByIdAndUpdate(v._id, {
+        const updatedVariant = await Variant.findByIdAndUpdate(v._id, {
           size: v.size.trim(),
           regularPrice: Number(v.price),
           stock: v.stock ? Number(v.stock) : 0,
           isListed: true
-        });
-        finalVariantIds.push(v._id);
+        }, { new: true });
+        if (updatedVariant) {
+          finalVariantIds.push(updatedVariant._id);
+        }
       } else {
         const newVar = new Variant({
           productId: id,
@@ -404,20 +374,22 @@ exports.postEditProduct = async (req, res) => {
       }
     }
 
-    
+    // --- Product Update ---
     const updateData = {
       productName: productName.trim(),
       brand: brand.trim().toUpperCase(),
       categoryId,
       description: description.trim(),
-      offer: Math.min(100, Math.max(0, Number(offer)) || 0),
+      offer: Math.min(100, Math.max(0, numOffer)),
       isListed: isListed === 'true',
       images: finalImages,
-      variants: finalVariantIds  
+      variants: finalVariantIds
     };
 
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
     await updatedProduct.calculateAndUpdatePrices();
+    
+    // --- Session and Response ---
     req.session.productEdited = true;
     req.session.save(err => {
       if (err) console.error("Error saving session:", err);
@@ -437,8 +409,6 @@ exports.postEditProduct = async (req, res) => {
     });
   }
 };
-
-
 
 
 exports.uploadProductImage = async (req, res) => {

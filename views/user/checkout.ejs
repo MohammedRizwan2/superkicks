@@ -401,7 +401,13 @@ class CheckoutManager {
 
     const dataElement = document.getElementById('checkout-data');
     this.data = dataElement ? JSON.parse(dataElement.dataset.checkout) : {};
-    this.originalTotals = this.data.totals || {};
+    this.subtotal = this.data.totals.subtotal || 0;
+    this.discount = this.data.totals.discount || 0;
+    this.deliveryCharge = this.data.totals.deliveryCharge || 0;
+    this.tax = this.data.totals.tax || 0;
+    this.total = this.data.totals.total || 0;
+    this.itemCount = this.data.totals.itemCount || 0;
+    this.couponCode = this.data.couponCode || '';
 
     this.init();
   }
@@ -411,13 +417,15 @@ class CheckoutManager {
     this.renderOrderItems();
     this.renderAvailableCoupons();
     this.updateTotalsDisplay();
-    this.checkWalletBalance();
 
-    if (this.data.appliedCoupon) {
-      this.appliedCoupon = this.data.appliedCoupon;
+    if (this.data.appliedCoupon || this.discount > 0) {
+      this.appliedCoupon = this.data.appliedCoupon || { code: this.couponCode };
       this.toggleCouponUI(true);
-      document.getElementById('coupon-code').value = this.data.appliedCoupon.code;
+      document.getElementById('coupon-code').value = this.appliedCoupon.code;
+      this.updateOrderSummary({ couponCode: this.appliedCoupon.code, discountAmount: this.discount });
     }
+
+    this.checkWalletBalance();
   }
 
   renderOrderItems() {
@@ -457,16 +465,16 @@ class CheckoutManager {
   }
 
   updateTotalsDisplay() {
-    document.getElementById('item-count').textContent = this.originalTotals.itemCount || 0;
-    document.getElementById('subtotal-amount').textContent = `₹${(this.originalTotals.subtotal || 0).toLocaleString('en-IN')}`;
+    document.getElementById('item-count').textContent = this.itemCount;
+    document.getElementById('subtotal-amount').textContent = `₹${this.subtotal.toLocaleString('en-IN')}`;
     const shippingEl = document.getElementById('shipping-amount');
-    if (this.originalTotals.deliveryCharge === 0) {
+    if (this.deliveryCharge === 0) {
       shippingEl.innerHTML = '<span class="text-green-600">FREE</span>';
     } else {
-      shippingEl.textContent = `₹${(this.originalTotals.deliveryCharge || 0).toLocaleString('en-IN')}`;
+      shippingEl.textContent = `₹${this.deliveryCharge.toLocaleString('en-IN')}`;
     }
-    document.getElementById('tax-amount').textContent = `₹${(this.originalTotals.tax || 0).toLocaleString('en-IN')}`;
-    document.getElementById('final-total').textContent = `₹${(this.originalTotals.total || 0).toLocaleString('en-IN')}`;
+    document.getElementById('tax-amount').textContent = `₹${this.tax.toLocaleString('en-IN')}`;
+    document.getElementById('final-total').textContent = `₹${this.total.toLocaleString('en-IN')}`;
   }
 
   async checkWalletBalance() {
@@ -550,7 +558,7 @@ class CheckoutManager {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ couponCode, orderTotal: this.originalTotals.total })
+        body: JSON.stringify({ couponCode, orderTotal: this.subtotal })
       });
       const result = await response.json();
       if (result.success) {
@@ -588,22 +596,56 @@ class CheckoutManager {
   }
 
   updateOrderSummary(couponData) {
-    const discountAmount = couponData.discountAmount;
-    const newTotal = this.originalTotals.total - discountAmount;
+    this.discount = couponData.discountAmount;
+    const discountedSubtotal = this.subtotal - this.discount;
+    this.deliveryCharge = discountedSubtotal >= 2999 ? 0 : 129;
+    this.tax = Math.round(discountedSubtotal * 0.18);
+    this.total = discountedSubtotal + this.tax + this.deliveryCharge;
+
+    const undiscountedTax = Math.round(this.subtotal * 0.18);
+    const undiscountedDelivery = this.subtotal >= 2999 ? 0 : 129;
+    const undiscountedTotal = this.subtotal + undiscountedTax + undiscountedDelivery;
+    const savings = undiscountedTotal - this.total;
+
     document.getElementById('discount-row').classList.remove('hidden');
     document.getElementById('applied-coupon-code').textContent = `(${couponData.couponCode})`;
-    document.getElementById('discount-amount').textContent = discountAmount.toLocaleString('en-IN');
-    document.getElementById('final-total').textContent = `₹${newTotal.toLocaleString('en-IN')}`;
-    document.getElementById('savings-display').classList.remove('hidden');
-    document.getElementById('total-savings').textContent = discountAmount.toLocaleString('en-IN');
-    document.getElementById('available-coupons').style.display = 'none';
+    document.getElementById('discount-amount').textContent = this.discount.toLocaleString('en-IN');
+
+    const shippingEl = document.getElementById('shipping-amount');
+    if (this.deliveryCharge === 0) {
+      shippingEl.innerHTML = '<span class="text-green-600">FREE</span>';
+    } else {
+      shippingEl.textContent = `₹${this.deliveryCharge.toLocaleString('en-IN')}`;
+    }
+
+    document.getElementById('tax-amount').textContent = `₹${this.tax.toLocaleString('en-IN')}`;
+    document.getElementById('final-total').textContent = `₹${this.total.toLocaleString('en-IN')}`;
+
+    if (savings > 0) {
+      document.getElementById('savings-display').classList.remove('hidden');
+      document.getElementById('total-savings').textContent = savings.toLocaleString('en-IN');
+    }
   }
 
   resetOrderSummary() {
+    this.discount = 0;
+    const discountedSubtotal = this.subtotal - this.discount;
+    this.deliveryCharge = discountedSubtotal >= 2999 ? 0 : 129;
+    this.tax = Math.round(discountedSubtotal * 0.18);
+    this.total = discountedSubtotal + this.tax + this.deliveryCharge;
+
     document.getElementById('discount-row').classList.add('hidden');
-    document.getElementById('final-total').textContent = `₹${this.originalTotals.total.toLocaleString('en-IN')}`;
     document.getElementById('savings-display').classList.add('hidden');
-    document.getElementById('available-coupons').style.display = 'block';
+
+    const shippingEl = document.getElementById('shipping-amount');
+    if (this.deliveryCharge === 0) {
+      shippingEl.innerHTML = '<span class="text-green-600">FREE</span>';
+    } else {
+      shippingEl.textContent = `₹${this.deliveryCharge.toLocaleString('en-IN')}`;
+    }
+
+    document.getElementById('tax-amount').textContent = `₹${this.tax.toLocaleString('en-IN')}`;
+    document.getElementById('final-total').textContent = `₹${this.total.toLocaleString('en-IN')}`;
   }
 
   toggleCouponUI(applied) {

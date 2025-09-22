@@ -52,15 +52,14 @@ const processWalletRefund = async (userId, amount, orderId, type) => {
   }
 };
 
-// Helper function to calculate refund amount for individual item
+
 const calculateItemRefund = async (order, cancelledItem) => {
+  
   const totalItems = order.orderItems.length;
   const itemSubtotal = cancelledItem.price * cancelledItem.quantity;
   
-  // Calculate proportional refund
   let refundAmount = itemSubtotal;
   
-  // If there's a coupon, calculate proportional discount reduction
   if (order.coupon && order.coupon.discountAmount) {
     const orderSubtotal = order.orderItems.reduce((sum, item) => 
       sum + (item.price * item.quantity), 0
@@ -72,22 +71,22 @@ const calculateItemRefund = async (order, cancelledItem) => {
     refundAmount -= proportionalCouponDiscount;
   }
   
-  // Add proportional delivery charge if applicable
+  
   if (order.deliveryCharge && totalItems === 1) {
-    // If only one item, include full delivery charge
+  
     refundAmount += order.deliveryCharge;
   } else if (order.deliveryCharge && totalItems > 1) {
-    // Proportional delivery charge
+  
     refundAmount += order.deliveryCharge / totalItems;
   }
   
-  // Add proportional tax
+  
   if (order.tax) {
     const taxProportion = itemSubtotal / (order.total - order.deliveryCharge - order.tax);
     refundAmount += order.tax * taxProportion;
   }
   
-  return Math.round(refundAmount * 100) / 100; // Round to 2 decimal places
+  return Math.round(refundAmount * 100) / 100; 
 };
 
 exports.orderList = async (req, res, next) => {
@@ -287,7 +286,7 @@ exports.cancelOrder = async (req, res, next) => {
   }
 };
 
-// **NEW: Cancel Individual Order Item with Payment Failed Check**
+
 exports.cancelOrderItem = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
@@ -332,14 +331,14 @@ exports.cancelOrderItem = async (req, res, next) => {
       });
     }
 
-    // Calculate refund amount for this item
+  
     let refundAmount = 0;
     if (order.paymentMethod !== 'COD') {
       refundAmount = await calculateItemRefund(order, orderItem);
     }
 
-    // Cancel the item
-    orderItem.status = 'Cancelled';
+  
+    orderItem.status = 'Cancelled'; 
     orderItem.isCancelled = true;
     if (reason) {
       orderItem.cancellationReason = reason;
@@ -470,7 +469,7 @@ exports.requestReturn = async (req, res, next) => {
         orderItem.returnReason = reason.trim();
         orderItem.returnRequestDate = new Date();
         
-        // DO NOT set isReturned = true here
+      
         
         if (orderItem.statusHistory !== undefined) {
           orderItem.statusHistory = orderItem.statusHistory || [];

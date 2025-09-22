@@ -9,6 +9,7 @@ const mongoose = require('mongoose')
 // GET /api/cart - Get cart items
 exports.getCart = async (req, res) => {
   try {
+    
     const userId = req.session.user?.id;
     
     if (!userId) {
@@ -44,7 +45,7 @@ exports.getCart = async (req, res) => {
           const variant = item.variantId;
           const product = variant.productId;
           
-        
+          let image = '/images/placeholder.png';
           if (product.images && product.images.length > 0) {
             const firstImage = product.images[0];
             console.log(firstImage);
@@ -186,7 +187,6 @@ exports.addToCart = async (req, res) => {
           error: 'Maximum 5 items allowed per variant'
         });
       }
-
       cart.items.push({
         productId: variant.productId._id,
         variantId,
