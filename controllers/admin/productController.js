@@ -253,7 +253,7 @@ exports.postEditProduct = async (req, res) => {
       isListed,
       deletedImages = '[]',
       newImages = '[]',
-      variants, // Correctly receive variants as an array from FormData
+      variants, 
       deletedVariants = '[]'
     } = req.body;
 
@@ -300,7 +300,7 @@ exports.postEditProduct = async (req, res) => {
       parsedDeletedImages.map(async identifier => {
         if (!identifier) return;
         try {
-          // Cloudinary images have a publicId
+        
           await cloudinary.uploader.destroy(identifier);
         } catch (err) {
           console.error('Cloudinary delete failed:', identifier, err.message);
@@ -308,7 +308,7 @@ exports.postEditProduct = async (req, res) => {
       })
     );
 
-    // --- Validation ---
+ 
     const errors = [];
     if (!productName || !productName.trim()) errors.push('Product name is required.');
     if (!brand || !brand.trim()) errors.push('Brand is required.');
@@ -320,7 +320,7 @@ exports.postEditProduct = async (req, res) => {
       errors.push('Offer must be a number between 0 and 100.');
     }
 
-    // The variants field is already an array from FormData
+   
     const parsedVariants = variants || [];
     if (parsedVariants.length === 0) {
       errors.push('At least one variant is required.');
@@ -340,7 +340,7 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-    // --- Variant Deletion, Update, and Creation ---
+   
     const parsedDeletedVariants = Array.isArray(deletedVariants) ? deletedVariants : JSON.parse(deletedVariants || '[]');
     if (parsedDeletedVariants.length > 0) {
       await Variant.deleteMany({
@@ -374,7 +374,7 @@ exports.postEditProduct = async (req, res) => {
       }
     }
 
-    // --- Product Update ---
+    
     const updateData = {
       productName: productName.trim(),
       brand: brand.trim().toUpperCase(),
@@ -389,7 +389,7 @@ exports.postEditProduct = async (req, res) => {
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
     await updatedProduct.calculateAndUpdatePrices();
     
-    // --- Session and Response ---
+ 
     req.session.productEdited = true;
     req.session.save(err => {
       if (err) console.error("Error saving session:", err);

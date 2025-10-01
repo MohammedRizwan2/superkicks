@@ -9,6 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const cloudinary = require('./config/cloudinary');
 const { getImageUrl } = require('./helper/imageHandler');;
+const headerload = require('./middleware/header')
 
 
 
@@ -56,14 +57,13 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// MongoDB connection
 mongoose.connect(process.env.MONGO_URI , {
 dbName:'superkicks'
 })
   .then(() => console.log('Connected to MongoDB',mongoose.connection.name))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// passport
+
 try {
   require('./config/passport');
 } catch (err) {
@@ -79,6 +79,7 @@ app.use((req,res,next)=>{
 })
 
 // Routes
+app.use(headerload)
 app.use('/user', userRoutes);
 app.use('/admin', adminRoutes);
 

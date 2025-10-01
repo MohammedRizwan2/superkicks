@@ -93,7 +93,7 @@ router.get('/reset-password/:token', isNotAuthenticated, userController.getReset
 router.post('/reset-password/:token', isNotAuthenticated, userController.postResetPassword);
 
 // Apply header middleware to all routes that need it
-router.use(headerload);
+router.get('/api/header-data',cartController.getHeaderData);
 
 // Protected product routes 
 router.get('/product/list', isAuthenticated, checkUserBlocked, productController.getShop);

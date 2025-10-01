@@ -296,7 +296,7 @@ exports.updateItemStatus = async (req, res) => {
   }
 };
 
-// Helper function for calculating item refund with your existing model
+
 async function calculateItemRefundAmount(order, orderItem) {
   try {
     console.log('Calculating refund for item:', orderItem._id);
@@ -314,7 +314,7 @@ async function calculateItemRefundAmount(order, orderItem) {
     let taxRefund = 0;
     let deliveryRefund = 0;
 
-    // 1. Apply proportional coupon discount deduction
+   
     let orderCouponDiscount = 0;
     if (order.coupon && order.coupon.discountAmount) {
       orderCouponDiscount = order.coupon.discountAmount;
@@ -325,7 +325,7 @@ async function calculateItemRefundAmount(order, orderItem) {
       refundAmount -= couponDiscountDeduction;
     }
     
-    // 2. Calculate proportional tax refund
+  
     if (order.tax && order.tax > 0) {
       const itemAfterDiscount = itemSubtotal - couponDiscountDeduction;
       const orderAfterDiscount = orderSubtotal - orderCouponDiscount;
@@ -337,7 +337,7 @@ async function calculateItemRefundAmount(order, orderItem) {
       }
     }
     
-    // 3. Calculate delivery charge from existing total
+    
     const calculatedDeliveryCharge = order.total - orderSubtotal - (order.tax || 0) + orderCouponDiscount;
     
     if (calculatedDeliveryCharge > 0) {

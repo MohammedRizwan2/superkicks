@@ -4,6 +4,7 @@ const Review = require('../../models/reviews');
 const Variant = require('../../models/variant');
 const mongoose = require('mongoose');
 const category = require('../../models/category');
+const  Order = require('../../models/order');
 
 
 
@@ -302,3 +303,11 @@ exports.getVariantDetails = async (req, res) => {
     });
   }
 };
+
+
+
+exports.gerFeturedProduct = async ()=>{
+  const result = await Order.aggregate([
+    
+  ])
+}

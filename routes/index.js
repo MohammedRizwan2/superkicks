@@ -35,7 +35,7 @@ async function checkUserBlocked(req, res, next) {
   }
 }
 
- router.use(headerload);
+
 router.get('/',checkUserBlocked, async (req, res) => {
   try {
    // Fetch up to 4 listed categories

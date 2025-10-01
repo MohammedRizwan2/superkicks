@@ -91,7 +91,7 @@ const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
     };
   }
   
-  // Apply discount to subtotal
+  
   const finalSubtotal = subtotal - discount;
 
   const deliveryCharge = finalSubtotal >= 2999 ? 0 : 129;
@@ -539,7 +539,7 @@ exports.verifyPayment = async (req, res) => {
   }
 };
 
-// Retry payment
+
 exports.retryPayment = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
@@ -874,7 +874,7 @@ exports.renderCheckout = async (req, res, next) => {
 
     const addresses = await Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
 
-    // Calculate totals
+  
     const totals = calculateOrderTotals(validItems, req.session.coupon);
     
     const cartItems = validItems.map(item => {

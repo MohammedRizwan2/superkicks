@@ -389,7 +389,7 @@ exports.removeFromCart = async (req, res) => {
 
     cart.items = cart.items.filter(item => item.variantId.toString() !== variantId);
     await cart.save();
-
+   
     return res.json({
       success: true,
       data: { message: 'Item removed from cart successfully' }
@@ -460,5 +460,38 @@ exports.renderCart = async (req, res) => {
   } catch (error) {
     console.error('Render cart error:', error);
     res.status(500).render('error', { message: 'Unable to load cart' });
+  }
+};
+
+
+
+exports.getHeaderData = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id;
+
+    if (!userId) {
+      return res.json({
+        isLoggedIn: false,
+        cartCount: 0,
+        wishCount: 0,
+        avatar: '/img/default-avatar.jpg',
+        userName: 'User'
+      });
+    }
+
+    const user = await User.findById(userId);
+    const cart = await Cart.findOne({ userId });
+    const wish = await Wishlist.findOne({ userId });
+    console.log(wish,"this is the wish listr")
+    res.json({
+      isLoggedIn: true,
+      cartCount: cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+      wishCount: wish?.items?.length || 0,
+      avatar: user?.avatar?.url || '/img/default-avatar.jpg',
+      fullName: user?.fullName || user?.name || 'User'
+    });
+  } catch (err) {
+    console.error('Header data API error:', err);
+    res.status(500).json({ error: 'Failed to fetch header data' });
   }
 };

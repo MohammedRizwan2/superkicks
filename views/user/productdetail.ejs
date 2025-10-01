@@ -416,6 +416,9 @@
                         var data = await response.json();
                         
                         if (data.success) {
+                            if (window.headerUpdater) {
+                     window.headerUpdater.triggerUpdate();
+                  }
                             wishlistIcon.className = 'fas fa-heart text-2xl text-gray-400 hover:text-red-500 transition-colors duration-300';
                             showToast('success', 'Removed from wishlist');
                         } else {
@@ -431,6 +434,9 @@
                         var data = await response.json();
                         
                         if (data.success) {
+                            if (window.headerUpdater) {
+                     window.headerUpdater.triggerUpdate();
+                  }
                             wishlistIcon.className = 'fas fa-heart text-2xl text-red-500';
                             showToast('success', 'Added to wishlist');
                         } else {
@@ -579,20 +585,22 @@
                     if (data.success) {
                         showToast('success', data.data.message || 'Product added to cart successfully!');
                         
-                        // Update cart counters
-                        var cartCount = document.getElementById('cartCount');
-                        if (cartCount) {
-                            var currentCount = parseInt(cartCount.textContent) || 0;
-                            cartCount.textContent = currentCount + quantity;
-                        }
+                       // Update cart counters
+                        // var cartCount = document.getElementById('cartCount');
+                        // if (cartCount) {
+                        //     var currentCount = parseInt(cartCount.textContent) || 0;
+                        //     cartCount.textContent = currentCount + quantity;
+                        // }
                         
-                        var cartBadge = document.querySelector('.cart-badge');
-                        if (cartBadge) {
-                            var currentCount = parseInt(cartBadge.textContent) || 0;
-                            cartBadge.textContent = currentCount + quantity;
-                            cartBadge.classList.remove('hidden');
-                        }
-                        
+                        // var cartBadge = document.querySelector('.cart-badge');
+                        // if (cartBadge) {
+                        //     var currentCount = parseInt(cartBadge.textContent) || 0;
+                        //     cartBadge.te                        xtContent = currentCount + quantity;
+                        //     cartBadge.classList.remove('hidden');
+                        // }
+                          if (window.headerUpdater) {
+                     window.headerUpdater.triggerUpdate();
+                  }
                     } else {
                         throw new Error(data.error || 'Failed to add item to cart');
                     }

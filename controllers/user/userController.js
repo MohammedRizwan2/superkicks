@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const User = require('../../models/userSchema');
+const cart = require('../../models/cart');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
@@ -749,3 +750,15 @@ exports.logout = (req, res) => {
     res.render('error/500', { title: 'Server Error' });
   }
 };
+
+
+const cartCount = cart.aggregate([
+  {$lookup:{
+    from:"variant",
+    localField:"variantId",
+    foreignField:"_id",
+    as:"variantDoc",
+  }},
+  {$unwind:"variantDoc"},
+  
+])

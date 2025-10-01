@@ -3,8 +3,7 @@ const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 
 class SalesReportController {
-  
-  // Render the sales report page
+
   static async renderSalesReportPage(req, res) {
     try {
       res.render('admin/salesReport', {
@@ -16,7 +15,7 @@ class SalesReportController {
     }
   }
 
-  // Generate sales report data
+  
   static async generateSalesReport(req, res) {
     try {
       const {
@@ -24,7 +23,7 @@ class SalesReportController {
         startDate,
         endDate,
         page = 1,
-        limit = 50
+        limit = 10,
       } = req.query;
 
       console.log('Query params:', req.query);
@@ -33,7 +32,7 @@ class SalesReportController {
       const dateRange = SalesReportController.calculateDateRange(reportType, startDate, endDate);
       
      
-      const pipeline = SalesReportController.buildSalesAggregationPipeline(dateRange, parseInt(page), parseInt(limit));
+       const pipeline = SalesReportController.buildSalesAggregationPipeline(dateRange, parseInt(page), parseInt(limit))
       
       
       const [reportData, totalCount] = await Promise.all([
@@ -41,11 +40,11 @@ class SalesReportController {
         SalesReportController.getTotalOrdersCount(dateRange)
       ]);
 
-      // Calculate summary metrics
+     
       const summaryMetrics = await SalesReportController.calculateSummaryMetrics(dateRange);
  console.log(reportData,"<<<");
  console.log(summaryMetrics,"summereeerrr")
-      // Return response
+    
       const response = {
         success: true,
         data: {
@@ -237,7 +236,6 @@ class SalesReportController {
     const skip = (page - 1) * limit;
     
     return [
-      // Match orders in date range
       {
         $match: {
           orderDate: {
@@ -248,7 +246,7 @@ class SalesReportController {
         }
       },
       
-      // Lookup order items (they already have offerDiscount calculated)
+      
       {
         $lookup: {
           from: 'orderitems',
@@ -258,12 +256,12 @@ class SalesReportController {
         }
       },
       
-      // Calculate totals from existing fields
+      
       {
         $addFields: {
           customerName: '$address.name',
           
-          // Sum up the already calculated offer discounts
+          
           productOffers: {
             $sum: {
               $map: {
@@ -273,10 +271,10 @@ class SalesReportController {
             }
           },
           
-          // Coupon discount
+          
           couponDiscount: { $ifNull: ['$coupon.discountAmount', 0] },
           
-          // Total discount
+       
           totalDiscount: {
             $add: [
               {
@@ -291,7 +289,7 @@ class SalesReportController {
             ]
           },
           
-          // Subtotal (total + all discounts)
+         
           subtotal: {
             $add: [
               '$total',
@@ -338,7 +336,7 @@ class SalesReportController {
 
   static async calculateSummaryMetrics(dateRange) {
   const pipeline = [
-    // Match orders in date range (excluding cancelled)
+
     {
       $match: {
         orderDate: {
@@ -349,7 +347,7 @@ class SalesReportController {
       }
     },
     
-    // Lookup order items
+  
     {
       $lookup: {
         from: 'orderitems',
@@ -500,7 +498,7 @@ class SalesReportController {
 }
 
 
-  // Get total orders count for pagination
+  
   static async getTotalOrdersCount(dateRange) {
     return await Order.countDocuments({
       orderDate: {
@@ -511,7 +509,7 @@ class SalesReportController {
     });
   }
 
-  // Get complete sales report data
+
   static async getSalesReportData(dateRange) {
     const pipeline = SalesReportController.buildSalesAggregationPipeline(dateRange, 1, 100000);
     const [orders, summary] = await Promise.all([
@@ -523,7 +521,7 @@ class SalesReportController {
   }
 }
 
-// ✅ Correct module export syntax
+
 module.exports = {
   renderSalesReportPage: SalesReportController.renderSalesReportPage,
   generateSalesReport: SalesReportController.generateSalesReport,

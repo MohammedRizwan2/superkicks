@@ -358,6 +358,10 @@
           })));
           this.cartData = result.data;
           this.render();
+
+          if (window.headerUpdater) {
+      window.headerUpdater.triggerUpdate();
+    }
         } catch (error) {
           this.showError('Failed to load cart', error.message);
         }
