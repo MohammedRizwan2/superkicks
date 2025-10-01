@@ -1,8 +1,8 @@
 <%- include('../partials/header') %>
 
 <!-- ░░ FEATURED PRODUCT DISPLAY ░░ -->
-<% if (products && products.length > 0) { 
-     const hero = products[0]; // Changed from products[1] to products[0] %>
+<% if (featuredProduct) { 
+     const hero = featuredProduct;  %>
   <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
     <!-- Animated Background Elements -->
     <div class="absolute inset-0 overflow-hidden">

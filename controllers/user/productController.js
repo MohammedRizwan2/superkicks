@@ -4,8 +4,8 @@ const Review = require('../../models/reviews');
 const Variant = require('../../models/variant');
 const mongoose = require('mongoose');
 const category = require('../../models/category');
-const  Order = require('../../models/order');
-
+const orderItem = require('../../models/orderItem')
+const {getFeaturedProduct}= require('../../helper/featuredProduct')
 
 
 exports.getShop = async (req, res) => {
@@ -169,7 +169,8 @@ exports.getShop = async (req, res) => {
 
     const prevPageUrl = page > 1 ? buildPageUrl(page - 1) : null;
     const nextPageUrl = page < totalPages ? buildPageUrl(page + 1) : null;
-    
+    const featuredProduct = await getFeaturedProduct();
+  
 
     
     const responseData = {
@@ -184,6 +185,7 @@ exports.getShop = async (req, res) => {
       totalPages,
       prevPageUrl,
       nextPageUrl,
+      featuredProduct
   
     };
 
@@ -305,9 +307,3 @@ exports.getVariantDetails = async (req, res) => {
 };
 
 
-
-exports.gerFeturedProduct = async ()=>{
-  const result = await Order.aggregate([
-    
-  ])
-}

@@ -482,7 +482,7 @@ exports.getHeaderData = async (req, res) => {
     const user = await User.findById(userId);
     const cart = await Cart.findOne({ userId });
     const wish = await Wishlist.findOne({ userId });
-    console.log(wish,"this is the wish listr")
+  
     res.json({
       isLoggedIn: true,
       cartCount: cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
