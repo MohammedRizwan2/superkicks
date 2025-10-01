@@ -13,55 +13,9 @@ const checkoutController = require('../controllers/user/checkoutController')
 const orderController = require('../controllers/user/orderController');
 const wishListController = require('../controllers/user/wishListController');
 const walletController = require('../controllers/user/walletController');
+const {checkUserBlocked} = require('../middleware/checkUserBlocked')
+const {isAuthenticated,isNotAuthenticated}= require('../middleware/authUser')
 const headerload = require('../middleware/header');
-// Middleware to check if user is authenticated
-const isAuthenticated = (req, res, next) => {
-    try {
-        if (req.session && req.session.user) {
-            return next();
-        } else {
-            return res.redirect('/user/login');
-        }
-    } catch (err) {
-        console.error('Error in isAuthenticated middleware:', err);
-        res.status(500).render('error/500', { title: 'Server Error' });
-    }
-};
-
-// Middleware to check if user is NOT authenticated
-const isNotAuthenticated = (req, res, next) => {
-    try {
-        if (!req.session.user) {
-            return next();
-        }
-        res.redirect('/');
-    } catch (err) {
-        console.error('Error in isNotAuthenticated middleware:', err);
-        res.status(500).render('error/500', { title: 'Server Error' });
-    }
-};
-
-// Middleware to check if user is blocked
-const checkUserBlocked = async (req, res, next) => {
-    try {
-        if (req.session && req.session.user) {
-            const user = await User.findOne({ email: req.session.user.email });
-            if (!user || user.isBlocked) {
-                const email = req.session.user.email;
-                req.session.user = null;
-                return res.render('user/login', {
-                    message: "Your account has been blocked by admin.",
-                    isError: true,
-                    oldInput: { email },
-                });
-            }
-        }
-        next();
-    } catch (err) {
-        console.error('Error in checkUserBlocked middleware:', err);
-        res.status(500).render('error/500', { title: 'Server Error' });
-    }
-};
 
 // Login routes
 router.get('/login', isNotAuthenticated, userController.getLogin);
