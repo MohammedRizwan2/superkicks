@@ -10,6 +10,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const cloudinary = require('./config/cloudinary');
 const { getImageUrl } = require('./helper/imageHandler');;
 const headerload = require('./middleware/header')
+const visitorTracker = require('./middleware/visitorsCount');
+const noCache = require('./middleware/noCache')
 
 
 
@@ -27,6 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.locals.getImageUrl = getImageUrl;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(noCache);
 
 // Session store
 const store = new MongoDBStore({
@@ -43,16 +46,16 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET ,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     store,
     cookie: {
-      maxAge: 60 * 60 * 1000, // 1 hour
+      maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
     },
   })
 );
-
+app.use(visitorTracker.trackUniqueVisitor);
 // Passport 
 app.use(passport.initialize());
 app.use(passport.session());

@@ -76,6 +76,16 @@
             required
           />
 
+          <!-- New Referral Code Field (optional) -->
+          <input
+            name="referralCode"
+            type="text"
+            placeholder="Referral Code (optional)"
+            value="<%= oldInput && oldInput.referralCode ? oldInput.referralCode : '' %>"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            aria-label="Referral Code"
+          />
+
           <input
             name="password"
             type="password"
@@ -112,7 +122,6 @@
     </div>
   </main>
 
-  
   <script src="/js/signupValidation.js"></script>
 </body>
 </html>

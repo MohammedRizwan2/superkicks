@@ -73,58 +73,149 @@ class SalesReportController {
       });
     }
   }
+static async downloadPDF(req, res) {
+  try {
+    const {
+      reportType = 'custom',
+      startDate,
+      endDate
+    } = req.query;
 
-  // Download PDF report
-  static async downloadPDF(req, res) {
-    try {
-      const {
-        reportType = 'custom',
-        startDate,
-        endDate
-      } = req.query;
+    const dateRange = SalesReportController.calculateDateRange(reportType, startDate, endDate);
+    const reportData = await SalesReportController.getSalesReportData(dateRange);
 
-      const dateRange = SalesReportController.calculateDateRange(reportType, startDate, endDate);
-      const reportData = await SalesReportController.getSalesReportData(dateRange);
-      
-      const doc = new PDFDocument();
-      const filename = `sales-report-${Date.now()}.pdf`;
-      
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
-      doc.pipe(res);
-      
-      // PDF Header
-      doc.fontSize(20).text('SUPERKICKS - Sales Report', { align: 'center' });
-      doc.fontSize(14).text(`Report Period: ${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`, { align: 'center' });
-      doc.moveDown();
+    // Create PDF document with pdfkit-table support
+    const PDFDocument = require('pdfkit-table');
+    const doc = new PDFDocument({ 
+      size: 'A4', 
+      margin: 30,
+      layout: 'landscape'
+    });
+    
+    const filename = `sales-report-${Date.now()}.pdf`;
 
-      // Summary section
-      doc.fontSize(16).text('Summary', { underline: true });
-      doc.fontSize(12);
-      doc.text(`Total Orders: ${reportData.summary.totalOrders}`);
-      doc.text(`Total Sales Amount: Rs ${reportData.summary.totalSalesAmount.toLocaleString('en-IN')}`);
-      doc.text(`Total Product Offers: Rs ${reportData.summary.totalProductOffers.toLocaleString('en-IN')}`);
-      doc.text(`Total Coupon Discounts: Rs ${reportData.summary.totalCouponDiscounts.toLocaleString('en-IN')}`);
-      doc.text(`Total Discounts: Rs ${reportData.summary.totalDiscounts.toLocaleString('en-IN')}`);
-      doc.text(`Average Order Value: Rs ${reportData.summary.averageOrderValue.toLocaleString('en-IN')}`);
-      doc.moveDown();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    doc.pipe(res);
 
-      // Orders table
-      doc.fontSize(14).text('Orders Details', { underline: true });
-      doc.fontSize(10);
-      reportData.orders.forEach((order, index) => {
-        doc.text(`${order.referenceNo} - ${order.customerName} - Rs ${order.total.toLocaleString('en-IN')} - ${order.status}`);
-        doc.moveDown(0.3);
-      });
+    // Header Section
+    doc.fontSize(22)
+       .font('Helvetica-Bold')
+       .text('SUPERKICKS - Sales Report', { align: 'center' })
+       .moveDown(0.3);
+    
+    doc.fontSize(11)
+       .font('Helvetica')
+       .text(
+         `Report Period: ${dateRange.start.toLocaleDateString('en-IN')} to ${dateRange.end.toLocaleDateString('en-IN')}`,
+         { align: 'center' }
+       )
+       .moveDown(0.3);
+    
+    doc.moveTo(30, doc.y)
+       .lineTo(812, doc.y)
+       .stroke();
+    
+    doc.moveDown(1);
 
-      doc.end();
+    // Summary Section
+    const s = reportData.summary;
+    
+    const summaryTable = {
+      title: 'Sales Summary',
+      headers: [
+        { label: 'Metric', property: 'metric', width: 200 },
+        { label: 'Value', property: 'value', width: 150 }
+      ],
+      datas: [
+        { metric: 'Total Orders', value: s.totalOrders.toString() },
+        { metric: 'Total Sales Amount', value: `Rs ${s.totalSalesAmount.toLocaleString('en-IN')}` },
+        { metric: 'Total Product Offers', value: `Rs ${s.totalProductOffers.toLocaleString('en-IN')}` },
+        { metric: 'Total Coupon Discounts', value: `Rs ${s.totalCouponDiscounts.toLocaleString('en-IN')}` },
+        { metric: 'Total Discounts', value: `Rs ${s.totalDiscounts.toLocaleString('en-IN')}` },
+        { metric: 'Average Order Value', value: `Rs ${s.averageOrderValue.toLocaleString('en-IN')}` }
+      ],
+      rows: []
+    };
 
-    } catch (error) {
-      console.error('PDF download error:', error);
-      res.status(500).json({ success: false, error: 'Failed to generate PDF report' });
-    }
+    await doc.table(summaryTable, {
+      prepareHeader: () => doc.font('Helvetica-Bold').fontSize(10),
+      prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
+        doc.font('Helvetica').fontSize(9);
+      }
+    });
+
+    doc.moveDown(2);
+
+    // Orders Table
+    const ordersTableData = reportData.orders.map(order => ({
+      orderId: order.referenceNo || 'N/A',
+      date: new Date(order.orderDate).toLocaleDateString('en-IN'),
+      customer: (order.customerName || 'N/A').substring(0, 20),
+      status: order.status,
+      items: order.itemCount.toString(),
+      subtotal: `${(order.subtotal || 0).toLocaleString('en-IN')}`,
+      productOffer: `${(order.productOffers || 0).toLocaleString('en-IN')}`,
+      couponCode: order.couponCode || '—',
+      couponDisc: `${(order.couponDiscount || 0).toLocaleString('en-IN')}`,
+      total: `${order.total.toLocaleString('en-IN')}`
+    }));
+
+    const ordersTable = {
+      title: 'Order Details',
+      headers: [
+        { label: 'Order ID', property: 'orderId', width: 70 },
+        { label: 'Date', property: 'date', width: 70 },
+        { label: 'Customer', property: 'customer', width: 90 },
+        { label: 'Status', property: 'status', width: 65 },
+        { label: 'Items', property: 'items', width: 40 },
+        { label: 'Subtotal', property: 'subtotal', width: 70 },
+        { label: 'Prod Offer', property: 'productOffer', width: 70 },
+        { label: 'Coupon', property: 'couponCode', width: 70 },
+        { label: 'Coup Disc', property: 'couponDisc', width: 70 },
+        { label: 'Total', property: 'total', width: 70 }
+      ],
+      datas: ordersTableData,
+      rows: []
+    };
+
+    await doc.table(ordersTable, {
+      prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+      prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
+        doc.font('Helvetica').fontSize(8);
+        // Remove the addBackground to fix opacity issue
+        // Just alternate colors using fillColor instead
+        if (indexRow % 2 === 0) {
+          doc.fillColor('#000000'); // Keep text black
+        }
+      }
+    });
+
+    // Footer
+    const pageCount = doc.bufferedPageRange().count;
+    doc.fontSize(8)
+       .font('Helvetica')
+       .fillColor('#000000')
+       .text(
+         `Generated on ${new Date().toLocaleString('en-IN')} | Total Pages: ${pageCount}`,
+         30,
+         doc.page.height - 30,
+         { align: 'center' }
+       );
+
+    doc.end();
+    
+  } catch (error) {
+    console.error('PDF download error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate PDF report',
+      details: error.message 
+    });
   }
+}
+
+
 
   // Download Excel report
   static async downloadExcel(req, res) {
@@ -192,13 +283,15 @@ class SalesReportController {
   // Calculate date range based on report type
   static calculateDateRange(reportType, startDate, endDate) {
     const now = new Date();
-    let start, end;
+    let start, end = new Date(now);  // End at current time for today
+
+    // Set end to end of current day
+    end.setHours(23, 59, 59, 999);
 
     switch (reportType) {
       case 'daily':
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        end = new Date(start);
-        end.setDate(end.getDate() + 1);
+        start = new Date(now);
+        start.setHours(0, 0, 0, 0);
         break;
         
       case 'weekly':
@@ -206,25 +299,26 @@ class SalesReportController {
         start = new Date(now);
         start.setDate(now.getDate() - dayOfWeek);
         start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setDate(end.getDate() + 7);
         break;
         
       case 'monthly':
         start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        start.setHours(0, 0, 0, 0);
         break;
         
       case 'yearly':
         start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear() + 1, 0, 1);
+        start.setHours(0, 0, 0, 0);
         break;
         
       case 'custom':
       default:
         start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-        end = endDate ? new Date(endDate) : new Date();
-        end.setHours(23, 59, 59, 999);
+        start.setHours(0, 0, 0, 0);
+        if (endDate) {
+          end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+        }
         break;
     }
 
@@ -320,6 +414,7 @@ class SalesReportController {
           subtotal: 1,
           productOffers: 1,
           couponDiscount: 1,
+          couponCode: '$coupon.code',
           totalDiscount: 1,
           itemCount: { $size: { $ifNull: ['$orderItems', []] } }
         }

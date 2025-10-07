@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const User = require('../../models/userSchema');
 const cart = require('../../models/cart');
 require('dotenv').config();
+const Wallet = require('../../models/wallet');
+const {applyReferralBonus,generateUniqueReferralCode}= require('./walletController')
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -113,7 +115,22 @@ exports.getSignup = (req, res) => {
 // Handle signup POST
 exports.postSignup = async (req, res) => {
   try {
-    const { fullName, email, phone, password, confirmPass } = req.body;
+    const { fullName, email, phone, password, confirmPass ,referralCode} = req.body;
+
+    const validateReferralCode = async (code) => {
+  if (!code) return true; 
+  const wallet = await Wallet.findOne({ 'referralStats.referralCode': code.toUpperCase() });
+  return !!wallet; 
+};
+
+const referralCodeIsValid = await validateReferralCode(referralCode);
+if (!referralCodeIsValid) {
+  return res.render('user/signup', {
+    message: 'Invalid referral code. Please check and try again.',
+    isError: true,
+    oldInput: { fullName, email, phone, referralCode },
+  });
+}
 
     if (!fullName || !email || !phone || !password || !confirmPass || password.length < 6) {
       return res.render('user/signup', {
@@ -155,6 +172,7 @@ exports.postSignup = async (req, res) => {
       phone,
       password: hashedPassword,
       role: 'user',
+      referralCode: referralCode?.trim() || null, 
       isBlocked: false,
     };
      
@@ -241,7 +259,6 @@ exports.postSignup = async (req, res) => {
   }
 };
 
-// Handle OTP verification - FIXED VERSION
 exports.verifyOtp = async (req, res) => {
   try {
     let { email, otp } = req.body;
@@ -249,8 +266,7 @@ exports.verifyOtp = async (req, res) => {
     // Handle array inputs (in case form sends arrays)
     email = Array.isArray(email) ? email[0] : email;
     otp = Array.isArray(otp) ? otp.join('') : otp;
-   console.log(otp)
-   console.log(req.session.otp.code+" =====")
+
     // Validate OTP session data
     if (
       !req.session.otp ||
@@ -271,13 +287,13 @@ exports.verifyOtp = async (req, res) => {
       return res.render('user/otp', {
         title: 'Verify OTP',
         email,
-        message: 'Signup data not found. Please try signing up again .',
+        message: 'Signup data not found. Please try signing up again.',
         isError: true,
       });
     }
 
-    // Extract signup data
-    const { fullName, email: signupEmail, phone, password, role, isBlocked } = req.session.signupData;
+    // Extract signup data including optional referralCode
+    const { fullName, email: signupEmail, phone, password, role, isBlocked, referralCode } = req.session.signupData;
 
     // Create new user
     const user = new User({
@@ -292,6 +308,31 @@ exports.verifyOtp = async (req, res) => {
     // Save user to database
     await user.save();
 
+    // Create wallet for new user
+    let wallet = new Wallet({
+      userId: user._id,
+      balance: 0,
+      transactions: [],
+      referralStats: {
+        totalReferrals: 0,
+        totalReferralEarnings: 0,
+        referralCode: await generateUniqueReferralCode(),
+        referredBy: null,
+      },
+      isActive: true,
+    });
+    await wallet.save();
+
+    // Apply referral bonus if referral code provided during signup
+    if (referralCode) {
+      try {
+        await applyReferralBonus(user._id, referralCode);
+      } catch (referralErr) {
+        console.error('Referral apply error:', referralErr);
+        // Optional: You may choose to notify user or log but allow signup to proceed
+      }
+    }
+
     // Set user session data
     req.session.user = {
       id: user._id,
@@ -299,11 +340,12 @@ exports.verifyOtp = async (req, res) => {
       role: user.role,
       email: user.email,
     };
-    req.session.justRegistered=true;
-    // Clean up temporary session data
+    req.session.justRegistered = true;
+
+    // Clean up temporary session data after successful user and wallet creation
     delete req.session.otp;
     delete req.session.signupData;
-console.log()
+
     // Save session and redirect
     req.session.save((err) => {
       if (err) {
@@ -319,15 +361,14 @@ console.log()
       // Success - redirect to home page
       res.redirect('/');
     });
-
   } catch (err) {
     console.error('Error in verifyOtp:', err);
-    
-    // Handle duplicate key error (user already exists)
+
+    // Duplicate key error (user exists)
     if (err.code === 11000) {
       const field = Object.keys(err.keyPattern)[0];
       const message = `${field === 'email' ? 'Email' : 'Phone number'} already exists.`;
-      
+
       return res.render('user/otp', {
         title: 'Verify OTP',
         email: req.body.email || '',
@@ -751,14 +792,3 @@ exports.logout = (req, res) => {
   }
 };
 
-
-const cartCount = cart.aggregate([
-  {$lookup:{
-    from:"variant",
-    localField:"variantId",
-    foreignField:"_id",
-    as:"variantDoc",
-  }},
-  {$unwind:"variantDoc"},
-  
-])

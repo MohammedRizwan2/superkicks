@@ -883,20 +883,33 @@
         container.innerHTML = discountHTML;
       }
 
-      updateActionButtons() {
+        updateActionButtons() {
         const { order } = this.data;
         
+      
+        const isAnyItemFulfilled = order.items.some(item => 
+          ['Delivered', 'Returned', 'Return Requested', 'Return Approved', 'Cancelled'].includes(item.status)
+        );
+        
+      
         const cancelBtn = document.getElementById('cancel-entire-order');
-        if (['Pending', 'Confirmed'].includes(order.status) && !order.isCancelled) {
-          cancelBtn.classList.remove('hidden');
+        if (cancelBtn) {
+            if (['Pending', 'Confirmed'].includes(order.status) && !order.isCancelled && !isAnyItemFulfilled) {
+           
+                cancelBtn.classList.remove('hidden');
+            } else {
+                cancelBtn.classList.add('hidden');
+            }
         }
-
+        
+    
         const returnBtn = document.getElementById('return-order');
         if (order.status === 'Delivered' && !order.isReturned && !order.isCancelled) {
           returnBtn.classList.remove('hidden');
+        } else {
+          returnBtn.classList.add('hidden');
         }
       }
-
       bindEvents() {
       
         const downloadBtn = document.getElementById('download-invoice');

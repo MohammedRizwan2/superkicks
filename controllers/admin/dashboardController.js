@@ -6,6 +6,7 @@ const Category = require('../../models/category');
 const moment = require('moment');
 const PDFDocument = require('pdfkit');
 const { HTTP_STATUS, MESSAGES } = require('../../config/constant'); 
+const Visitor = require('../../models/visitor')
 
 function getDateFilter(period, year, month) {
     let startDate, endDate;
@@ -223,14 +224,18 @@ exports.getDashboard = async (req, res) => {
 
         const totalStatsObj = totalStats[0] || { totalSales: 0, totalOrders: 0 };
         const totalUsers = await User.countDocuments();
+        const totalVisitors = await Visitor.countDocuments()
+   
+
 
         res.render('admin/dashboard', {
             totalStats: {
                 totalSales: totalStatsObj.totalSales || 0,
                 totalOrders: totalStatsObj.totalOrders || 0,
                 totalUsers: totalUsers || 0,
-                totalVisitors: 2500
+                totalVisitors: totalVisitors,
             },
+         
             salesData: salesData || [],
             bestSellingProducts: bestProducts || [],
             bestSellingCategories: bestCategories || [],
@@ -450,3 +455,5 @@ function getStatusColor(status) {
             return '#6b7280'; // gray
     }
 }
+
+

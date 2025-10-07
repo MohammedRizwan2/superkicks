@@ -13,7 +13,7 @@ async function generateUniqueReferralCode() {
   return code;
 }
 
-exports.renderWallet = async (req, res, next) => {
+const renderWallet = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
     if (!userId) {
@@ -101,7 +101,7 @@ console.log(walletData)
 };
 
 
-exports.getWalletBalance = async (req, res) => {
+const getWalletBalance = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
     if (!userId) {
@@ -121,78 +121,90 @@ exports.getWalletBalance = async (req, res) => {
 };
 
 
-exports.applyReferralCode = async (req, res) => {
+
+const applyReferralCode = async (req, res) => {
   try {
     const userId = req.session?.user?.id;
-    if (!userId) {
-      return res.status(401).json({ success: false, error: 'User not authenticated' });
-    }
-
     const { referralCode } = req.body;
-    if (!referralCode) {
-      return res.status(400).json({ success: false, error: 'Referral code required' });
-    }
 
-    const referredWallet = await Wallet.findOne({ userId });
-    if (!referredWallet) {
-      return res.status(404).json({ success: false, error: 'Wallet not found' });
-    }
+    if (!userId) return res.status(401).json({ success: false, error: 'User not authenticated' });
 
-    if (referredWallet.referralStats.referredBy) {
-      return res.status(400).json({ success: false, error: 'You have already been referred' });
-    }
+    const result = await applyReferralBonus(userId, referralCode);
 
-    const referrerWallet = await Wallet.findOne({ 'referralStats.referralCode': referralCode.toUpperCase() });
-    if (!referrerWallet) {
-      return res.status(400).json({ success: false, error: 'Invalid referral code' });
-    }
-
-    if (referrerWallet.userId.toString() === userId) {
-      return res.status(400).json({ success: false, error: 'Cannot use your own referral code' });
-    }
-
-
-    const referredBalanceBefore = referredWallet.balance;
-    referredWallet.balance += 100;
-    referredWallet.referralStats.referredBy = referrerWallet.userId;
-    referredWallet.transactions.push({
-      transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
-      type: 'CREDIT',
-      amount: 100,
-      description: 'Referral bonus for using code',
-      category: 'REFERRAL_BONUS',
-      reference: { type: 'REFERRAL', referenceId: referrerWallet.userId.toString() },
-      status: 'COMPLETED',
-      balanceBefore: referredBalanceBefore,
-      balanceAfter: referredWallet.balance,
-      createdAt: new Date(),
-    });
-    await referredWallet.save();
-
-
-    const referrerBalanceBefore = referrerWallet.balance;
-    referrerWallet.balance += 200;
-    referrerWallet.referralStats.totalReferrals += 1;
-    referrerWallet.referralStats.totalReferralEarnings += 200;
-    referrerWallet.transactions.push({
-      transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
-      type: 'CREDIT',
-      amount: 200,
-      description: `Referral bonus for referring user ${userId}`,
-      category: 'REFERRAL_BONUS',
-      reference: { type: 'REFERRAL', referenceId: userId },
-      status: 'COMPLETED',
-      balanceBefore: referrerBalanceBefore,
-      balanceAfter: referrerWallet.balance,
-      createdAt: new Date(),
-    });
-    await referrerWallet.save();
-
-    res.json({ success: true, message: 'Referral applied successfully' });
+    res.json(result);
   } catch (error) {
-    console.error('Apply referral code error:', error);
-    res.status(500).json({ success: false, error: 'Failed to apply referral code' });
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 
-module.exports = exports;
+async function applyReferralBonus(referredUserId, referralCode) {
+  if (!referralCode) throw new Error('Referral code required');
+
+  const referredWallet = await Wallet.findOne({ userId: referredUserId });
+  if (!referredWallet) throw new Error('Wallet not found');
+
+  if (referredWallet.referralStats.referredBy) 
+    throw new Error('User has already been referred');
+
+  const referrerWallet = await Wallet.findOne({ 'referralStats.referralCode': referralCode.toUpperCase() });
+  if (!referrerWallet) throw new Error('Invalid referral code');
+
+  if (referrerWallet.userId.toString() === referredUserId.toString())
+    throw new Error('Cannot use your own referral code');
+
+  // Credit the referred wallet
+  const referredBalanceBefore = referredWallet.balance;
+  referredWallet.balance += 100;
+  referredWallet.referralStats.referredBy = referrerWallet.userId;
+  referredWallet.transactions.push({
+    transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    type: 'CREDIT',
+    amount: 100,
+    description: 'Referral bonus for using code',
+    category: 'REFERRAL_BONUS',
+    reference: { type: 'REFERRAL', referenceId: referrerWallet.userId.toString() },
+    status: 'COMPLETED',
+    balanceBefore: referredBalanceBefore,
+    balanceAfter: referredWallet.balance,
+    createdAt: new Date(),
+  });
+  await referredWallet.save();
+
+  // Credit the referrer wallet
+  const referrerBalanceBefore = referrerWallet.balance;
+  referrerWallet.balance += 200;
+  referrerWallet.referralStats.totalReferrals += 1;
+  referrerWallet.referralStats.totalReferralEarnings += 200;
+  referrerWallet.transactions.push({
+    transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    type: 'CREDIT',
+    amount: 200,
+    description: `Referral bonus for referring user ${referredUserId}`,
+    category: 'REFERRAL_BONUS',
+    reference: { type: 'REFERRAL', referenceId: referredUserId.toString() },
+    status: 'COMPLETED',
+    balanceBefore: referrerBalanceBefore,
+    balanceAfter: referrerWallet.balance,
+    createdAt: new Date(),
+  });
+  await referrerWallet.save();
+
+  return {
+    success: true,
+    message: 'Referral applied successfully'
+  };
+}
+
+
+
+
+
+module.exports = {
+  applyReferralBonus,
+  generateUniqueReferralCode,
+  applyReferralCode,
+  renderWallet,
+  getWalletBalance,
+  // any other functions you want to export
+};
+

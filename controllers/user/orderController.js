@@ -1,6 +1,6 @@
 const Order = require('../../models/order');
 const Variant = require('../../models/variant');
-const OrderItem= require('../../models/orderItem')
+const OrderItem = require('../../models/orderItem');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -54,39 +54,39 @@ const processWalletRefund = async (userId, amount, orderId, type) => {
 
 
 const calculateItemRefund = async (order, cancelledItem) => {
-  
   const totalItems = order.orderItems.length;
   const itemSubtotal = cancelledItem.price * cancelledItem.quantity;
   
   let refundAmount = itemSubtotal;
   
+  // Handle coupon proportionally
   if (order.coupon && order.coupon.discountAmount) {
-    const orderSubtotal = order.orderItems.reduce((sum, item) => 
-      sum + (item.price * item.quantity), 0
-    );
+    const orderSubtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     const itemProportion = itemSubtotal / orderSubtotal;
+    
     const proportionalCouponDiscount = order.coupon.discountAmount * itemProportion;
     
     refundAmount -= proportionalCouponDiscount;
   }
   
-  
-  if (order.deliveryCharge && totalItems === 1) {
-  
-    refundAmount += order.deliveryCharge;
-  } else if (order.deliveryCharge && totalItems > 1) {
-  
-    refundAmount += order.deliveryCharge / totalItems;
+  // Handle delivery charge
+  if (order.deliveryCharge) {
+    if (totalItems === 1) {
+      refundAmount += order.deliveryCharge;
+    } else {
+      refundAmount += order.deliveryCharge / totalItems;
+    }
   }
   
-  
+  // Handle tax proportionally
   if (order.tax) {
-    const taxProportion = itemSubtotal / (order.total - order.deliveryCharge - order.tax);
+    const orderSubtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const taxProportion = itemSubtotal / orderSubtotal;
     refundAmount += order.tax * taxProportion;
   }
   
-  return Math.round(refundAmount * 100) / 100; 
+  return Math.max(0, Math.round(refundAmount * 100) / 100);  // Ensure non-negative
 };
 
 exports.orderList = async (req, res, next) => {
@@ -113,13 +113,11 @@ exports.getOrders = async (req, res, next) => {
     const userId = req.session?.user?.id;
     
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
+      return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
-    const { search, status, page = 1, limit = 10 } = req.query;
+    // 1. 📢 FIX: Destructure paymentMethod from req.query
+    const { search, status, paymentMethod, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
     let query = { userId };
@@ -132,6 +130,12 @@ exports.getOrders = async (req, res, next) => {
       query.status = status;
     }
 
+    // 2. 📢 FIX: Apply Payment Method Filter
+    if (paymentMethod && paymentMethod !== 'all') {
+      query.paymentMethod = paymentMethod;
+    }
+
+    // 3. Execute query with dynamic filters
     const orders = await Order.find(query)
       .populate('orderItems')
       .sort({ orderDate: -1 })
@@ -141,22 +145,45 @@ exports.getOrders = async (req, res, next) => {
     const totalOrders = await Order.countDocuments(query);
     const totalPages = Math.ceil(totalOrders / limit);
 
-    const processedOrders = orders.map(order => ({
-      id: order._id,
-      referenceNo: order.referenceNo,
-      orderDate: order.orderDate,
-      status: order.status,
-      total: order.total,
-      paymentMethod: order.paymentMethod,
-      itemCount: order.orderItems.length,
-      canCancel: ['Pending', 'Confirmed'].includes(order.status) && !order.isCancelled,
-      canReturn: order.status === 'Delivered' && !order.isReturned,
-      isCancelled: order.isCancelled,
-      isReturned: order.isReturned,
-      cancellationReason: order.cancellationReason,
-      returnReason: order.returnReason,
-      returnRequestDate: order.returnRequestDate,
-    }));
+    // 4. Process Orders and Calculate Flags
+    const processedOrders = orders.map(order => {
+        // Check item statuses to determine if full cancellation is possible (data integrity)
+        const isAnyItemFulfilled = order.orderItems.some(item => 
+            ['Shipped', 'Out for Delivery', 'Delivered', 'Returned', 'Return Requested'].includes(item.status)
+        );
+        
+        const canCancelOrder = (
+            ['Pending', 'Confirmed'].includes(order.status) && 
+            !order.isCancelled && 
+            !isAnyItemFulfilled
+        );
+
+        // Calculate pagination display indices
+        const startIndex = totalOrders > 0 ? skip + 1 : 0;
+        const endIndex = Math.min(skip + parseInt(limit), totalOrders);
+        
+        return ({
+            id: order._id,
+            referenceNo: order.referenceNo,
+            orderDate: order.orderDate,
+            status: order.status,
+            total: order.total,
+            paymentMethod: order.paymentMethod,
+            itemCount: order.orderItems.length,
+            
+            // 📢 Calculated Flags
+            canCancel: canCancelOrder, 
+            canReturn: order.status === 'Delivered' && !order.isReturned,
+            canRetryPayment: order.status === 'Payment Failed',
+            
+            isCancelled: order.isCancelled,
+            isReturned: order.isReturned,
+            cancellationReason: order.cancellationReason,
+            returnReason: order.returnReason,
+            returnRequestDate: order.returnRequestDate,
+            discount: order.coupon?.discountAmount || 0, // Ensure discount is available for display
+        });
+    });
 
     return res.json({
       success: true,
@@ -167,7 +194,9 @@ exports.getOrders = async (req, res, next) => {
           totalPages,
           totalOrders,
           hasNext: page < totalPages,
-          hasPrev: page > 1
+          hasPrev: page > 1,
+          startIndex: totalOrders > 0 ? skip + 1 : 0,
+          endIndex: Math.min(skip + parseInt(limit), totalOrders)
         }
       }
     });
@@ -211,12 +240,17 @@ exports.cancelOrder = async (req, res, next) => {
       });
     }
 
-    // Calculate refund amount
+    // Calculate refund amount only for non-cancelled items
     let refundAmount = 0;
     
     // Only refund if payment was made (not COD)
     if (order.paymentMethod !== 'COD') {
-      refundAmount = order.total; // Full order total
+      // Sum refunds for each non-cancelled item
+      for (const item of order.orderItems) {
+        if (!item.isCancelled) {
+          refundAmount += await calculateItemRefund(order, item);
+        }
+      }
     }
 
     // Update order status
@@ -227,18 +261,17 @@ exports.cancelOrder = async (req, res, next) => {
     }
 
     // Update order items and restore stock
-    for (const itemId of order.orderItems) {
-      const orderItem = await OrderItem.findById(itemId);
-      if (orderItem && !orderItem.isCancelled) {
-        orderItem.status = 'Cancelled';
-        orderItem.isCancelled = true;
+    for (const item of order.orderItems) {
+      if (!item.isCancelled) {
+        item.status = 'Cancelled';
+        item.isCancelled = true;
         if (reason) {
-          orderItem.cancellationReason = reason;
+          item.cancellationReason = reason;
         }
         
-        if (orderItem.statusHistory !== undefined) {
-          orderItem.statusHistory = orderItem.statusHistory || [];
-          orderItem.statusHistory.push({
+        if (item.statusHistory !== undefined) {
+          item.statusHistory = item.statusHistory || [];
+          item.statusHistory.push({
             status: 'Cancelled',
             updatedBy: userId,
             updatedAt: new Date(),
@@ -246,12 +279,12 @@ exports.cancelOrder = async (req, res, next) => {
           });
         }
         
-        await orderItem.save();
+        await item.save();
 
         // Restore stock
-        const variant = await Variant.findById(orderItem.variantId);
+        const variant = await Variant.findById(item.variantId);
         if (variant) {
-          variant.stock += orderItem.quantity;
+          variant.stock += item.quantity;
           await variant.save();
         }
       }
@@ -308,7 +341,6 @@ exports.cancelOrderItem = async (req, res, next) => {
       });
     }
 
-  
     if (order.status === 'Payment Failed') {
       return res.status(400).json({
         success: false,
@@ -331,13 +363,13 @@ exports.cancelOrderItem = async (req, res, next) => {
       });
     }
 
-  
+    // Calculate refund amount
     let refundAmount = 0;
     if (order.paymentMethod !== 'COD') {
       refundAmount = await calculateItemRefund(order, orderItem);
     }
 
-  
+    // Update order item
     orderItem.status = 'Cancelled'; 
     orderItem.isCancelled = true;
     if (reason) {
@@ -469,8 +501,6 @@ exports.requestReturn = async (req, res, next) => {
         orderItem.returnReason = reason.trim();
         orderItem.returnRequestDate = new Date();
         
-      
-        
         if (orderItem.statusHistory !== undefined) {
           orderItem.statusHistory = orderItem.statusHistory || [];
           orderItem.statusHistory.push({
@@ -558,14 +588,14 @@ exports.searchOrders = async (req, res, next) => {
 exports.orderDetails = async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
-    const { orderId } = req.params;
-    console.log(orderId)
+    const {orderId: referenceNo} = req.params;
+  
     
     if (!userId) {
       return res.redirect('/user/login');
     }
 
-    const order = await Order.findOne({ _id: orderId, userId })
+    const order = await Order.findOne({ referenceNo: referenceNo, userId })
       .populate({
         path: 'orderItems',
         populate: {
@@ -731,6 +761,54 @@ exports.downloadInvoice = async (req, res, next) => {
   } catch (error) {
     console.error('Download invoice error:', error);
     res.status(500).json({ success: false, error: 'Failed to generate invoice' });
+  }
+};
+
+//Search orders
+exports.searchOrders = async (req, res, next) => {
+  try {
+    const userId = req.session?.user?.id;
+    const { q } = req.query;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (!q || q.trim().length < 2) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const orders = await Order.find({
+      userId,
+      referenceNo: { $regex: q.trim(), $options: 'i' }
+    })
+    .select('referenceNo orderDate status total')
+    .sort({ orderDate: -1 })
+    .limit(10);
+
+    return res.json({
+      success: true,
+      data: orders.map(order => ({
+        id: order._id,
+        referenceNo: order.referenceNo,
+        orderDate: order.orderDate,
+        status: order.status,
+        total: order.total
+      }))
+    });
+
+  } catch (error) {
+    console.error('Search orders error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Search failed'
+    });
   }
 };
 

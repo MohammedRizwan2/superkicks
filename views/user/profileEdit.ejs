@@ -120,7 +120,7 @@
             
             <!-- Cropper Modal -->
             <div id="cropModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+              <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
                 <!-- Header -->
                 <div class="border-b border-black/10 px-6 py-4">
                   <h3 class="text-xl font-bold text-black">Crop Your Profile Picture</h3>
@@ -157,14 +157,44 @@
                 <div class="field-error text-red-600 text-sm mt-1 hidden" id="fullNameError"></div>
               </div>
               
+              <!-- Updated Phone Number Field with Country Code -->
               <div>
                 <label class="block text-sm font-semibold text-black/70 mb-2">Phone Number</label>
-                <div class="relative">
-                  <input type="tel" id="phone" name="phone"
-                         value="<%= (user && user.phone) ? user.phone : '' %>"
-                         class="w-full px-4 py-3 pl-12 bg-ash/30 border border-black/20 rounded-lg focus:border-black/50 focus:bg-white focus:outline-none transition-colors" 
-                         placeholder="+91 ">
-                  <i class="fas fa-phone absolute left-4 top-1/2 transform -translate-y-1/2 text-black/40"></i>
+                <div class="flex gap-2">
+                  <!-- Country Code Dropdown -->
+                  <div class="relative min-w-[8rem]">
+                    <select id="countryCode" name="countryCode" 
+                            class="w-full px-3 py-3 pl-10 pr-8 bg-ash/30 border border-black/20 rounded-lg focus:border-black/50 focus:bg-white focus:outline-none transition-colors appearance-none">
+                      <option value="+91">+91 (IN)</option>
+                      <option value="+1">+1 (US)</option>
+                      <option value="+44">+44 (UK)</option>
+                      <option value="+61">+61 (AU)</option>
+                      <option value="+65">+65 (SG)</option>
+                      <option value="+60">+60 (MY)</option>
+                      <option value="+971">+971 (AE)</option>
+                      <option value="+86">+86 (CN)</option>
+                      <option value="+81">+81 (JP)</option>
+                      <option value="+82">+82 (KR)</option>
+                      <option value="+33">+33 (FR)</option>
+                      <option value="+49">+49 (DE)</option>
+                      <option value="+39">+39 (IT)</option>
+                      <option value="+34">+34 (ES)</option>
+                      <option value="+55">+55 (BR)</option>
+                      <option value="+52">+52 (MX)</option>
+                      <option value="+7">+7 (RU)</option>
+                      <option value="+27">+27 (ZA)</option>
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-black/40 pointer-events-none"></i>
+                    <i class="fas fa-globe absolute left-3 top-1/2 transform -translate-y-1/2 text-black/40"></i>
+                  </div>
+                  
+                  <!-- Phone Number Input -->
+                  <div class="relative flex-1">
+                    <input type="tel" id="phoneNumber" name="phoneNumber"
+                           class="w-full px-4 py-3 pl-12 bg-ash/30 border border-black/20 rounded-lg focus:border-black/50 focus:bg-white focus:outline-none transition-colors" 
+                           placeholder="1234567890">
+                    <i class="fas fa-phone absolute left-4 top-1/2 transform -translate-y-1/2 text-black/40"></i>
+                  </div>
                 </div>
                 <div class="field-error text-red-600 text-sm mt-1 hidden" id="phoneError"></div>
               </div>
@@ -521,6 +551,15 @@
 #cropModal.show {
   display: flex !important;
 }
+
+/* Country code dropdown styling */
+.country-code-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
 </style>
 
 <script>
@@ -537,6 +576,7 @@ class ProfileEditor {
     this.setupOtpInputs();
     this.setupPhoneInput();
     this.initCropper();
+    this.setupCountryCode();
   }
 
   bindEvents() {
@@ -577,6 +617,71 @@ class ProfileEditor {
         this.cancelAvatarCrop();
       }
     });
+  }
+
+  setupCountryCode() {
+    // Parse existing phone number to set country code and phone number
+  const currentPhone = "<%= (user && user.phone) ? user.phone : '' %>";
+
+    if (currentPhone) {
+      this.parseAndSetPhoneNumber(currentPhone);
+    }
+  }
+
+  parseAndSetPhoneNumber(phone) {
+    // Common country codes pattern
+    const countryCodes = {
+      '+91': 'IN',
+      '+1': 'US',
+      '+44': 'UK',
+      '+61': 'AU',
+      '+65': 'SG',
+      '+60': 'MY',
+      '+971': 'AE',
+      '+86': 'CN',
+      '+81': 'JP',
+      '+82': 'KR',
+      '+33': 'FR',
+      '+49': 'DE',
+      '+39': 'IT',
+      '+34': 'ES',
+      '+55': 'BR',
+      '+52': 'MX',
+      '+7': 'RU',
+      '+27': 'ZA'
+    };
+
+    let countryCode = '+91'; // Default to India
+    let phoneNumber = phone;
+
+    // Try to extract country code
+    for (const code of Object.keys(countryCodes)) {
+      if (phone.startsWith(code)) {
+        countryCode = code;
+        phoneNumber = phone.substring(code.length).replace(/^[-\\s]+/, '');
+        break;
+      }
+    }
+
+    // Set the values in the form
+    const countryCodeSelect = document.getElementById('countryCode');
+    const phoneNumberInput = document.getElementById('phoneNumber');
+
+    if (countryCodeSelect && phoneNumberInput) {
+      countryCodeSelect.value = countryCode;
+      phoneNumberInput.value = phoneNumber;
+    }
+  }
+
+  getFullPhoneNumber() {
+    const countryCode = document.getElementById('countryCode').value;
+    const phoneNumber = document.getElementById('phoneNumber').value;
+    
+    if (!phoneNumber.trim()) {
+      return '';
+    }
+    
+    return `${countryCode}${phoneNumber}`;
   }
 
   initCropper() {
@@ -739,23 +844,25 @@ class ProfileEditor {
   }
 
   setupPhoneInput() {
-    const phoneInput = document.getElementById('phone');
-    if (!phoneInput) return;
+    const phoneNumberInput = document.getElementById('phoneNumber');
+    if (!phoneNumberInput) return;
 
-    phoneInput.addEventListener('input', function(e) {
+    phoneNumberInput.addEventListener('input', function(e) {
+      // Remove any non-digit characters
+      let input = e.target.value.replace(/\D/g, '');
       
+      // Limit to 15 digits (reasonable phone number length)
+      if (input.length > 15) {
+        input = input.substring(0, 15);
+      }
       
-      if (input.length > 9) {
-  e.target.value = `+91-${input}`;
-}
-
+      e.target.value = input;
     });
 
-    phoneInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Backspace' && 
-          (this.value.endsWith('-') || this.value.endsWith(') ') || this.value.endsWith('('))) {
+    phoneNumberInput.addEventListener('keydown', function(e) {
+      // Allow only numbers and control keys
+      if (!/[\d]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(e.key)) {
         e.preventDefault();
-        this.value = this.value.slice(0, -1);
       }
     });
   }
@@ -768,9 +875,8 @@ class ProfileEditor {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     
-    if (data.phone) {
-      data.phone = data.phone.replace(/\D/g, '');
-    }
+    // Combine country code and phone number
+    data.phone = this.getFullPhoneNumber();
 
     try {
       const response = await fetch(`${this.BASE_PATH}/profile`, {

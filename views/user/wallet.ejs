@@ -617,7 +617,7 @@
 
       shareOnWhatsApp() {
         const { wallet } = this.data;
-        const message = `Join SuperKicks using my referral code ${wallet.referralCode} and we both get bonuses in our wallets! Shop amazing products at great prices. ${window.location.origin}/user/register?ref=${wallet.referralCode}`;
+        const message = `Join SuperKicks using my referral code ${wallet.referralCode} and we both get bonuses in our wallets! Shop amazing products at great prices. ${window.location.origin}/user/signup?ref=${wallet.referralCode}`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
       }

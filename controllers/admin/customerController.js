@@ -1,5 +1,5 @@
 const User = require('../../models/userSchema');
-const { HTTP_STATUS, MESSAGES } = require('../../config/constant'); // Import the constants
+const { HTTP_STATUS, MESSAGES } = require('../../config/constant'); 
 
 exports.getUsers = async (req, res) => {
   try {

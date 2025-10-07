@@ -640,7 +640,15 @@ exports.verifyRetryPayment = async (req, res) => {
       if (!updatedOrder) {
         throw new Error('Order not found');
       }
-
+        await OrderItem.updateMany(
+        { orderId: updatedOrder._id },
+        { 
+          $set: { 
+            status: 'Pending' 
+           
+          } 
+        }
+      ).session(session);
       // Deduct stock for retry payment
       const orderItems = await OrderItem.find({ orderId: updatedOrder._id }).session(session);
       for (const item of orderItems) {

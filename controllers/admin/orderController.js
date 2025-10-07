@@ -405,29 +405,42 @@ async function updateOverallOrderStatus(orderId) {
 
     if (!orderItems.length) return;
 
-    const itemStatuses = orderItems.map(item => item.status);
-    let newOrderStatus = order.status;
+    // Filter active items (not cancelled or returned)
+    const activeItems = orderItems.filter(item => 
+      !item.isCancelled && !item.isReturned
+    );
 
-    if (itemStatuses.every(status => status === 'Delivered')) {
+    if (activeItems.length === 0) {
+      order.status = 'Cancelled';
+      order.isCancelled = true;
+      await order.save();
+      return;
+    }
+
+    // Get statuses of active items
+    const activeStatuses = activeItems.map(item => item.status);
+
+    let newOrderStatus = 'Pending';
+
+    // If any item is Return Requested, set to Return Requested
+    if (activeStatuses.some(status => status === 'Return Requested')) {
+      newOrderStatus = 'Return Requested';
+    } 
+    // All delivered
+    else if (activeStatuses.every(status => status === 'Delivered')) {
       newOrderStatus = 'Delivered';
     }
-    else if (itemStatuses.every(status => status === 'Cancelled')) {
-      newOrderStatus = 'Cancelled';
+    // Some in transit
+    else if (activeStatuses.some(status => 
+      ['Out for Delivery', 'Shipped'].includes(status))) {
+      newOrderStatus = activeStatuses.includes('Out for Delivery') ? 'Out for Delivery' : 'Shipped';
     }
-    else if (itemStatuses.every(status => 
-      ['Shipped', 'Out for Delivery', 'Delivered'].includes(status))) {
-      if (itemStatuses.some(status => status === 'Out for Delivery')) {
-        newOrderStatus = 'Out for Delivery';
-      } else if (itemStatuses.every(status => 
-        ['Shipped', 'Delivered'].includes(status))) {
-        newOrderStatus = 'Shipped';
-      }
-    }
-    else if (itemStatuses.some(status => 
-      ['Processing', 'Shipped', 'Out for Delivery'].includes(status))) {
+    // Some processing
+    else if (activeStatuses.some(status => status === 'Processing')) {
       newOrderStatus = 'Processing';
     }
-    else if (itemStatuses.some(status => status === 'Confirmed')) {
+    // Some confirmed
+    else if (activeStatuses.some(status => status === 'Confirmed')) {
       newOrderStatus = 'Confirmed';
     }
 

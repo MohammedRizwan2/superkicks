@@ -359,7 +359,7 @@
           container.innerHTML = '<div class="p-3 text-black/60 text-sm">No orders found</div>';
         } else {
           container.innerHTML = orders.map(order => `
-            <a href="/user/orders/${order.id}" 
+            <a href="/user/orders/${order.referenceNo}" 
                class="block p-3 hover:bg-ash/30 transition border-b border-black/5 last:border-b-0">
               <div class="font-medium">#${order.referenceNo}</div>
               <div class="text-sm text-black/60">
@@ -494,7 +494,7 @@
               <!-- Action Buttons -->
               <div class="flex flex-wrap gap-2">
                 <!-- View Details -->
-                <a href="/user/orders/${order.id}" 
+                <a href="/user/orders/${order.referenceNo}" 
                    class="px-4 py-2 border border-black/20 text-black rounded-lg font-medium hover:bg-black/5 transition text-sm">
                   View Details
                 </a>

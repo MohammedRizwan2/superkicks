@@ -11,7 +11,7 @@ if(!userId){
 }
 console.log("hereeeeee")
 const addresses= await Address.find({userId}).sort({createdAt:-1});
-console.log("hellloooooooo",addresses)
+
 res.render('user/addresses',{
     isLoggedIn:true,
     user:req.session.user,
