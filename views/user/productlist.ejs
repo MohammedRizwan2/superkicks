@@ -1,8 +1,8 @@
 <%- include('../partials/header') %>
 
-  <!-- ░░ FEATURED PRODUCT DISPLAY ░░ -->
-<% if (products && products.length) { 
-     const hero = products[1]; %>
+<!-- ░░ FEATURED PRODUCT DISPLAY ░░ -->
+<% if (featuredProduct) { 
+     const hero = featuredProduct;  %>
   <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
     <!-- Animated Background Elements -->
     <div class="absolute inset-0 overflow-hidden">
@@ -146,259 +146,388 @@
   </section>
 <% } %>
 
-  <!-- ░░ FILTERS & SEARCH ░░ -->
-  <main class="max-w-7xl mx-auto px-6 py-16">
-    <div class="mb-12">
-      <h2 class="text-3xl font-bold mb-2">All Products</h2>
-      <p class="text-gray-600">Discover our complete collection</p>
+<main class="bg-white min-h-screen">
+  
+  <!-- Main Container -->
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-black mb-3">All Products</h1>
+      <p class="text-gray-600 text-lg">Discover our complete collection</p>
     </div>
 
-    <!-- Filter Form -->
-    <form id="filterForm" class="mb-12 bg-gray-50 rounded-lg p-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        
-        <!-- Search -->
-        <div class="lg:col-span-2">
-          <label class="block text-sm font-medium mb-2">Search Products</label>
-          <div class="flex gap-2">
-            <input type="text" name="q" id="q" 
-                   placeholder="Search..." 
-                   value="<%= typeof q !== 'undefined' ? q : '' %>"
-                   class="flex-1 rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
-            <button type="button" onclick="clearFilters()" 
-                    class="px-4 py-3 bg-gray-200 rounded hover:bg-gray-300 transition">
-              <i class="fa-solid fa-xmark"></i>
+    <!-- Search & Filter Section -->
+    <div class="bg-gray-50 rounded-2xl p-6 mb-10 shadow-sm border border-gray-200">
+      
+      <!-- Search Bar -->
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-black mb-3">Search Products</h3>
+        <form id="searchForm" class="relative">
+          <div class="flex items-center">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input 
+                type="text" 
+                name="q" 
+                id="q"
+                placeholder="Search for products..."
+                value="<%= typeof q !== 'undefined' ? q : '' %>"
+                class="w-full pl-12 pr-12 py-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-black placeholder-gray-400 text-base transition"
+              />
+              <button 
+                type="button" 
+                id="clearSearchBtn"
+                class="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-gray-500 hover:text-black transition"
+                aria-label="Clear search only"
+              >
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <button 
+              type="button"
+              onclick="performSearch()"
+              class="ml-4 bg-black hover:bg-gray-800 text-white px-8 py-4 rounded-xl font-semibold transition"
+            >
+              Search
             </button>
           </div>
-        </div>
-
-        <!-- Category -->
-        <div>
-          <label class="block text-sm font-medium mb-2">Category</label>
-          <select name="category" id="category" 
-                  class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
-            <option value="">All Categories</option>
-            <% categories.forEach(cat => { %>
-              <option value="<%= cat._id %>" <%= category === cat._id.toString() ? 'selected' : '' %>>
-                <%= cat.name %>
-              </option>
-            <% }) %>
-          </select>
-        </div>
-
-        <!-- Price Min -->
-        <div>
-          <label class="block text-sm font-medium mb-2">Min Price</label>
-          <input type="number" name="priceMin" id="priceMin"
-                 value="<%= typeof priceMin !== 'undefined' ? priceMin : '' %>"
-                 placeholder="₹0"
-                 class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
-        </div>
-
-        <!-- Price Max -->
-        <div>
-          <label class="block text-sm font-medium mb-2">Max Price</label>
-          <input type="number" name="priceMax" id="priceMax"
-                 value="<%= typeof priceMax !== 'undefined' ? priceMax : '' %>"
-                 placeholder="Any"
-                 class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
-        </div>
-
-        <!-- Sort -->
-        <div>
-          <label class="block text-sm font-medium mb-2">Sort By</label>
-          <select name="sort" id="sort" 
-                  class="w-full rounded border-0 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900">
-            <option value="">Default</option>
-            <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
-            <option value="priceDesc" <%= sort === 'priceDesc' ? 'selected' : '' %>>Price: High to Low</option>
-            <option value="nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A to Z</option>
-            <option value="nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z to A</option>
-            <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>New Arrivals</option>
-          </select>
-        </div>
+        </form>
       </div>
 
-      <div class="mt-6 flex justify-center">
-        <button type="button" onclick="applyFilters()" 
-                class="px-8 py-3 bg-gray-900 text-white rounded hover:bg-transparent hover:text-gray-900 border border-gray-900 transition font-semibold uppercase tracking-wide">
-          Apply Filters
-        </button>
-      </div>
-    </form>
+      <!-- Filters -->
+      <div>
+        <h3 class="text-lg font-semibold text-black mb-3">Filter Products</h3>
+        <form id="filterForm">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            
+            <!-- Category -->
+            <div>
+              <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <select 
+                name="category" 
+                id="category"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-black"
+              >
+                <option value="">All Categories</option>
+                <% categories.forEach(cat => { %>
+                  <option value="<%= cat._id %>" <%= category === cat._id.toString() ? 'selected' : '' %>>
+                    <%= cat.name %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
 
-    <!-- ░░ PRODUCTS GRID ░░ -->
-    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- Min Price -->
+            <div>
+              <label for="priceMin" class="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+              <input 
+                type="number" 
+                name="priceMin" 
+                id="priceMin"
+                placeholder="0"
+                value="<%= typeof priceMin !== 'undefined' ? priceMin : '' %>"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-black"
+              />
+            </div>
+
+            <!-- Max Price -->
+            <div>
+              <label for="priceMax" class="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+              <input 
+                type="number" 
+                name="priceMax" 
+                id="priceMax"
+                placeholder="Any"
+                value="<%= typeof priceMax !== 'undefined' ? priceMax : '' %>"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-black"
+              />
+            </div>
+
+            <!-- Sort -->
+            <div>
+              <label for="sort" class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+              <select 
+                name="sort" 
+                id="sort"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-black"
+              >
+                <option value="">Default</option>
+                <option value="priceAsc" <%= sort === 'priceAsc' ? 'selected' : '' %>>Price: Low to High</option>
+                <option value="priceDesc" <%= sort === 'priceDesc' ? 'selected' : '' %>>Price: High to Low</option>
+                <option value="nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A to Z</option>
+                <option value="nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z to A</option>
+                <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>New Arrivals</option>
+              </select>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="flex flex-col justify-end">
+              <div class="flex gap-3">
+                <button 
+                  type="button" 
+                  id="clearFilterBtn"
+                  class="flex-1 bg-white border-2 border-black text-black px-4 py-3 rounded-lg font-semibold hover:bg-black hover:text-white transition"
+                >
+                  Clear
+                </button>
+                <button 
+                  type="button" 
+                  onclick="applyFilters(1)"
+                  class="flex-1 bg-black text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+                >
+                  Filter
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Products Grid -->
+    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       <% if (!products || products.length === 0) { %>
-        <p class="col-span-full text-center text-gray-500 py-12">No products found matching your criteria.</p>
+        <div class="col-span-full text-center py-16">
+          <div class="text-gray-400 mb-4">
+            <i class="fa-solid fa-box-open text-6xl"></i>
+          </div>
+          <p class="text-xl text-gray-600">No products found matching your criteria.</p>
+        </div>
       <% } else { %>
         <% products.forEach(product => { %>
           <a href="/user/products/<%= product._id %>" class="group block">
-            <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
-              <div class="aspect-square overflow-hidden">
-                <img src="<%= getImageUrl(product.images[0]) %>"
-                     alt="<%= product.productName %>"
-                     class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+            <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-black hover:shadow-lg transition-all duration-300">
+              
+              <!-- Product Image -->
+              <div class="aspect-square bg-gray-100 overflow-hidden">
+                <img 
+                  src="<%= getImageUrl(product.images[0]) %>"
+                  alt="<%= product.productName %>"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
               </div>
-              <div class="p-6">
-                <h3 class="font-semibold mb-1 truncate group-hover:text-gray-600"><%= product.productName %></h3>
-                <p class="text-sm text-gray-600 mb-3 uppercase tracking-wide"><%= product.brand %></p>
+              
+              <!-- Product Info -->
+              <div class="p-5">
+                <h3 class="font-bold text-lg text-black mb-1 line-clamp-2"><%= product.productName %></h3>
+                <p class="text-sm text-gray-500 uppercase tracking-wider mb-3"><%= product.brand %></p>
                 
+                <!-- Pricing -->
                 <% if (product.bestOffer > 0) { %>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-lg font-bold">₹<%= product.lowestSalePrice?.toFixed(2) || 'N/A' %></span>
-                      <span class="text-sm line-through text-gray-400">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
-                    </div>
-                    <span class="inline-block bg-gray-900 text-white px-2 py-1 rounded text-xs font-semibold">
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <span class="text-2xl font-bold text-black">₹<%= product.lowestSalePrice?.toFixed(2) || 'N/A' %></span>
+                    <span class="text-lg line-through text-gray-400">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
+                    <span class="bg-black text-white px-3 py-1 rounded-full text-xs font-bold">
                       <%= product.bestOffer %>% OFF
                     </span>
                   </div>
                 <% } else { %>
-                  <span class="text-lg font-bold">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
+                  <span class="text-2xl font-bold text-black">₹<%= product.lowestPrice?.toFixed(2) || 'N/A' %></span>
                 <% } %>
               </div>
+
             </div>
           </a>
         <% }) %>
       <% } %>
     </div>
 
-    <!-- ░░ PAGINATION ░░ -->
+    <!-- Pagination -->
     <div id="paginationContainer" class="mt-12 flex justify-center items-center gap-4">
       <% if (prevPageUrl) { %>
-        <a href="#" data-page="<%= currentPage - 1 %>" class="page-link px-6 py-3 rounded border hover:bg-gray-50 transition">
+        <a href="#" data-page="<%= currentPage - 1 %>" class="page-link px-6 py-3 bg-white border-2 border-black text-black rounded-lg hover:bg-black hover:text-white transition font-semibold">
           <i class="fa-solid fa-arrow-left mr-2"></i>Previous
         </a>
       <% } %>
-      <span class="px-6 py-3 bg-gray-900 text-white rounded font-semibold">
-        <%= currentPage %> / <%= totalPages %>
-      </span>
+      
+      <div class="px-6 py-3 bg-black text-white rounded-lg font-bold">
+        Page <%= currentPage %> of <%= totalPages %>
+      </div>
+      
       <% if (nextPageUrl) { %>
-        <a href="#" data-page="<%= currentPage + 1 %>" class="page-link px-6 py-3 rounded border hover:bg-gray-50 transition">
+        <a href="#" data-page="<%= currentPage + 1 %>" class="page-link px-6 py-3 bg-white border-2 border-black text-black rounded-lg hover:bg-black hover:text-white transition font-semibold">
           Next<i class="fa-solid fa-arrow-right ml-2"></i>
         </a>
       <% } %>
     </div>
-  </main>
 
-  <!-- ░░ SCRIPTS ░░ -->
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script>
-    // Mobile menu toggle
-    const btn = document.getElementById('mobileBtn');
-    const menu = document.getElementById('mobileMenu');
-    btn?.addEventListener('click', () => {
-      menu.classList.toggle('translate-x-full');
-    });
+  </div>
+</main>
 
-    // Page link handling
-    document.addEventListener('click', function(e) {
-      if (e.target.classList.contains('page-link')) {
-        e.preventDefault();
-        const page = e.target.getAttribute('data-page');
-        applyFilters(parseInt(page));
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+  // Search clear button - ONLY clears search, preserves all filters using AJAX
+  document.getElementById('clearSearchBtn').addEventListener('click', function() {
+    document.getElementById('q').value = '';
+    // Use AJAX instead of page refresh to preserve filters
+    applyFilters(1, false, true); // page=1, clearFilters=false, clearSearch=true
+  });
+
+  // Filter clear button - ONLY clears filters, preserves search
+  document.getElementById('clearFilterBtn').addEventListener('click', function() {
+    // Reset only filter form fields
+    document.getElementById('category').value = '';
+    document.getElementById('priceMin').value = '';
+    document.getElementById('priceMax').value = '';
+    document.getElementById('sort').value = '';
+    
+    // Apply filters with cleared values but keep search term
+    applyFilters(1, true, false); // page=1, clearFilters=true, clearSearch=false
+  });
+
+  // Perform search function - keeps filters intact using AJAX
+  function performSearch() {
+    applyFilters(1, false, false); // Use AJAX instead of page refresh
+  }
+
+  // Page navigation
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('page-link') || e.target.closest('.page-link')) {
+      e.preventDefault();
+      const link = e.target.classList.contains('page-link') ? e.target : e.target.closest('.page-link');
+      const page = link.getAttribute('data-page');
+      applyFilters(parseInt(page), false, false);
+    }
+  });
+
+  // Apply filters function - updated to handle search clearing
+  async function applyFilters(page = 1, clearFilters = false, clearSearch = false) {
+    try {
+      // Show loading state
+      document.getElementById('productsContainer').innerHTML = `
+        <div class="col-span-full text-center py-16">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-black border-t-transparent mx-auto mb-4"></div>
+          <p class="text-gray-600">Loading products...</p>
+        </div>
+      `;
+
+      // Build parameters
+      let params = new URLSearchParams();
+      params.set('page', page);
+
+      // Handle search parameter
+      if (!clearSearch) {
+        const searchValue = document.getElementById('q').value.trim();
+        if (searchValue) {
+          params.set('q', searchValue);
+        }
       }
-    });
 
-    // Apply filters function
-    async function applyFilters(page = 1) {
-      try {
+      // Add filter parameters if not clearing
+      if (!clearFilters) {
+        const category = document.getElementById('category').value;
+        const priceMin = document.getElementById('priceMin').value;
+        const priceMax = document.getElementById('priceMax').value;
+        const sort = document.getElementById('sort').value;
+
+        if (category) params.set('category', category);
+        if (priceMin) params.set('priceMin', priceMin);
+        if (priceMax) params.set('priceMax', priceMax);
+        if (sort) params.set('sort', sort);
+      }
+
+      // Fetch filtered products
+      const response = await axios.get(`/user/product/list?${params.toString()}`);
+      const { products, totalPages, currentPage } = response.data;
+
+      // Render products
+      if (!products || products.length === 0) {
         document.getElementById('productsContainer').innerHTML = `
           <div class="col-span-full text-center py-16">
-            <i class="fas fa-spinner fa-spin text-gray-900 text-4xl"></i>
-            <p class="mt-4 text-gray-600">Loading products...</p>
+            <div class="text-gray-400 mb-4">
+              <i class="fa-solid fa-box-open text-6xl"></i>
+            </div>
+            <p class="text-xl text-gray-600">No products found matching your criteria.</p>
           </div>
         `;
-
-        const formData = new FormData(document.getElementById('filterForm'));
-        formData.set('page', page);
-        const params = new URLSearchParams(formData);
-        const response = await axios.get(`/user/product/list?${params.toString()}`);
-        const { products, totalPages, currentPage } = response.data;
-
-        // Update products
-        if (!products || products.length === 0) {
-          document.getElementById('productsContainer').innerHTML = `
-            <p class="col-span-full text-center text-gray-500 py-16">No products found matching your criteria.</p>
-          `;
-        } else {
-          document.getElementById('productsContainer').innerHTML = products.map(product => `
-            <a href="/user/products/${product._id}" class="group block">
-              <div class="bg-gray-50 rounded-lg overflow-hidden transition hover:-translate-y-1 hover:shadow-lg">
-                <div class="aspect-square overflow-hidden">
-                  <img src="${product.images?.[0] || '/assets/placeholder.jpg'}"
-                       alt="${product.productName}"
-                       class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                </div>
-                <div class="p-6">
-                  <h3 class="font-semibold mb-1 truncate group-hover:text-gray-600">${product.productName}</h3>
-                  <p class="text-sm text-gray-600 mb-3 uppercase tracking-wide">${product.brand}</p>
-                  
-                  ${product.bestOffer > 0 ? `
-                    <div class="space-y-1">
-                      <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</span>
-                        <span class="text-sm line-through text-gray-400">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <span class="inline-block bg-gray-900 text-white px-2 py-1 rounded text-xs font-semibold">
-                        ${product.bestOffer}% OFF
-                      </span>
-                    </div>
-                  ` : `
-                    <span class="text-lg font-bold">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
-                  `}
-                </div>
+      } else {
+        document.getElementById('productsContainer').innerHTML = products.map(product => `
+          <a href="/user/products/${product._id}" class="group block">
+            <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-black hover:shadow-lg transition-all duration-300">
+              <div class="aspect-square bg-gray-100 overflow-hidden">
+                <img src="${product.images?.[0] || '/assets/placeholder.jpg'}" alt="${product.productName}"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               </div>
-            </a>
-          `).join('');
-        }
-
-        updatePagination(currentPage, totalPages);
-        window.history.pushState({}, '', `/user/product/list?${params.toString()}`);
-
-      } catch (error) {
-        console.error('Error applying filters:', error);
-        document.getElementById('productsContainer').innerHTML = `
-          <p class="col-span-full text-center text-red-500 py-16">Error loading products. Please try again.</p>
-        `;
+              <div class="p-5">
+                <h3 class="font-bold text-lg text-black mb-1 line-clamp-2">${product.productName}</h3>
+                <p class="text-sm text-gray-500 uppercase tracking-wider mb-3">${product.brand}</p>
+                ${product.bestOffer > 0 ? `
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <span class="text-2xl font-bold text-black">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</span>
+                    <span class="text-lg line-through text-gray-400">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+                    <span class="bg-black text-white px-3 py-1 rounded-full text-xs font-bold">${product.bestOffer}% OFF</span>
+                  </div>
+                ` : `
+                  <span class="text-2xl font-bold text-black">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+                `}
+              </div>
+            </div>
+          </a>
+        `).join('');
       }
-    }
 
-    function clearFilters() {
-      document.getElementById('filterForm').reset();
-      applyFilters(1);
-      window.history.pushState({}, '', '/user/product/list');
-    }
+      // Update pagination
+      updatePagination(currentPage, totalPages);
+      
+      // Update URL
+      window.history.pushState({}, '', `/user/product/list?${params.toString()}`);
 
-    function updatePagination(currentPage, totalPages) {
-      const prevBtn = currentPage > 1 ? 
-        `<a href="#" onclick="applyFilters(${currentPage - 1}); return false;" class="px-6 py-3 rounded border hover:bg-gray-50 transition">
-          <i class="fa-solid fa-arrow-left mr-2"></i>Previous
-         </a>` : '';
-      
-      const nextBtn = currentPage < totalPages ? 
-        `<a href="#" onclick="applyFilters(${currentPage + 1}); return false;" class="px-6 py-3 rounded border hover:bg-gray-50 transition">
-          Next<i class="fa-solid fa-arrow-right ml-2"></i>
-         </a>` : '';
-      
-      document.getElementById('paginationContainer').innerHTML = `
-        ${prevBtn}
-        <span class="px-6 py-3 bg-gray-900 text-white rounded font-semibold">${currentPage} / ${totalPages}</span>
-        ${nextBtn}
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      document.getElementById('productsContainer').innerHTML = `
+        <div class="col-span-full text-center py-16">
+          <div class="text-red-500 mb-4">
+            <i class="fa-solid fa-exclamation-triangle text-6xl"></i>
+          </div>
+          <p class="text-xl text-red-600">Error loading products. Please try again.</p>
+        </div>
       `;
     }
+  }
 
-    // GSAP animations
-    document.addEventListener('DOMContentLoaded', () => {
-      gsap.from('.grid > a', {
-        y: 40,
+  function updatePagination(currentPage, totalPages) {
+    const prevBtn = currentPage > 1 ? 
+      `<a href="#" data-page="${currentPage - 1}" class="page-link px-6 py-3 bg-white border-2 border-black text-black rounded-lg hover:bg-black hover:text-white transition font-semibold">
+        <i class="fa-solid fa-arrow-left mr-2"></i>Previous
+       </a>` : '';
+    
+    const nextBtn = currentPage < totalPages ? 
+      `<a href="#" data-page="${currentPage + 1}" class="page-link px-6 py-3 bg-white border-2 border-black text-black rounded-lg hover:bg-black hover:text-white transition font-semibold">
+        Next<i class="fa-solid fa-arrow-right ml-2"></i>
+       </a>` : '';
+    
+    document.getElementById('paginationContainer').innerHTML = `
+      ${prevBtn}
+      <div class="px-6 py-3 bg-black text-white rounded-lg font-bold">
+        Page ${currentPage} of ${totalPages}
+      </div>
+      ${nextBtn}
+    `;
+  }
+
+  // GSAP animations for featured product
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof gsap !== 'undefined') {
+      gsap.from('[data-gsap="fade-right"]', {
+        x: -50,
         opacity: 0,
-        duration: 0.8,
-        ease: 'power3.out',
-        stagger: 0.1
+        duration: 1,
+        ease: 'power3.out'
       });
-    });
-  </script>
+      
+      gsap.from('[data-gsap="fade-left"]', {
+        x: 50,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+        delay: 0.2
+      });
+    }
+  });
+</script>
+
 </body>
 </html>

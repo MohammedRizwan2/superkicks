@@ -4,7 +4,8 @@ const Review = require('../../models/reviews');
 const Variant = require('../../models/variant');
 const mongoose = require('mongoose');
 const category = require('../../models/category');
-
+const orderItem = require('../../models/orderItem')
+const {getFeaturedProduct}= require('../../helper/featuredProduct')
 
 
 exports.getShop = async (req, res) => {
@@ -18,7 +19,7 @@ exports.getShop = async (req, res) => {
     const limit = 4;
     const skip = (page - 1) * limit;
 
-    // Build match stage
+    
     const matchStage = { isListed: true ,};
     if (q) {
       matchStage.$or = [
@@ -30,7 +31,7 @@ exports.getShop = async (req, res) => {
       matchStage.categoryId = new mongoose.Types.ObjectId(category);
     }
 
-    // Main aggregation pipeline
+  
     const pipeline = [
       { $match: matchStage },
 
@@ -55,16 +56,16 @@ exports.getShop = async (req, res) => {
 
       {
         $addFields: {
-          // Get the best offer (product or category)
+          
           bestOffer: {
             $max: [
               { $ifNull: ["$offer", 0] },
               { $ifNull: ["$categoryInfo.offer", 0] }
             ]
           },
-          // Get lowest regular price
+        
           lowestPrice: { $min: "$variantDocs.regularPrice" },
-          // Get lowest sale price (already calculated in variant schema)
+      
           lowestSalePrice: { $min: "$variantDocs.salePrice" }
         }
       }
@@ -153,10 +154,10 @@ exports.getShop = async (req, res) => {
     const totalProducts = countResult.length > 0 ? countResult[0].totalCount : 0;
     const totalPages = Math.ceil(totalProducts / limit);
 
-    // Get categories for filter dropdown
+    
     const categories = await Category.find({ isListed: true }).sort({ name: 1 });
 
-    // Build pagination URLs
+    
     const baseUrl = req.originalUrl.split('?')[0];
     const currentQuery = { ...req.query };
     
@@ -168,9 +169,10 @@ exports.getShop = async (req, res) => {
 
     const prevPageUrl = page > 1 ? buildPageUrl(page - 1) : null;
     const nextPageUrl = page < totalPages ? buildPageUrl(page + 1) : null;
-    
+    const featuredProduct = await getFeaturedProduct();
+  
 
-    // Prepare response
+    
     const responseData = {
       products,
       categories,
@@ -183,10 +185,11 @@ exports.getShop = async (req, res) => {
       totalPages,
       prevPageUrl,
       nextPageUrl,
+      featuredProduct
   
     };
 
-    // Return JSON for Axios or render EJS
+    
     if (req.xhr || req.headers.accept?.includes('application/json')) {
       res.json(responseData);
     } else {
@@ -302,3 +305,5 @@ exports.getVariantDetails = async (req, res) => {
     });
   }
 };
+
+

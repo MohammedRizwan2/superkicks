@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Coupon = require('../../models/coupon');
+const { HTTP_STATUS, MESSAGES } = require('../../config/constant'); 
 
 function normalize(payload) {
   const data = {
@@ -53,8 +54,8 @@ function buildFilter(q, status) {
   }
   return filter;
 }
-// couponController.js
 
+// couponController.js
 exports.renderCouponsPage = async (req, res) => {
   try {
     const { q, status, page = 1, limit = 10 } = req.query;
@@ -72,8 +73,6 @@ exports.renderCouponsPage = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    console.log('Coupons fetched:', coupons); // Verify data here
-
     const total = await Coupon.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
@@ -90,7 +89,7 @@ exports.renderCouponsPage = async (req, res) => {
     });
   } catch (error) {
     console.error('Get coupons error:', error);
-    res.status(500).send('Server error');
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -108,9 +107,8 @@ exports.list = async (req, res) => {
       Coupon.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Coupon.countDocuments(filter)
     ]);
-    console.log(items)
 
-    return res.json({
+    return res.status(HTTP_STATUS.OK).json({
       success: true,
       data: items,
       pagination: {
@@ -124,7 +122,10 @@ exports.list = async (req, res) => {
     });
   } catch (err) {
     console.error('Coupons list error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
@@ -132,50 +133,97 @@ exports.create = async (req, res) => {
   try {
     const data = normalize(req.body);
     const errors = validatePayload(data);
-    if (errors.length) return res.status(400).json({ success: false, error: errors });
+    if (errors.length) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: errors 
+    });
 
     const exists = await Coupon.findOne({ code: data.code, isDeleted: false });
-    if (exists) return res.status(400).json({ success: false, error: ['Coupon code already exists'] });
+    if (exists) return res.status(HTTP_STATUS.CONFLICT).json({ 
+      success: false, 
+      error: ['Coupon code already exists'] 
+    });
 
     const created = await Coupon.create(data);
-    return res.status(201).json({ success: true, data: created });
+    return res.status(HTTP_STATUS.CREATED).json({ 
+      success: true, 
+      data: created,
+      message: MESSAGES.CREATED
+    });
   } catch (err) {
     console.error('Coupon create error:', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
 exports.getOne = async (req, res) => {
   try {
     const id = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'Invalid id' });
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: MESSAGES.BAD_REQUEST 
+    });
+    
     const doc = await Coupon.findById(id).lean();
-    if (!doc) return res.status(404).json({ success: false, error: 'Not found' });
-    return res.json({ success: true, data: doc });
+    if (!doc) return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+      success: false, 
+      error: MESSAGES.NOT_FOUND 
+    });
+    
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      data: doc 
+    });
   } catch (err) {
     console.error('Coupon get error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
 exports.update = async (req, res) => {
   try {
     const id = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'Invalid id' });
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: MESSAGES.BAD_REQUEST 
+    });
 
     const data = normalize(req.body);
     const errors = validatePayload(data);
-    if (errors.length) return res.status(400).json({ success: false, error: errors });
+    if (errors.length) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: errors 
+    });
 
     const dup = await Coupon.findOne({ _id: { $ne: id }, code: data.code, isDeleted: false });
-    if (dup) return res.status(400).json({ success: false, error: ['Coupon code already exists'] });
+    if (dup) return res.status(HTTP_STATUS.CONFLICT).json({ 
+      success: false, 
+      error: ['Coupon code already exists'] 
+    });
 
     const updated = await Coupon.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    return res.json({ success: true, data: updated });
+    if (!updated) return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+      success: false, 
+      error: MESSAGES.NOT_FOUND 
+    });
+    
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      data: updated,
+      message: MESSAGES.UPDATED
+    });
   } catch (err) {
     console.error('Coupon update error:', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
@@ -183,13 +231,28 @@ exports.toggle = async (req, res) => {
   try {
     const id = req.params.id;
     const isActive = !!req.body.isActive;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'Invalid id' });
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: MESSAGES.BAD_REQUEST 
+    });
+    
     const updated = await Coupon.findByIdAndUpdate(id, { $set: { isActive } }, { new: true });
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    return res.json({ success: true, data: updated });
+    if (!updated) return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+      success: false, 
+      error: MESSAGES.NOT_FOUND 
+    });
+    
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      data: updated,
+      message: MESSAGES.UPDATED
+    });
   } catch (err) {
     console.error('Coupon toggle error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
@@ -197,12 +260,27 @@ exports.archive = async (req, res) => {
   try {
     const id = req.params.id;
     const isDeleted = !!req.body.isDeleted;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'Invalid id' });
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+      success: false, 
+      error: MESSAGES.BAD_REQUEST 
+    });
+    
     const updated = await Coupon.findByIdAndUpdate(id, { $set: { isDeleted } }, { new: true });
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    return res.json({ success: true, data: updated });
+    if (!updated) return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+      success: false, 
+      error: MESSAGES.NOT_FOUND 
+    });
+    
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      data: updated,
+      message: isDeleted ? 'Coupon archived successfully' : 'Coupon unarchived successfully'
+    });
   } catch (err) {
     console.error('Coupon archive error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      error: MESSAGES.INTERNAL_ERROR 
+    });
   }
 };

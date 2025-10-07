@@ -7,9 +7,13 @@ const categoryController = require('../controllers/admin/categoryController');
 const orderController = require('../controllers/admin/orderController')
 const { uploadProductImages } = require('../config/multer');
 const couponController = require('../controllers/admin/couponController')
+const SalesReportController = require('../controllers/admin/salesReportController');
+const dashboardController = require('../controllers/admin/dashboardController')
 
 const adminAuth = require('../middleware/adminAuth');
 const coupon = require('../models/coupon');
+const salesReportController = require('../controllers/admin/salesReportController');
+const { dash } = require('pdfkit');
 // Login routes
 router.get('/login', adminController.getAdminLogin);
 router.post('/login', adminController.postLogin);
@@ -17,8 +21,9 @@ router.post('/login', adminController.postLogin);
 
 
 router.use(adminAuth)
-router.get('/dashboard', adminController.getDashboard);
 
+router.get('/dashboard',dashboardController.getDashboard);
+router.get('/dashboard/ledger',dashboardController.generateLedger)
 // Customers
 router.get('/customers', customerController.getUsers);
 router.post('/customers/:id/toggle', customerController.toggleBlockStatus);
@@ -63,6 +68,14 @@ router.get('/coupons/:id', couponController.getOne);
 router.put('/coupons/:id', couponController.update);
 router.patch('/coupons/:id/toggle', couponController.toggle);
 router.patch('/coupons/:id/archive', couponController.archive);
+
+
+
+
+router.get('/sales-report', SalesReportController.renderSalesReportPage);
+router.get('/api/sales-report', salesReportController.generateSalesReport);
+router.get('/api/sales-report/download-pdf', salesReportController.downloadPDF);
+router.get('/api/sales-report/download-excel', salesReportController.downloadExcel);
 
 
 router.get('/logout',adminController.logout)

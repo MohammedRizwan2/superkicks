@@ -9,6 +9,9 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const cloudinary = require('./config/cloudinary');
 const { getImageUrl } = require('./helper/imageHandler');;
+const headerload = require('./middleware/header')
+const visitorTracker = require('./middleware/visitorsCount');
+const noCache = require('./middleware/noCache')
 
 
 
@@ -26,11 +29,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.locals.getImageUrl = getImageUrl;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(noCache);
 
 // Session store
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI ,
   collection: 'sessions',
+  dbName:'superkicks'
+
 });
 store.on('error', (error) => {
   console.error('Session store error:', error);
@@ -40,28 +46,27 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET ,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     store,
     cookie: {
-      maxAge: 60 * 60 * 1000, // 1 hour
+      maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
     },
   })
 );
-
+app.use(visitorTracker.trackUniqueVisitor);
 // Passport 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost/superkicks', {
-
+mongoose.connect(process.env.MONGO_URI , {
+dbName:'superkicks'
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('Connected to MongoDB',mongoose.connection.name))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// passport
+
 try {
   require('./config/passport');
 } catch (err) {
@@ -77,6 +82,7 @@ app.use((req,res,next)=>{
 })
 
 // Routes
+app.use(headerload)
 app.use('/user', userRoutes);
 app.use('/admin', adminRoutes);
 

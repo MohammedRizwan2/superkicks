@@ -30,7 +30,7 @@ const orderSchema = new mongoose.Schema({
   razorpayOrderId:String,
   razorpayPaymentId: String,
   razorpaySignature: String,
-   
+ tax:{type:Number,min:0},  
 total: { type: Number, required: true, min: 0 },
   orderItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem', required: true }],
 }, { timestamps: true });

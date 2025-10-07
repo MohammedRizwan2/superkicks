@@ -67,11 +67,7 @@
               <i class="fas fa-shopping-cart mr-2"></i> Orders
             </a>
           </li>
-          <li>
-            <a href="/admin/banners" class="flex items-center p-2 hover:bg-blue-600 rounded">
-              <i class="fas fa-image mr-2"></i> Banner Management
-            </a>
-          </li>
+         
           <li>
             <a href="/admin/coupons" class="flex items-center p-2 hover:bg-blue-600 rounded">
               <i class="fas fa-tags mr-2"></i> Coupon Management
@@ -246,17 +242,14 @@
                           </h4>
                           <p class="text-sm text-gray-600">
                             Size: <%= item.size || 'N/A' %> 
-                            <% if (item.color) { %>
-                              | Color: <%= item.color %>
-                            <% } %>
+                           
                           </p>
                           
                           <!-- Current Item Status Display -->
                           <div class="flex items-center gap-2 mt-2">
-                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full" 
-                                  data-item-status="<%= item.status %>">
-                              <%= item.status %>
-                            </span>
+                             <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full"data-item-status="<%= item.status %>" data-item-id="<%= item._id %>"id="status-badge-<%= item._id %>"><%= item.status %>
+  </span>
+
                             <% if (item.returnRequested) { %>
                               <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
                                 RETURN REQUESTED 
@@ -744,16 +737,15 @@
             e.target.dataset.currentStatus = newStatus;
             
             // Update item status badge
-            const itemContainer = e.target.closest('[data-item-id]');
-            const statusBadge = itemContainer.querySelector('[data-item-status]');
+           const itemContainer = e.target.closest('[data-item-id]');
+      const statusBadge = itemContainer.querySelector('[data-item-status]');
             if (statusBadge) {
               statusBadge.textContent = newStatus;
               statusBadge.dataset.itemStatus = newStatus;
               styleStatusBadge(statusBadge, newStatus);
             }
             
-            styleStatusSelect(e.target, newStatus);
-            
+             styleStatusSelect(e.target, newStatus);
             // Disable select if status is final
             if (['Delivered', 'Cancelled', 'Returned'].includes(newStatus)) {
               e.target.disabled = true;

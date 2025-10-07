@@ -15,31 +15,113 @@
             graphite: '#e5e5e5'
           },
           boxShadow: {
-            smooth: '0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.15)'
+            smooth: '0 2px 8px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.12)',
+            card: '0 1px 3px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.08)'
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.3s ease-out',
+            'slide-up': 'slideUp 0.3s ease-out',
+            'bounce-subtle': 'bounceSubtle 2s infinite'
           }
         }
       }
     }
   </script>
 
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
-    .loading { opacity: 0.6; pointer-events: none; }
+    html, body { 
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
+    }
+    
+    .focus-ring:focus { 
+      outline: 2px solid #000; 
+      outline-offset: 2px; 
+    }
+    
+    .loading { 
+      opacity: 0.6; 
+      pointer-events: none; 
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes bounceSubtle {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
+      60% { transform: translateY(-2px); }
+    }
+
+    .cart-item {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cart-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    .quantity-btn {
+      transition: all 0.2s ease;
+    }
+
+    .quantity-btn:hover:not(:disabled) {
+      transform: scale(1.1);
+    }
+
+    .quantity-btn:active {
+      transform: scale(0.95);
+    }
+
+    .checkout-btn {
+      background: linear-gradient(135deg, #000 0%, #333 100%);
+      transition: all 0.3s ease;
+    }
+
+    .checkout-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #333 0%, #000 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .trust-badge {
+      transition: all 0.2s ease;
+    }
+
+    .trust-badge:hover {
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      transform: translateX(4px);
+    }
   </style>
 </head>
 
-<body class="min-h-full bg-white text-black">
+<body class="min-h-full bg-gradient-to-br from-gray-50 via-white to-gray-50 text-black">
   <%- include('../partials/header.ejs') %>
 
   <!-- Loading Overlay -->
-  <div id="loading-overlay" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg p-6 shadow-xl">
-      <div class="flex items-center gap-3">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
-        <span>Loading cart...</span>
+  <div id="loading-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-md z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 shadow-2xl animate-slide-up max-w-sm mx-4">
+      <div class="flex flex-col items-center gap-4">
+        <div class="relative">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-black"></div>
+          <div class="absolute inset-2 rounded-full bg-gray-100"></div>
+        </div>
+        <div class="text-center">
+          <h3 class="font-semibold text-lg">Loading your cart</h3>
+          <p class="text-gray-500 text-sm">Please wait a moment...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -47,115 +129,165 @@
   <!-- Main Content -->
   <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
     <!-- Cart Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
       <div>
-        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Your Cart</h1>
-        <p id="cart-count" class="mt-1 text-black/60 text-sm">Loading...</p>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-black via-gray-800 to-black bg-clip-text text-transparent">
+          Your Cart
+        </h1>
+        <p id="cart-count" class="mt-2 text-black/60 font-medium">Loading...</p>
       </div>
-      <a href="/user/product/list" class="text-sm text-black/70 hover:text-black transition">Continue Shopping</a>
+      <a href="/user/product/list" 
+         class="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-black/70 hover:text-black bg-white rounded-full border border-black/10 hover:border-black/20 transition-all duration-200 hover:shadow-card">
+        <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+        </svg>
+        Continue Shopping
+      </a>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
       <!-- Cart Items -->
       <section class="lg:col-span-2">
         <!-- Empty State -->
-        <div id="empty-state" class="hidden rounded-xl border border-dashed border-black/15 p-10 text-center bg-ash/40">
-          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-black/5">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <div id="empty-state" class="hidden rounded-2xl border-2 border-dashed border-black/10 p-12 text-center bg-gradient-to-br from-gray-50 to-white animate-fade-in">
+          <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-200 animate-bounce-subtle">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5m2.5-5L9 15"/>
             </svg>
           </div>
-          <h3 class="text-lg font-semibold mb-2">Your cart is empty</h3>
-          <p class="text-black/60 mb-6">Discover amazing products and add your favorites.</p>
-          <a href="/user/product/list" class="inline-flex items-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white hover:bg-black/90 transition">
+          <h3 class="text-2xl font-bold mb-3 text-gray-800">Your cart is empty</h3>
+          <p class="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+            Discover amazing products and add your favorites to get started with your shopping journey.
+          </p>
+          <a href="/user/product/list" 
+             class="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-black to-gray-800 px-8 py-4 text-sm font-semibold text-white hover:from-gray-800 hover:to-black transition-all duration-300 hover:shadow-2xl hover:scale-105">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
             Start Shopping
           </a>
         </div>
 
         <!-- Cart Items Container -->
-        <div id="cart-items" class="space-y-4"></div>
+        <div id="cart-items" class="space-y-6"></div>
       </section>
 
       <!-- Order Summary -->
       <aside class="lg:col-span-1">
-        <div class="sticky top-24">
-          <div class="rounded-xl border border-black/10 bg-ash/30 p-6 shadow-smooth">
-            <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+        <div class="sticky top-24 animate-fade-in" style="animation-delay: 0.2s;">
+          <div class="rounded-2xl border border-black/10 bg-gradient-to-br from-white via-gray-50/50 to-white p-8 shadow-smooth backdrop-blur-sm">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-2 h-8 bg-gradient-to-b from-black to-gray-600 rounded-full"></div>
+              <h2 class="text-xl font-bold">Order Summary</h2>
+            </div>
             
-            <dl class="space-y-3 text-sm">
-              <div class="flex justify-between">
-                <dt class="text-black/70">Items (<span id="summary-items">0</span>)</dt>
-                <dd id="summary-subtotal" class="font-medium">₹0</dd>
+            <dl class="space-y-4 text-sm">
+              <div class="flex justify-between items-center py-2">
+                <dt class="text-black/70 font-medium">Items (<span id="summary-items" class="font-semibold">0</span>)</dt>
+                <dd id="summary-subtotal" class="font-bold text-lg">₹0</dd>
               </div>
-              <div class="flex justify-between">
-                <dt class="text-black/70">Delivery</dt>
-                <dd id="summary-delivery" class="font-medium">₹0</dd>
+              <div class="flex justify-between items-center py-2">
+                <dt class="text-black/70 font-medium">Delivery</dt>
+                <dd id="summary-delivery" class="font-semibold">₹0</dd>
               </div>
-              <div class="flex justify-between">
-                <dt class="text-black/70">GST (18%)</dt>
-                <dd id="summary-tax" class="font-medium">₹0</dd>
+              <div class="flex justify-between items-center py-2">
+                <dt class="text-black/70 font-medium">GST (18%)</dt>
+                <dd id="summary-tax" class="font-semibold">₹0</dd>
               </div>
-              <div class="border-t border-black/10 pt-3">
-                <div class="flex justify-between text-base font-semibold">
+              <div class="border-t-2 border-black/10 pt-4 mt-4">
+                <div class="flex justify-between items-center text-lg font-bold">
                   <dt>Total</dt>
-                  <dd id="summary-total">₹0</dd>
+                  <dd id="summary-total" class="text-2xl bg-gradient-to-r from-black to-gray-600 bg-clip-text text-transparent">₹0</dd>
                 </div>
               </div>
             </dl>
 
             <!-- Free Shipping Progress -->
-            <div id="free-shipping-progress" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p class="text-sm text-blue-800" id="shipping-text">
-                Add more for free delivery
-              </p>
-              <div class="mt-2 w-full bg-blue-200 rounded-full h-2">
-                <div id="shipping-progress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            <div id="free-shipping-progress" class="hidden mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50">
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586l-2 2V6H5v12h6v2H4a1 1 0 01-1-1V4z"/>
+                  <path d="M17 12l-2-2v4l2-2zm4 0l-2-2v4l2-2z"/>
+                </svg>
+                <p class="text-sm font-semibold text-blue-800" id="shipping-text">
+                  Add more for free delivery
+                </p>
+              </div>
+              <div class="w-full bg-blue-200/50 rounded-full h-3">
+                <div id="shipping-progress" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
               </div>
             </div>
 
             <!-- Checkout Button -->
-            <div id="checkout-section">
-              <form action="/user/checkout" method="GET" class="mt-6">
+            <div id="checkout-section" class="mt-8">
+              <form action="/user/checkout" method="GET">
                 <button type="submit" id="checkout-btn"
-                        class="w-full rounded-full bg-black py-3 text-sm font-semibold text-white hover:bg-black/90 transition focus-ring disabled:opacity-50 disabled:cursor-not-allowed">
-                  Proceed to Checkout
+                        class="checkout-btn w-full rounded-2xl py-4 text-base font-bold text-white focus-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                  <span class="flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Proceed to Checkout
+                  </span>
                 </button>
               </form>
             </div>
 
             <!-- Clear Cart -->
             <button id="clear-cart-btn" 
-                    class="mt-3 w-full text-sm text-red-600 hover:text-red-800 transition">
-              Clear Cart
+                    class="mt-4 w-full text-sm font-medium text-red-500 hover:text-red-700 py-3 rounded-xl hover:bg-red-50 transition-all duration-200">
+              <span class="flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Clear Cart
+              </span>
             </button>
           </div>
 
           <!-- Trust Badges -->
-          <div class="mt-6 space-y-3 text-sm text-black/70">
-            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M9 12l2 2 4-4"/>
-                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
-                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
-                <path d="M3 12h6m6 0h6"/>
-              </svg>
-              <span>Secure Payment</span>
+          <div class="mt-8 space-y-4">
+            <div class="trust-badge flex items-center gap-4 rounded-xl border border-black/10 bg-white px-6 py-4 shadow-card">
+              <div class="flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                  <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                  <path d="M3 12h6m6 0h6"/>
+                </svg>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-800">Secure Payment</div>
+                <div class="text-sm text-gray-500">SSL encrypted checkout</div>
+              </div>
             </div>
-            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="8.5" cy="7" r="4"/>
-                <path d="M20 8v6"/>
-                <path d="M23 11h-6"/>
-              </svg>
-              <span>24/7 Support</span>
+            
+            <div class="trust-badge flex items-center gap-4 rounded-xl border border-black/10 bg-white px-6 py-4 shadow-card">
+              <div class="flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <path d="M20 8v6"/>
+                  <path d="M23 11h-6"/>
+                </svg>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-800">24/7 Support</div>
+                <div class="text-sm text-gray-500">Always here to help</div>
+              </div>
             </div>
-            <div class="flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9,22 9,12 15,12 15,22"/>
-              </svg>
-              <span>Easy Returns</span>
+            
+            <div class="trust-badge flex items-center gap-4 rounded-xl border border-black/10 bg-white px-6 py-4 shadow-card">
+              <div class="flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9,22 9,12 15,12 15,22"/>
+                </svg>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-800">Easy Returns</div>
+                <div class="text-sm text-gray-500">30-day return policy</div>
+              </div>
             </div>
           </div>
         </div>
@@ -180,21 +312,24 @@
 
       showLoading() {
         this.loadingOverlay.classList.remove('hidden');
+        document.body.classList.add('loading');
       }
 
       hideLoading() {
         this.loadingOverlay.classList.add('hidden');
+        document.body.classList.remove('loading');
       }
 
-      // API Methods using proper HTTP methods
       async apiCall(url, options = {}) {
         try {
           const response = await fetch(url, {
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
               ...options.headers
             },
+            cache: 'no-store',
             ...options
           });
 
@@ -213,16 +348,28 @@
 
       async loadCart() {
         try {
-          const result = await this.apiCall('/user/api/cart');
+          console.log('Fetching cart data at:', new Date().toISOString());
+          const result = await this.apiCall(`/user/api/cart?t=${Date.now()}`);
+          console.log('Cart API response:', result.data.items.map(item => ({
+            variantId: item.variantId,
+            productName: item.productName,
+            size: item.size,
+            stock: item.stock
+          })));
           this.cartData = result.data;
           this.render();
+
+          if (window.headerUpdater) {
+      window.headerUpdater.triggerUpdate();
+    }
         } catch (error) {
-          this.showError('Failed to load cart: ' + error.message);
+          this.showError('Failed to load cart', error.message);
         }
       }
 
       async updateQuantity(variantId, action, directQuantity = null) {
         try {
+          this.showLoading();
           const body = directQuantity !== null ? { quantity: directQuantity } : { action };
           
           const result = await this.apiCall(`/user/api/cart/item/${variantId}`, {
@@ -237,37 +384,99 @@
           await this.loadCart(); // Refresh cart data
           return result;
         } catch (error) {
-          this.showError('Failed to update quantity: ' + error.message);
+          this.showError('Update Failed', error.message);
           throw error;
+        } finally {
+          this.hideLoading();
         }
       }
 
       async removeItem(variantId) {
+        const result = await Swal.fire({
+          title: 'Remove Item?',
+          text: 'This item will be removed from your cart.',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, remove it',
+          cancelButtonText: 'Keep it',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl px-6 py-3',
+            cancelButton: 'rounded-xl px-6 py-3'
+          }
+        });
+
+        if (!result.isConfirmed) return;
+
         try {
+          this.showLoading();
           await this.apiCall(`/user/api/cart/item/${variantId}`, {
             method: 'DELETE'
           });
 
           this.removeItemFromDOM(variantId);
-          await this.loadCart(); // Refresh cart data
+          await this.loadCart();
+          
+          Swal.fire({
+            title: 'Removed!',
+            text: 'Item has been removed from your cart.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: {
+              popup: 'rounded-2xl'
+            }
+          });
         } catch (error) {
-          this.showError('Failed to remove item: ' + error.message);
+          this.showError('Remove Failed', error.message);
+        } finally {
+          this.hideLoading();
         }
       }
 
       async clearCart() {
-        try {
-          if (!confirm('Are you sure you want to clear your entire cart?')) {
-            return;
+        const result = await Swal.fire({
+          title: 'Clear Entire Cart?',
+          text: 'All items will be removed from your cart. This action cannot be undone.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, clear cart',
+          cancelButtonText: 'Cancel',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl px-6 py-3',
+            cancelButton: 'rounded-xl px-6 py-3'
           }
+        });
 
+        if (!result.isConfirmed) return;
+
+        try {
+          this.showLoading();
           await this.apiCall('/user/api/cart', {
             method: 'DELETE'
           });
 
-          await this.loadCart(); // Refresh cart data
+          await this.loadCart();
+          
+          Swal.fire({
+            title: 'Cart Cleared!',
+            text: 'Your cart has been cleared successfully.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: {
+              popup: 'rounded-2xl'
+            }
+          });
         } catch (error) {
-          this.showError('Failed to clear cart: ' + error.message);
+          this.showError('Clear Failed', error.message);
+        } finally {
+          this.hideLoading();
         }
       }
 
@@ -284,12 +493,6 @@
         return '₹' + Math.round(amount).toLocaleString('en-IN');
       }
 
-      render() {
-        this.renderItems();
-        this.renderSummary();
-        this.renderFreeShippingProgress();
-      }
-
       renderItems() {
         const container = document.getElementById('cart-items');
         const emptyState = document.getElementById('empty-state');
@@ -302,111 +505,129 @@
 
         emptyState.classList.add('hidden');
         
-        container.innerHTML = this.cartData.items.map(item => `
-          <div class="rounded-xl border border-black/10 bg-white p-4 shadow-sm transition-all duration-200" data-variant="${item.variantId}">
-            <div class="flex flex-col sm:flex-row gap-4">
-              <!-- Product Image -->
-              <div class="flex-shrink-0">
-                <img src="${item.image}" 
-                     alt="${item.productName}" 
-                     class="h-32 w-32 rounded-lg object-cover border border-black/10"
-                     onerror="this.src='/images/placeholder.png'"/>
-              </div>
-
-              <!-- Product Details -->
-              <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <!-- Product Info -->
-                <div class="lg:col-span-7">
-                  <div class="flex justify-between items-start">
-                    <div class="flex-1 min-w-0">
-                      <h3 class="font-semibold text-lg truncate">${item.productName}</h3>
-                      <p class="text-sm text-black/60 line-clamp-2">${item.description}</p>
-                      <div class="mt-2 flex items-center gap-3 text-sm text-black/50">
-                        <span>Brand: ${item.brand}</span>
-                        <span>•</span>
-                        <span>Size: ${item.size}</span>
-                      </div>
-                      
-                      <!-- Stock Info -->
-                      <div class="mt-2">
-                        ${item.stock <= 5 ? 
-                          `<span class="text-xs text-red-600 font-medium">Only ${item.stock} left in stock</span>` :
-                          `<span class="text-xs text-green-600">In stock</span>`
-                        }
-                      </div>
-                    </div>
-
-                    <!-- Remove Button -->
-                    <button type="button" 
-                            class="ml-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 hover:bg-black/5 remove-btn transition" 
-                            data-variant="${item.variantId}"
-                            title="Remove item">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/>
-                        <path d="M10 11v6M14 11v6"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  <!-- Quantity Controls -->
-                  <div class="mt-4 flex items-center gap-3">
-                    <div class="inline-flex items-center rounded-full border border-black/10 bg-ash/50">
-                      <button type="button" 
-                              class="h-9 w-9 inline-flex items-center justify-center rounded-l-full hover:bg-black/5 qty-dec transition" 
-                              data-variant="${item.variantId}"
-                              ${item.quantity <= 1 ? 'disabled' : ''}>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M5 12h14"/>
-                        </svg>
-                      </button>
-                      <span class="px-3 py-2 text-sm font-medium qty-val" data-variant="${item.variantId}">
-                        ${item.quantity}
-                      </span>
-                      <button type="button" 
-                              class="h-9 w-9 inline-flex items-center justify-center rounded-r-full hover:bg-black/5 qty-inc transition" 
-                              data-variant="${item.variantId}"
-                              ${item.quantity >= 5 || item.quantity >= item.stock ? 'disabled' : ''}>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                      </button>
-                    </div>
-                    <span class="text-xs text-black/50">Max 5 per item</span>
+        container.innerHTML = this.cartData.items.map(item => {
+          console.log(`Rendering item: variantId=${item.variantId}, productName=${item.productName}, size=${item.size}, stock=${item.stock}`);
+          return `
+            <div class="cart-item rounded-2xl border border-black/10 bg-white p-6 shadow-card" data-variant="${item.variantId}">
+              <div class="flex flex-col sm:flex-row gap-6">
+                <!-- Product Image -->
+                <div class="flex-shrink-0">
+                  <div class="relative group">
+                    <img src="${item.image}" 
+                         alt="${item.productName}" 
+                         class="h-36 w-36 rounded-xl object-cover border border-black/10 group-hover:scale-105 transition-transform duration-300"
+                         onerror="this.src='/images/placeholder.png'"/>
+                    <div class="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                 </div>
 
-                <!-- Pricing -->
-                <div class="lg:col-span-5 flex items-center justify-between lg:justify-end lg:text-right">
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2 lg:justify-end">
-                      ${item.hasDiscount ? `
-                        <span class="text-sm text-black/40 line-through">${this.formatINR(item.regularPrice)}</span>
-                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                          ${item.discountPercent}% OFF
-                        </span>
-                      ` : ''}
+                <!-- Product Details -->
+                <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <!-- Product Info -->
+                  <div class="lg:col-span-7">
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-xl text-gray-900 mb-2">${item.productName}</h3>
+                        <p class="text-gray-600 line-clamp-2 mb-3">${item.description}</p>
+                        <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                          <span class="bg-gray-100 px-3 py-1 rounded-full font-medium">${item.brand}</span>
+                          <span class="bg-gray-100 px-3 py-1 rounded-full font-medium">Size: ${item.size}</span>
+                        </div>
+                        
+                        <!-- Stock Info -->
+                        <div class="mb-4">
+                          ${item.stock <= 5 ? 
+                            `<span class="inline-flex items-center gap-1 text-xs text-red-600 font-semibold bg-red-50 px-3 py-1 rounded-full">
+                              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                              </svg>
+                              Only ${item.stock} left
+                            </span>` :
+                            `<span class="inline-flex items-center gap-1 text-xs text-green-600 font-semibold bg-green-50 px-3 py-1 rounded-full">
+                              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                              </svg>
+                              In Stock
+                            </span>`
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Remove Button -->
+                      <button type="button" 
+                              class="ml-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 remove-btn transition-all duration-200" 
+                              data-variant="${item.variantId}"
+                              title="Remove item">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/>
+                          <path d="M10 11v6M14 11v6"/>
+                        </svg>
+                      </button>
                     </div>
-                    <div class="text-lg font-bold">${this.formatINR(item.salePrice)}</div>
-                    <div class="text-sm text-black/60">per item</div>
+
+                    <!-- Quantity Controls -->
+                    <div class="flex items-center gap-4">
+                      <div class="inline-flex items-center rounded-2xl border border-black/10 bg-gray-50/50">
+                        <button type="button" 
+                                class="quantity-btn h-12 w-12 inline-flex items-center justify-center rounded-l-2xl hover:bg-black hover:text-white transition-all duration-200" 
+                                data-variant="${item.variantId}"
+                                ${item.quantity <= 1 ? 'disabled' : ''}>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14"/>
+                          </svg>
+                        </button>
+                        <input type="number" 
+                               class="qty-input w-16 text-center text-base font-bold bg-transparent focus:outline-none" 
+                               data-variant="${item.variantId}" 
+                               value="${item.quantity}" 
+                               min="1" 
+                               max="${Math.min(item.stock, 5)}">
+                        <button type="button" 
+                                class="quantity-btn h-12 w-12 inline-flex items-center justify-center rounded-r-2xl hover:bg-black hover:text-white qty-inc transition-all duration-200" 
+                                data-variant="${item.variantId}"
+                                ${item.quantity >= 5 || item.quantity >= item.stock ? 'disabled' : ''}>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <span class="text-xs text-gray-500 font-medium">Max 5 per item</span>
+                    </div>
                   </div>
-                  <div class="lg:ml-6">
-                    <div class="text-sm text-black/60">Subtotal</div>
-                    <div class="text-xl font-bold item-subtotal" data-variant="${item.variantId}">
-                      ${this.formatINR(item.itemTotal)}
+
+                  <!-- Pricing -->
+                  <div class="lg:col-span-5 flex items-center justify-between lg:justify-end lg:text-right">
+                    <div class="space-y-2">
+                      ${item.hasDiscount ? `
+                        <div class="flex items-center gap-3 lg:justify-end">
+                          <span class="text-lg text-gray-400 line-through">${this.formatINR(item.regularPrice)}</span>
+                          <span class="text-xs bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full font-bold">
+                            ${item.discountPercent}% OFF
+                          </span>
+                        </div>
+                      ` : ''}
+                      <div class="text-2xl font-bold text-gray-900">${this.formatINR(item.salePrice)}</div>
+                      <div class="text-sm text-gray-500 font-medium">per item</div>
+                    </div>
+                    <div class="lg:ml-8">
+                      <div class="text-sm text-gray-500 font-medium mb-1">Subtotal</div>
+                      <div class="text-3xl font-bold bg-gradient-to-r from-black to-gray-600 bg-clip-text text-transparent item-subtotal" data-variant="${item.variantId}">
+                        ${this.formatINR(item.itemTotal)}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
 
       renderSummary() {
         const { totals } = this.cartData;
         
         document.getElementById('cart-count').textContent = 
-          `Total ${totals.itemCount} item${totals.itemCount !== 1 ? 's' : ''} in your cart`;
+          `${totals.itemCount} item${totals.itemCount !== 1 ? 's' : ''} in your cart`;
         document.getElementById('summary-items').textContent = totals.itemCount;
         document.getElementById('summary-subtotal').textContent = this.formatINR(totals.subtotal);
         document.getElementById('summary-tax').textContent = this.formatINR(totals.tax);
@@ -414,19 +635,32 @@
         
         const deliveryEl = document.getElementById('summary-delivery');
         if (totals.deliveryCharge === 0) {
-          deliveryEl.innerHTML = '<span class="text-green-600">FREE</span>';
+          deliveryEl.innerHTML = '<span class="text-green-600 font-bold">FREE</span>';
         } else {
           deliveryEl.textContent = this.formatINR(totals.deliveryCharge);
         }
 
-        // Enable/disable checkout
         const checkoutBtn = document.getElementById('checkout-btn');
         if (totals.itemCount === 0) {
           checkoutBtn.disabled = true;
-          checkoutBtn.textContent = 'Cart is Empty';
+          checkoutBtn.innerHTML = `
+            <span class="flex items-center justify-center gap-3">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+              </svg>
+              Cart is Empty
+            </span>
+          `;
         } else {
           checkoutBtn.disabled = false;
-          checkoutBtn.textContent = 'Proceed to Checkout';
+          checkoutBtn.innerHTML = `
+            <span class="flex items-center justify-center gap-3">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Proceed to Checkout
+            </span>
+          `;
         }
       }
 
@@ -447,8 +681,13 @@
         }
       }
 
+      render() {
+        this.renderItems();
+        this.renderSummary();
+        this.renderFreeShippingProgress();
+      }
+
       bindEvents() {
-        // Quantity controls
         document.addEventListener('click', async (e) => {
           const target = e.target.closest('button');
           if (!target) return;
@@ -459,24 +698,27 @@
           try {
             if (target.classList.contains('qty-inc')) {
               await this.updateQuantity(variantId, 'increment');
-            } else if (target.classList.contains('qty-dec')) {
+            } else if (target.classList.contains('quantity-btn') && !target.classList.contains('qty-inc')) {
               await this.updateQuantity(variantId, 'decrement');
             } else if (target.classList.contains('remove-btn')) {
-              if (confirm('Remove this item from your cart?')) {
-                await this.removeItem(variantId);
-              }
+              await this.removeItem(variantId);
             }
           } catch (error) {
             console.error('Action failed:', error);
           }
         });
 
-        // Clear cart
         document.getElementById('clear-cart-btn').addEventListener('click', () => {
           this.clearCart();
         });
 
-        // Direct quantity input (optional enhancement)
+        // Handle navigation events to refresh cart
+        window.addEventListener('popstate', async () => {
+          console.log('Navigation event detected, reloading cart');
+          await this.loadCart();
+        });
+
+        // Handle direct quantity input
         document.addEventListener('change', async (e) => {
           if (e.target.matches('.qty-input')) {
             const variantId = e.target.dataset.variant;
@@ -485,23 +727,27 @@
               await this.updateQuantity(variantId, null, quantity);
             } catch (error) {
               console.error('Quantity update failed:', error);
+              this.showError('Invalid Quantity', 'Please enter a valid quantity between 1 and 5 or available stock.');
             }
           }
         });
       }
 
-      showError(message) {
-        // You can replace this with a proper toast notification
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
-        errorDiv.textContent = message;
-        document.body.appendChild(errorDiv);
-        
-        setTimeout(() => errorDiv.remove(), 5000);
+      showError(title, message) {
+        Swal.fire({
+          title: title,
+          text: message,
+          icon: 'error',
+          confirmButtonColor: '#ef4444',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl px-6 py-3'
+          }
+        });
       }
     }
 
-    // Initialize cart
     document.addEventListener('DOMContentLoaded', () => {
       new CartAPI();
     });
