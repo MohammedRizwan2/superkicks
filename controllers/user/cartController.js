@@ -80,7 +80,7 @@ exports.getCart = async (req, res) => {
         });
     }
 
-    const deliveryCharge = subtotal >= 2999 || subtotal === 0 ? 0 : 129;
+    const deliveryCharge = subtotal >= 2999 || subtotal === 0 ? 0 : 100;
     const taxRate = 0.18;
     const tax = subtotal * taxRate;
     const total = subtotal + deliveryCharge + tax;

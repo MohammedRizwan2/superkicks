@@ -397,7 +397,6 @@ async function calculateOrderRefundAmount(order) {
     return order.total;
   }
 }
-
 async function updateOverallOrderStatus(orderId) {
   try {
     const order = await Order.findById(orderId);
@@ -405,47 +404,61 @@ async function updateOverallOrderStatus(orderId) {
 
     if (!orderItems.length) return;
 
-    // Filter active items (not cancelled or returned)
+   
     const activeItems = orderItems.filter(item => 
-      !item.isCancelled && !item.isReturned
+      !['Cancelled', 'Returned'].includes(item.status)
     );
+    
+  
+    const allItemStatuses = orderItems.map(item => item.status);
 
+    let newOrderStatus = order.status; 
+
+    
     if (activeItems.length === 0) {
-      order.status = 'Cancelled';
-      order.isCancelled = true;
-      await order.save();
-      return;
+      if (allItemStatuses.every(status => status === 'Cancelled')) {
+        
+        newOrderStatus = 'Cancelled';
+      } else if (allItemStatuses.every(status => status === 'Returned')) {
+        
+        newOrderStatus = 'Returned'; 
+      } else if (allItemStatuses.every(status => ['Cancelled', 'Returned', 'Delivered'].includes(status))) {
+       
+        if (allItemStatuses.includes('Returned')) {
+            newOrderStatus = 'Returned';
+        } else {
+           
+            newOrderStatus = 'Delivered'; 
+        }
+      }
     }
+    
+  
+    else {
+      
+        const currentActiveStatuses = activeItems.map(item => item.status);
 
-    // Get statuses of active items
-    const activeStatuses = activeItems.map(item => item.status);
+        if (currentActiveStatuses.every(status => status === 'Delivered')) {
+          newOrderStatus = 'Delivered';
+        }
 
-    let newOrderStatus = 'Pending';
-
-    // If any item is Return Requested, set to Return Requested
-    if (activeStatuses.some(status => status === 'Return Requested')) {
-      newOrderStatus = 'Return Requested';
-    } 
-    // All delivered
-    else if (activeStatuses.every(status => status === 'Delivered')) {
-      newOrderStatus = 'Delivered';
-    }
-    // Some in transit
-    else if (activeStatuses.some(status => 
-      ['Out for Delivery', 'Shipped'].includes(status))) {
-      newOrderStatus = activeStatuses.includes('Out for Delivery') ? 'Out for Delivery' : 'Shipped';
-    }
-    // Some processing
-    else if (activeStatuses.some(status => status === 'Processing')) {
-      newOrderStatus = 'Processing';
-    }
-    // Some confirmed
-    else if (activeStatuses.some(status => status === 'Confirmed')) {
-      newOrderStatus = 'Confirmed';
+        else if (currentActiveStatuses.some(status => 
+          ['Out for Delivery', 'Shipped'].includes(status))) {
+          newOrderStatus = currentActiveStatuses.includes('Out for Delivery') ? 'Out for Delivery' : 'Shipped';
+        }
+    
+        else if (currentActiveStatuses.some(status => status === 'Processing')) {
+          newOrderStatus = 'Processing';
+        }
+    
+        else if (currentActiveStatuses.some(status => status === 'Confirmed')) {
+          newOrderStatus = 'Confirmed';
+        }
     }
 
     if (newOrderStatus !== order.status) {
       order.status = newOrderStatus;
+  
       await order.save();
     }
 
@@ -453,7 +466,6 @@ async function updateOverallOrderStatus(orderId) {
     console.error('Update overall order status error:', error);
   }
 }
-
 exports.approveReturnRequest = async (req, res) => {
   try {
     const { itemId } = req.params;
