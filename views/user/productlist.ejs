@@ -444,29 +444,35 @@
           </div>
         `;
       } else {
-        document.getElementById('productsContainer').innerHTML = products.map(product => `
-          <a href="/user/products/${product._id}" class="group block">
-            <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-black hover:shadow-lg transition-all duration-300">
-              <div class="aspect-square bg-gray-100 overflow-hidden">
-                <img src="${product.images?.[0] || '/assets/placeholder.jpg'}" alt="${product.productName}"
-                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div class="p-5">
-                <h3 class="font-bold text-lg text-black mb-1 line-clamp-2">${product.productName}</h3>
-                <p class="text-sm text-gray-500 uppercase tracking-wider mb-3">${product.brand}</p>
-                ${product.bestOffer > 0 ? `
-                  <div class="flex items-center gap-3 flex-wrap">
-                    <span class="text-2xl font-bold text-black">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</span>
-                    <span class="text-lg line-through text-gray-400">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
-                    <span class="bg-black text-white px-3 py-1 rounded-full text-xs font-bold">${product.bestOffer}% OFF</span>
-                  </div>
-                ` : `
-                  <span class="text-2xl font-bold text-black">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
-                `}
-              </div>
+        document.getElementById('productsContainer').innerHTML = products.map(product => {
+  
+  const imageObj = product.images?.[0];
+  const imageUrl = (typeof imageObj === 'string' ? imageObj : imageObj?.url) || '/assets/placeholder.jpg';
+
+  return `
+    <a href="/user/products/${product._id}" class="group block">
+      <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-black hover:shadow-lg transition-all duration-300">
+        <div class="aspect-square bg-gray-100 overflow-hidden">
+          <img src="${imageUrl}" alt="${product.productName}"
+               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        </div>
+        <div class="p-5">
+          <h3 class="font-bold text-lg text-black mb-1 line-clamp-2">${product.productName}</h3>
+          <p class="text-sm text-gray-500 uppercase tracking-wider mb-3">${product.brand}</p>
+          ${product.bestOffer > 0 ? `
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-2xl font-bold text-black">₹${product.lowestSalePrice?.toFixed(2) || 'N/A'}</span>
+              <span class="text-lg line-through text-gray-400">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+              <span class="bg-black text-white px-3 py-1 rounded-full text-xs font-bold">${product.bestOffer}% OFF</span>
             </div>
-          </a>
-        `).join('');
+          ` : `
+            <span class="text-2xl font-bold text-black">₹${product.lowestPrice?.toFixed(2) || 'N/A'}</span>
+          `}
+        </div>
+      </div>
+    </a>
+  `;
+}).join('');
       }
 
       // Update pagination

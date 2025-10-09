@@ -93,8 +93,8 @@ const calculateOrderTotals = (cartItems, sessionCoupon = null) => {
   
   
   const finalSubtotal = subtotal - discount;
-
-  const deliveryCharge = finalSubtotal >= 2999 ? 0 : 129;
+   
+  const deliveryCharge = finalSubtotal >= 2999 ? 0 : 100;
   const tax = Math.round(finalSubtotal * 0.18);
   const total = finalSubtotal + tax + deliveryCharge;
 
@@ -832,7 +832,6 @@ exports.removeCoupon = async (req, res) => {
     });
   }
 };
-
 // Render checkout page
 exports.renderCheckout = async (req, res, next) => {
   try {
@@ -856,7 +855,30 @@ exports.renderCheckout = async (req, res, next) => {
       return res.redirect('/user/cart?error=empty-cart');
     }
 
-    // Filter out invalid items
+  
+    const stockErrors = [];
+    cart.items.forEach(item => {
+      if (item.variantId && item.quantity > item.variantId.stock) {
+        stockErrors.push({
+          productName: item.variantId.productId?.productName || 'Unknown Product',
+          size: item.variantId.size,
+          requested: item.quantity,
+          available: item.variantId.stock
+        });
+      }
+    });
+
+    if (stockErrors.length > 0) {
+      
+      
+   
+      
+   
+      return res.redirect('/user/cart?error=stock-mismatch');
+    }
+  
+
+
     const validItems = cart.items.filter(item => {
       return item.variantId &&
              item.variantId.productId &&
@@ -867,6 +889,7 @@ exports.renderCheckout = async (req, res, next) => {
     });
 
     if (validItems.length !== cart.items.length) {
+ 
       cart.items = validItems;
       await cart.save();
     }
@@ -876,15 +899,14 @@ exports.renderCheckout = async (req, res, next) => {
     }
 
     const wallet = await Wallet.findOne({ userId }).select('balance');
-    if (!wallet) {
-      return res.redirect('/user/cart?error=wallet-not-found');
-    }
+   
 
     const addresses = await Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
 
-  
+    // Calculate totals
     const totals = calculateOrderTotals(validItems, req.session.coupon);
     
+    // Process cart items for the view (existing logic remains)
     const cartItems = validItems.map(item => {
       const variant = item.variantId;
       const product = variant.productId;
@@ -910,6 +932,7 @@ exports.renderCheckout = async (req, res, next) => {
     
     const availableCoupons = await getAvailableCouponsForUser(userId, totals.subtotal);
 
+    // Render the checkout page (existing logic remains)
     res.render('user/checkout', {
       user: req.session.user,
       addresses: addresses.map(addr => ({

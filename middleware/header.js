@@ -23,7 +23,7 @@ const headerDataMiddleware = async (req, res, next) => {
     res.locals.wishCount = wish?.items?.length || 0;
     res.locals.isLoggedIn = true;
     res.locals.avatar = user?.avatar?.url || '/img/default-avatar.jpg';
-    res.locals.userName = user?.fullName || user?.name || 'User';
+    res.locals.userName = user?.fullName ||  'User';
 
     next();
   } catch (err) {
