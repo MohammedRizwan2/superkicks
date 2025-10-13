@@ -73,7 +73,6 @@
 <body class="min-h-full bg-white text-black">
   <%- include('../partials/header') %>
 
-  <!-- Hidden div to store user data -->
   <div id="user-data-container" 
        style="display: none;" 
        data-user="<%- encodeURIComponent(JSON.stringify({
@@ -83,7 +82,6 @@
        })) %>">
   </div>
 
-  <!-- Loading Overlay -->
   <div id="loading-overlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
     <div class="bg-white rounded-lg p-6 shadow-xl">
       <div class="flex items-center gap-3">
@@ -93,43 +91,37 @@
     </div>
   </div>
 
-  <!-- Main Content -->
-  <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+  <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
     
-    <!-- Header -->
-    <div class="mb-8 animate-fade-in">
-      <h1 class="text-2xl md:text-3xl font-bold tracking-tight">My Orders</h1>
-      <p class="mt-2 text-black/60">Track and manage all your orders</p>
+    <div class="mb-6 sm:mb-8 animate-fade-in">
+      <h1 class="text-xl md:text-3xl font-bold tracking-tight">My Orders</h1>
+      <p class="mt-1 text-sm text-black/60">Track and manage all your orders</p>
     </div>
 
-    <!-- Search and Filters -->
     <div class="mb-6 animate-fade-in">
       <div class="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         
-        <!-- Search Bar -->
-        <div class="flex-1 max-w-md">
+        <div class="w-full md:flex-1 md:max-w-md">
           <form id="search-form" class="relative">
             <input type="text" 
                    id="search-input"
                    name="search"
                    placeholder="Search by Order ID..."
                    value=""
-                   class="w-full pl-10 pr-4 py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-ash/30">
+                   class="w-full pl-10 pr-4 py-2 sm:py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-ash/30 text-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="h-4 w-4 sm:h-5 sm:w-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </form>
           
-          <!-- Search Results Dropdown -->
-          <div id="search-results" class="hidden absolute z-10 w-full max-w-md mt-1 bg-white border border-black/20 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+          <div id="search-results" class="hidden absolute z-10 w-full md:max-w-md mt-1 bg-white border border-black/20 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
         </div>
 
-        <!-- Status Filter -->
-        <div class="flex gap-3">
+        <div class="flex flex-1 md:flex-none gap-3 w-full sm:w-auto">
           <select id="status-filter" 
-                  class="px-4 py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-white">
+                  class="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-white text-sm">
             <option value="all">All Status</option>
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
@@ -141,56 +133,51 @@
           </select>
 
           <select id="payment-filter" 
-                  class="px-4 py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-white">
+                  class="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 bg-white text-sm">
             <option value="all">All Payments</option>
-            <option value="COD">Cash on Delivery</option>
-            <option value="RAZORPAY">Online Payment</option>
-            <option value="WALLET">Wallet Payment</option>
+            <option value="COD">COD</option>
+            <option value="RAZORPAY">Online</option>
+            <option value="WALLET">Wallet</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- Orders Container -->
     <div class="animate-fade-in">
       <div id="orders-container" class="space-y-4">
-        <!-- Loading state -->
         <div class="text-center py-12">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
           <p class="text-black/60">Loading your orders...</p>
         </div>
       </div>
 
-      <!-- Pagination Container -->
-      <div id="pagination-container" class="mt-8 flex items-center justify-between">
-        <!-- Pagination will be inserted here -->
-      </div>
+      <div id="pagination-container" class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        </div>
     </div>
   </main>
 
-  <!-- Cancel Modal -->
   <div id="cancel-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
+      <div class="bg-white rounded-xl shadow-2xl max-w-xs sm:max-w-md w-full">
+        <div class="p-4 sm:p-6">
           <h3 class="text-lg font-semibold mb-4">Cancel Order</h3>
-          <p class="text-black/70 mb-4">Are you sure you want to cancel this order? This action cannot be undone.</p>
+          <p class="text-sm text-black/70 mb-4">Are you sure you want to cancel this order? This action cannot be undone.</p>
           
           <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Reason (Optional)</label>
             <textarea id="cancel-reason" 
                       placeholder="Please provide a reason for cancellation..."
                       rows="3"
-                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"></textarea>
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"></textarea>
           </div>
 
           <div class="flex gap-3">
             <button id="cancel-modal-close"
-                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                    class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
               Keep Order
             </button>
             <button id="confirm-cancel"
-                    class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    class="flex-1 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
               Cancel Order
             </button>
           </div>
@@ -199,31 +186,30 @@
     </div>
   </div>
 
-  <!-- Return Modal -->
   <div id="return-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
+      <div class="bg-white rounded-xl shadow-2xl max-w-xs sm:max-w-md w-full">
+        <div class="p-4 sm:p-6">
           <h3 class="text-lg font-semibold mb-4">Request Return</h3>
-          <p class="text-black/70 mb-4">Please provide a reason for the return request. Our team will review and process your request.</p>
+          <p class="text-sm text-black/70 mb-4">Please provide a reason for the return request. Our team will review and process your request.</p>
           
           <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Return Reason *</label>
             <textarea id="return-reason" 
                       placeholder="Please describe why you want to return this order (minimum 10 characters)..."
                       rows="4"
-                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"
                       required></textarea>
             <div class="text-xs text-red-600 hidden" id="return-reason-error">Return reason is required (minimum 10 characters)</div>
           </div>
 
           <div class="flex gap-3">
             <button id="return-modal-close"
-                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                    class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
               Cancel
             </button>
             <button id="confirm-return"
-                    class="flex-1 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                    class="flex-1 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-sm">
               Submit Request
             </button>
           </div>
@@ -232,7 +218,6 @@
     </div>
   </div>
 
-  <!-- Enhanced Order List JavaScript -->
   <script>
     class OrderManager {
       constructor() {
@@ -361,8 +346,8 @@
           container.innerHTML = orders.map(order => `
             <a href="/user/orders/${order.referenceNo}" 
                class="block p-3 hover:bg-ash/30 transition border-b border-black/5 last:border-b-0">
-              <div class="font-medium">#${order.referenceNo}</div>
-              <div class="text-sm text-black/60">
+              <div class="font-medium text-sm">#${order.referenceNo}</div>
+              <div class="text-xs text-black/60">
                 ${new Date(order.orderDate).toLocaleDateString('en-IN')} • 
                 ${order.status} • 
                 ₹${order.total.toLocaleString('en-IN')}
@@ -427,35 +412,34 @@
         }
 
         container.innerHTML = orders.map(order => `
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 hover:border-black/20 transition ${order.status === 'Payment Failed' ? 'failed-payment-border' : ''}">
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 hover:border-black/20 transition ${order.status === 'Payment Failed' ? 'failed-payment-border' : ''}">
             ${order.status === 'Payment Failed' ? `
               <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 text-sm">
                   <i class="fas fa-exclamation-triangle text-red-600"></i>
                   <span class="text-red-800 font-medium">Payment Failed</span>
-                  <span class="text-red-600 text-sm">• Payment can be retried anytime</span>
+                  <span class="text-red-600 text-xs hidden sm:inline">• Payment can be retried anytime</span>
                 </div>
-                <p class="text-red-700 text-sm mt-1">Your payment could not be processed. Please retry the payment to confirm your order.</p>
+                <p class="text-red-700 text-xs mt-1 sm:hidden">Payment can be retried anytime</p>
               </div>
             ` : ''}
             
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               
-              <!-- Order Header -->
               <div class="flex-1">
-                <div class="flex items-center gap-3 mb-4">
-                  <h3 class="font-semibold text-lg">Order #${order.referenceNo}</h3>
-                  <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full ${this.getStatusClass(order.status)}">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                  <h3 class="font-semibold text-base sm:text-lg">Order #${order.referenceNo}</h3>
+                  <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${this.getStatusClass(order.status)}">
                     ${order.status}
                   </span>
-                  ${order.paymentMethod === 'COD' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">COD</span>' : ''}
-                  ${order.paymentMethod === 'RAZORPAY' && order.status !== 'Payment Failed' ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">PAID</span>' : ''}
-                  ${order.paymentMethod === 'RAZORPAY' && order.status === 'Payment Failed' ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">UNPAID</span>' : ''}
-                  ${order.paymentMethod === 'WALLET' ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">WALLET</span>' : ''}
-                  ${order.coupon ? `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">COUPON: ${order.coupon.code}</span>` : ''}
+                  ${order.paymentMethod === 'COD' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">COD</span>' : ''}
+                  ${order.paymentMethod === 'RAZORPAY' && order.status !== 'Payment Failed' ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">PAID</span>' : ''}
+                  ${order.paymentMethod === 'RAZORPAY' && order.status === 'Payment Failed' ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">UNPAID</span>' : ''}
+                  ${order.paymentMethod === 'WALLET' ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">WALLET</span>' : ''}
+                  ${order.coupon ? `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full hidden sm:inline">COUPON: ${order.coupon.code}</span>` : ''}
                 </div>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-black/70">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs sm:text-sm text-black/70">
                   <div>
                     <span class="block font-medium text-black">Order Date</span>
                     ${new Date(order.orderDate).toLocaleDateString('en-IN')}
@@ -464,7 +448,7 @@
                     <span class="block font-medium text-black">Items</span>
                     ${order.itemCount} item${order.itemCount !== 1 ? 's' : ''}
                   </div>
-                  <div>
+                  <div class="hidden md:block">
                     <span class="block font-medium text-black">Payment</span>
                     ${this.getPaymentMethodDisplay(order.paymentMethod)}
                   </div>
@@ -478,12 +462,11 @@
                   </div>
                 </div>
 
-                <!-- Coupon Information -->
                 ${order.coupon ? `
-                  <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div class="flex items-center gap-2 text-sm">
+                  <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg block md:hidden">
+                    <div class="flex items-center gap-2 text-xs">
                       <i class="fas fa-ticket-alt text-yellow-600"></i>
-                      <span class="font-medium text-yellow-800">Coupon Applied:</span>
+                      <span class="font-medium text-yellow-800">Coupon:</span>
                       <span class="text-yellow-700">${order.coupon.code}</span>
                       <span class="text-yellow-600">(-₹${order.coupon.discountAmount.toLocaleString('en-IN')})</span>
                     </div>
@@ -491,27 +474,23 @@
                 ` : ''}
               </div>
 
-              <!-- Action Buttons -->
-              <div class="flex flex-wrap gap-2">
-                <!-- View Details -->
+              <div class="flex flex-wrap gap-2 lg:flex-col lg:items-end">
                 <a href="/user/orders/${order.referenceNo}" 
-                   class="px-4 py-2 border border-black/20 text-black rounded-lg font-medium hover:bg-black/5 transition text-sm">
+                   class="px-3 py-1.5 border border-black/20 text-black rounded-lg font-medium hover:bg-black/5 transition text-xs sm:text-sm">
                   View Details
                 </a>
 
-                <!-- Download Invoice (only for successful orders) -->
                 ${order.status !== 'Payment Failed' ? `
                   <button onclick="downloadInvoice('${order.id}')"
-                          class="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-sm">
+                          class="px-3 py-1.5 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition text-xs sm:text-sm">
                     <i class="fas fa-download mr-1"></i>
                     Invoice
                   </button>
                 ` : ''}
 
-                <!-- Retry Payment Button (always available for Payment Failed orders) -->
                 ${order.canRetryPayment ? `
                   <button onclick="retryPayment('${order.id}')"
-                          class="retry-payment-btn px-4 py-2 text-white rounded-lg font-medium text-sm flex items-center gap-2">
+                          class="retry-payment-btn px-3 py-1.5 text-white rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1">
                     <i class="fas fa-redo-alt"></i>
                     Retry Payment
                   </button>
@@ -519,14 +498,14 @@
 
                 ${order.canCancel ? `
                   <button onclick="showCancelModal('${order.id}', 'order')"
-                          class="px-4 py-2 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition text-sm">
+                          class="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition text-xs sm:text-sm">
                     Cancel Order
                   </button>
                 ` : ''}
 
                 ${order.canReturn ? `
                   <button onclick="showReturnModal('${order.id}')"
-                          class="px-4 py-2 border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition text-sm">
+                          class="px-3 py-1.5 border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition text-xs sm:text-sm">
                     Return Order
                   </button>
                 ` : ''}
@@ -547,14 +526,14 @@
 
         container.style.display = 'flex';
         container.innerHTML = `
-          <div class="text-sm text-black/60">
+          <div class="text-xs sm:text-sm text-black/60">
             Showing orders ${pagination.startIndex}-${pagination.endIndex} of ${pagination.totalOrders}
           </div>
           
-          <div class="flex gap-2">
+          <div class="flex gap-1 sm:gap-2">
             ${pagination.hasPrev ? `
               <button onclick="orderManager.changePage(${pagination.currentPage - 1})"
-                      class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
+                      class="px-3 py-1.5 sm:px-4 sm:py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition text-xs sm:text-sm">
                 Previous
               </button>
             ` : ''}
@@ -564,7 +543,7 @@
               if (page > pagination.totalPages) return '';
               return `
                 <button onclick="orderManager.changePage(${page})"
-                        class="px-4 py-2 ${page === pagination.currentPage ? 'bg-black text-white' : 'border border-black/20 text-black hover:bg-black/5'} rounded-lg transition">
+                        class="px-3 py-1.5 sm:px-4 sm:py-2 ${page === pagination.currentPage ? 'bg-black text-white' : 'border border-black/20 text-black hover:bg-black/5'} rounded-lg transition text-xs sm:text-sm">
                   ${page}
                 </button>
               `;
@@ -572,7 +551,7 @@
             
             ${pagination.hasNext ? `
               <button onclick="orderManager.changePage(${pagination.currentPage + 1})"
-                      class="px-4 py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition">
+                      class="px-3 py-1.5 sm:px-4 sm:py-2 border border-black/20 text-black rounded-lg hover:bg-black/5 transition text-xs sm:text-sm">
                 Next
               </button>
             ` : ''}
