@@ -22,7 +22,7 @@ exports.getProducts = async (req, res) => {
     delete req.session.productEddited;
     const query = req.query.q ? req.query.q.trim() : '';
     const page = parseInt(req.query.page) || 1;
-    const limit = 5; 
+    const limit = 8; 
 
     
     const filter = {};
