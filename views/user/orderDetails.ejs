@@ -41,6 +41,7 @@
   <style>
     html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .focus-ring:focus { outline: 2px solid #000; outline-offset: 2px; }
+    /* Mobile-first adjustment for payment failed border */
     .failed-payment-border {
       background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
       border: 2px solid #ef4444;
@@ -76,7 +77,6 @@
 <body class="min-h-full bg-white text-black">
   <%- include('../partials/header') %>
 
-  <!-- Hidden data container -->
   <div id="order-data-container" 
        style="display: none;" 
        data-order="<%- encodeURIComponent(JSON.stringify(order)) %>"
@@ -85,7 +85,6 @@
        data-user="<%- encodeURIComponent(JSON.stringify(user)) %>">
   </div>
 
-  <!-- Loading Overlay -->
   <div id="loading-overlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
     <div class="bg-white rounded-lg p-6 shadow-xl">
       <div class="flex items-center gap-3">
@@ -95,22 +94,19 @@
     </div>
   </div>
 
-  <!-- Main Content -->
-  <main class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+  <main class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
     
-    <!-- Payment Failed Alert -->
     <% if (order.status === 'Payment Failed') { %>
-      <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl failed-payment-border animate-fade-in">
+      <div class="mb-4 sm:mb-6 p-4 bg-red-50 border border-red-200 rounded-xl failed-payment-border animate-fade-in">
         <div class="flex items-start gap-3">
           <i class="fas fa-exclamation-triangle text-red-600 text-xl mt-1"></i>
           <div class="flex-1">
-            <h3 class="text-lg font-semibold text-red-800 mb-2">Payment Failed</h3>
+            <h3 class="text-base sm:text-lg font-semibold text-red-800 mb-2">Payment Failed</h3>
             <p class="text-red-700 text-sm mb-3">
               Your payment could not be processed. You can retry the payment anytime to complete your order.
             </p>
-            <!-- Retry Payment Button -->
             <button id="retry-payment-btn" 
-                    class="retry-payment-btn px-6 py-3 text-white rounded-lg font-medium text-sm inline-flex items-center gap-2 no-print">
+                    class="retry-payment-btn px-4 py-2 text-white rounded-lg font-medium text-sm inline-flex items-center gap-2 no-print">
               <i class="fas fa-redo-alt"></i>
               Retry Payment Now
             </button>
@@ -119,55 +115,50 @@
       </div>
     <% } %>
     
-    <!-- Header -->
-    <div class="mb-8 animate-fade-in">
-      <div class="flex items-center justify-between mb-4">
+    <div class="mb-6 sm:mb-8 animate-fade-in">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Order Details</h1>
-          <nav class="mt-2 text-sm text-black/60">
+          <h1 class="text-xl md:text-3xl font-bold tracking-tight">Order Details</h1>
+          <nav class="mt-1 text-xs sm:text-sm text-black/60">
             <a href="/user/orders" class="hover:text-black">My Orders</a>
-            <span class="mx-2">&gt;</span>
+            <span class="mx-1 sm:mx-2">&gt;</span>
             <span class="text-black font-semibold">Order #<span id="order-reference-no"></span></span>
           </nav>
         </div>
         
-        <!-- Action Buttons -->
-        <div class="flex gap-3 no-print">
+        <div class="flex flex-wrap gap-2 no-print">
           <% if (order.status !== 'Payment Failed') { %>
             <button id="download-invoice" 
-                    class="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-black/90 transition focus-ring">
+                    class="flex items-center gap-1 px-3 py-2 text-xs sm:text-sm bg-black text-white rounded-lg font-medium hover:bg-black/90 transition focus-ring">
               <i class="fas fa-download"></i>
-              Download Invoice
+              <span class="hidden sm:inline">Download Invoice</span>
+              <span class="sm:hidden">Invoice</span>
             </button>
           <% } %>
 
-          <!-- Cancel Entire Order Button -->
           <button id="cancel-entire-order" 
-                  class="hidden flex items-center gap-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition">
+                  class="hidden flex items-center gap-1 px-3 py-2 text-xs sm:text-sm border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition">
             <i class="fas fa-times"></i>
-            Cancel Order
+            Cancel
           </button>
 
-          <!-- Return Order Button -->
           <button id="return-order" 
-                  class="hidden flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition">
+                  class="hidden flex items-center gap-1 px-3 py-2 text-xs sm:text-sm border border-orange-300 text-orange-700 rounded-lg font-medium hover:bg-orange-50 transition">
             <i class="fas fa-undo"></i>
-            Return Order
+            Return
           </button>
         </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
       
-      <!-- Order Information -->
       <div class="lg:col-span-2 space-y-6">
         
-        <!-- Order Summary Card -->
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
-          <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in">
+          <h2 class="text-base sm:text-lg font-semibold mb-4">Order Summary</h2>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-sm">
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span class="text-black/60">Order Number:</span>
@@ -187,10 +178,10 @@
               <div class="flex justify-between">
                 <span class="text-black/60">Order Status:</span>
                 <div class="flex items-center gap-2">
-                  <span id="order-status-badge" class="inline-flex px-3 py-1 text-sm font-semibold rounded-full"></span>
+                  <span id="order-status-badge" class="inline-flex px-3 py-1 text-xs font-semibold rounded-full"></span>
                 </div>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-center">
                 <span class="text-black/60">Total Amount:</span>
                 <span class="text-xl font-bold" id="total-amount-display"></span>
               </div>
@@ -203,52 +194,40 @@
             </div>
           </div>
 
-          <!-- Status Messages -->
           <div id="status-messages" class="mt-4">
-            <!-- Will be populated by JavaScript -->
-          </div>
+            </div>
         </div>
 
-        <!-- Shipping Address -->
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
-          <h2 class="text-lg font-semibold mb-4">Shipping Address</h2>
-          <div class="text-black/80 space-y-1" id="shipping-address">
-            <!-- Address will be populated by JavaScript -->
-          </div>
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in">
+          <h2 class="text-base sm:text-lg font-semibold mb-4">Shipping Address</h2>
+          <div class="text-sm text-black/80 space-y-1" id="shipping-address">
+            </div>
         </div>
 
-        <!-- Order Items -->
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
-          <h2 class="text-lg font-semibold mb-4">Order Items</h2>
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in">
+          <h2 class="text-base sm:text-lg font-semibold mb-4">Order Items</h2>
           <div class="space-y-4" id="order-items-container">
-            <!-- Items will be populated by JavaScript -->
-          </div>
+            </div>
         </div>
       </div>
 
-      <!-- Order Summary Sidebar -->
       <div class="lg:col-span-1">
         <div class="sticky top-6 space-y-6">
           
-          <!-- Enhanced Payment Summary with Discounts -->
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
-            <h2 class="text-lg font-semibold mb-4">Payment Summary</h2>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in">
+            <h2 class="text-base sm:text-lg font-semibold mb-4">Payment Summary</h2>
             <div class="space-y-3 text-sm" id="payment-summary-details">
-              <!-- Payment details will be populated by JavaScript -->
-            </div>
+              </div>
           </div>
 
-          <!-- Discount Breakdown -->
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in">
-            <h2 class="text-lg font-semibold mb-4">Savings & Discounts</h2>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in">
+            <h2 class="text-base sm:text-lg font-semibold mb-4">Savings & Discounts</h2>
             <div class="space-y-3 text-sm" id="discount-breakdown">
-              <!-- Discount details will be populated by JavaScript -->
-            </div>
+              </div>
           </div>
 
-          <!-- Order Actions -->
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in no-print">
-            <h2 class="text-lg font-semibold mb-4">Actions</h2>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in no-print">
+            <h2 class="text-base sm:text-lg font-semibold mb-4">Actions</h2>
             
             <div class="space-y-3">
               <a href="/user/orders" 
@@ -263,9 +242,8 @@
             </div>
           </div>
 
-          <!-- Support -->
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-6 animate-fade-in no-print">
-            <h2 class="text-lg font-semibold mb-4">Need Help?</h2>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 sm:p-6 animate-fade-in no-print">
+            <h2 class="text-base sm:text-lg font-semibold mb-4">Need Help?</h2>
             <div class="space-y-2 text-xs text-black/60">
               <a href="/contact" class="flex items-center gap-2 hover:text-black transition">
                 <i class="fas fa-comments"></i>
@@ -282,29 +260,28 @@
     </div>
   </main>
 
-  <!-- Cancel Order Modal -->
   <div id="cancel-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
+      <div class="bg-white rounded-xl shadow-2xl max-w-sm sm:max-w-md w-full">
+        <div class="p-4 sm:p-6">
           <h3 class="text-lg font-semibold mb-4" id="cancel-modal-title">Cancel Order</h3>
-          <p class="text-black/70 mb-4" id="cancel-modal-text">Are you sure you want to cancel this order? This action cannot be undone.</p>
+          <p class="text-sm text-black/70 mb-4" id="cancel-modal-text">Are you sure you want to cancel this order? This action cannot be undone.</p>
           
           <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Reason (Optional)</label>
             <textarea id="cancel-reason" 
                       placeholder="Please provide a reason for cancellation..."
                       rows="3"
-                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"></textarea>
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"></textarea>
           </div>
 
           <div class="flex gap-3">
             <button id="cancel-modal-close"
-                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                    class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
               Cancel
             </button>
             <button id="confirm-cancel"
-                    class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    class="flex-1 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
               Confirm Cancel
             </button>
           </div>
@@ -313,31 +290,30 @@
     </div>
   </div>
 
-  <!-- Return Order Modal -->
   <div id="return-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
+      <div class="bg-white rounded-xl shadow-2xl max-w-sm sm:max-w-md w-full">
+        <div class="p-4 sm:p-6">
           <h3 class="text-lg font-semibold mb-4">Request Return</h3>
-          <p class="text-black/70 mb-4">Please provide a reason for the return request. Our team will review and process your request.</p>
+          <p class="text-sm text-black/70 mb-4">Please provide a reason for the return request. Our team will review and process your request.</p>
           
           <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Return Reason *</label>
             <textarea id="return-reason" 
                       placeholder="Please describe why you want to return this order (minimum 10 characters)..."
                       rows="4"
-                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"
                       required></textarea>
             <div class="text-xs text-red-600 hidden" id="return-reason-error">Return reason is required (minimum 10 characters)</div>
           </div>
 
           <div class="flex gap-3">
             <button id="return-modal-close"
-                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                    class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
               Cancel
             </button>
             <button id="confirm-return"
-                    class="flex-1 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                    class="flex-1 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-sm">
               Submit Request
             </button>
           </div>
@@ -346,32 +322,31 @@
     </div>
   </div>
 
-  <!-- Individual Item Return Modal -->
   <div id="item-return-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
+      <div class="bg-white rounded-xl shadow-2xl max-w-sm sm:max-w-md w-full">
+        <div class="p-4 sm:p-6">
           <h3 class="text-lg font-semibold mb-4">Return Item</h3>
-          <p class="text-black/70 mb-2">Item: <span id="item-return-name" class="font-medium"></span></p>
-          <p class="text-black/70 mb-4">Please provide a reason for returning this specific item.</p>
+          <p class="text-sm text-black/70 mb-2">Item: <span id="item-return-name" class="font-medium"></span></p>
+          <p class="text-sm text-black/70 mb-4">Please provide a reason for returning this specific item.</p>
           
           <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Return Reason *</label>
             <textarea id="item-return-reason" 
                       placeholder="Please describe why you want to return this item (minimum 10 characters)..."
                       rows="4"
-                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                      class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"
                       required></textarea>
             <div class="text-xs text-red-600 hidden" id="item-return-reason-error">Return reason is required (minimum 10 characters)</div>
           </div>
 
           <div class="flex gap-3">
             <button id="item-return-modal-close"
-                    class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                    class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
               Cancel
             </button>
             <button id="confirm-item-return"
-                    class="flex-1 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                    class="flex-1 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-sm">
               Submit Request
             </button>
           </div>
@@ -379,32 +354,31 @@
       </div>
     </div>
   </div>
-<!-- Individual Item Cancel Modal -->
-<div id="item-cancel-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div id="item-cancel-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
   <div class="flex min-h-screen items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-      <div class="p-6">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm sm:max-w-md w-full">
+      <div class="p-4 sm:p-6">
         <h3 class="text-lg font-semibold mb-4">Cancel Item</h3>
-        <p class="text-black/70 mb-2">Item: <span id="item-cancel-name" class="font-medium"></span></p>
-        <p class="text-black/70 mb-4">Please provide a reason for cancelling this specific item.</p>
+        <p class="text-sm text-black/70 mb-2">Item: <span id="item-cancel-name" class="font-medium"></span></p>
+        <p class="text-sm text-black/70 mb-4">Please provide a reason for cancelling this specific item.</p>
         
         <div class="mb-4">
           <label class="block text-sm font-medium mb-2">Cancellation Reason *</label>
           <textarea id="item-cancel-reason" 
                     placeholder="Please describe why you want to cancel this item (minimum 10 characters)..."
                     rows="4"
-                    class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none"
+                    class="w-full p-3 border border-black/20 rounded-lg focus:outline-none focus:border-black/40 resize-none text-sm"
                     required></textarea>
           <div class="text-xs text-red-600 hidden" id="item-cancel-reason-error">Cancellation reason is required (minimum 10 characters)</div>
         </div>
 
         <div class="flex gap-3">
           <button id="item-cancel-modal-close"
-                  class="flex-1 py-3 border border-black/20 rounded-lg hover:bg-black/5 transition">
+                  class="flex-1 py-2 sm:py-3 border border-black/20 rounded-lg hover:bg-black/5 transition text-sm">
             Cancel
           </button>
           <button id="confirm-item-cancel"
-                  class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                  class="flex-1 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
             Confirm Cancel
           </button>
         </div>
@@ -412,7 +386,6 @@
     </div>
   </div>
 </div>
-  <!-- JavaScript -->
   <script>
     class UserOrderDetailsManager {
       constructor() {
@@ -512,7 +485,7 @@
         // Order status badge
         const statusBadge = document.getElementById('order-status-badge');
         statusBadge.textContent = order.status;
-        statusBadge.className = `inline-flex px-3 py-1 text-sm font-semibold rounded-full ${this.getStatusClass(order.status)}`;
+        statusBadge.className = `inline-flex px-3 py-1 text-xs sm:text-sm font-semibold rounded-full ${this.getStatusClass(order.status)}`;
         
         // Delivery estimate
         const deliveryElement = document.getElementById('delivery-estimate');
@@ -609,27 +582,24 @@
           
           return `
             <div class="flex flex-col sm:flex-row gap-4 p-4 bg-white/60 rounded-lg border border-black/5 ${isAffected ? 'opacity-60' : ''}">
-              <!-- Product Image -->
               <div class="flex-shrink-0">
                 <img src="${item.image || '/images/placeholder.png'}" 
                      alt="${item.productName}" 
-                     class="w-20 h-20 object-cover rounded border border-black/10 ${isAffected ? 'grayscale' : ''}"
+                     class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded border border-black/10 ${isAffected ? 'grayscale' : ''}"
                      onerror="this.src='/images/placeholder.png'">
               </div>
 
-              <!-- Product Details -->
               <div class="flex-1 min-w-0">
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div class="flex-1">
-                    <h3 class="font-semibold text-black truncate">
+                    <h3 class="font-semibold text-black truncate text-sm sm:text-base">
                       ${item.productName}
-                      ${item.returnRequested ? '<span class="text-xs text-orange-600 ml-2">(RETURN REQUESTED)</span>' : ''}
+                      ${item.returnRequested ? '<span class="text-xs text-orange-600 ml-2">(Rtrn Rqst)</span>' : ''}
                       ${item.returnApproved === false ? '<span class="text-xs text-green-600 ml-2">(DELIVERED)</span>' : ''}
-                      ${item.returnApproved === true ? '<span class="text-xs text-green-600 ml-2">(RETURN APPROVED)</span>' : ''}
+                      ${item.returnApproved === true ? '<span class="text-xs text-green-600 ml-2">(Rtrn Apprvd)</span>' : ''}
                     </h3>
-                    <p class="text-sm text-black/60">Size: ${item.size}</p>
+                    <p class="text-xs sm:text-sm text-black/60">Size: ${item.size}</p>
                     
-                    <!-- Pricing Details -->
                     <div class="mt-2 space-y-1">
                       ${item.regularPrice && item.regularPrice > item.price ? `
                         <div class="text-xs text-black/50">
@@ -646,35 +616,32 @@
                       ` : ''}
                     </div>
 
-                    <!-- Item Status -->
                     <div class="flex items-center gap-2 mt-2">
                       <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${this.getStatusClass(item.status)}">
                         ${item.status}
                       </span>
                     </div>
 
-                    <!-- Item Actions - INDIVIDUAL RETURN REQUEST -->
                     ${canReturnItem ? `
                       <div class="mt-3 no-print">
                         <button onclick="window.userOrderDetailsManager.showItemReturnModal('${item.id}', '${item.productName}')"
                                 class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
                           <i class="fas fa-undo"></i>
-                          Return This Item
+                          Return Item
                         </button>
                       </div>
                     ` : ''}
 
-                    <!-- Status Messages -->
                     ${item.cancellationReason ? `
                       <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                        <span class="font-medium text-red-800">Cancellation reason:</span>
+                        <span class="font-medium text-red-800">Cancel reason:</span>
                         <span class="text-red-700">${item.cancellationReason}</span>
                       </div>
                     ` : ''}
                     
                     ${item.returnRejectionReason ? `
                       <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                        <span class="font-medium text-red-800">Return rejection reason:</span>
+                        <span class="font-medium text-red-800">Rtrn rejection:</span>
                         <span class="text-red-700">${item.returnRejectionReason}</span>
                       </div>
                     ` : ''}
@@ -683,16 +650,15 @@
                       <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
                         <span class="font-medium text-orange-800">Return reason:</span>
                         <span class="text-orange-700">${item.returnReason}</span>
-                        ${item.returnRequestDate ? `<p class="text-xs text-orange-600 mt-1">Requested on: ${this.formatDate(item.returnRequestDate)}</p>` : ''}
+                        ${item.returnRequestDate ? `<p class="text-xs text-orange-600 mt-1">Requested: ${this.formatDate(item.returnRequestDate)}</p>` : ''}
                       </div>
                     ` : ''}
 
-                    <!-- Return Request Status -->
                     ${item.returnRequested && !item.returnApproved && item.returnApproved !== false ? `
                       <div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
                         <div class="flex items-center gap-1 text-amber-800">
                           <i class="fas fa-clock"></i>
-                          <span class="font-medium">Return request pending admin review</span>
+                          <span class="font-medium">Return request pending</span>
                         </div>
                       </div>
                     ` : ''}
@@ -706,20 +672,18 @@
                       </div>
                     ` : ''}
 
-                    <!-- Inside the order item template -->
-                   ${(['Pending', 'Confirmed'].includes(item.status) && !item.isCancelled) ? `
+                    ${(['Pending', 'Confirmed'].includes(item.status) && !item.isCancelled) ? `
                <div class="mt-3 no-print">
                  <button onclick="window.userOrderDetailsManager.showItemCancelModal('${item.id}', '${item.productName}')"
                               class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition mr-2">
                 <i class="fas fa-times"></i>
-                    Cancel This Item
+                    Cancel Item
                </button>
              </div>
                        ` : ''}
                   </div>
                   
-                  <!-- Pricing -->
-                  <div class="text-right">
+                  <div class="text-left sm:text-right mt-2 sm:mt-0">
                     <div class="text-sm text-black/60">
                       ₹${this.formatINR(item.price)} × ${item.quantity}
                     </div>
@@ -1209,60 +1173,60 @@
       }
 
       showItemCancelModal(itemId, itemName) {
-  this.currentItemId = itemId;
-  document.getElementById('item-cancel-name').textContent = itemName;
-  this.itemCancelModal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
+        this.currentItemId = itemId;
+        document.getElementById('item-cancel-name').textContent = itemName;
+        this.itemCancelModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
 
-closeItemCancelModal() {
-  this.itemCancelModal.classList.add('hidden');
-  document.body.style.overflow = '';
-  document.getElementById('item-cancel-reason').value = '';
-  document.getElementById('item-cancel-reason-error').classList.add('hidden');
-  this.currentItemId = null;
-}
+      closeItemCancelModal() {
+        this.itemCancelModal.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('item-cancel-reason').value = '';
+        document.getElementById('item-cancel-reason-error').classList.add('hidden');
+        this.currentItemId = null;
+      }
 
-async confirmItemCancel() {
-  const reasonInput = document.getElementById('item-cancel-reason');
-  const errorElement = document.getElementById('item-cancel-reason-error');
-  const reason = reasonInput.value.trim();
-  
-  if (reason.length < 10) {
-    errorElement.classList.remove('hidden');
-    reasonInput.focus();
-    return;
-  }
-  
-  errorElement.classList.add('hidden');
-  
-  try {
-    this.showLoading();
-    
-    const response = await fetch(`/user/api/orders/${this.data.order.id}/items/${this.currentItemId}/cancel`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ reason })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      this.showToast('success', result.message);
-      this.closeItemCancelModal();
-      setTimeout(() => window.location.reload(), 1000);
-    } else {
-      this.showToast('error', result.error);
-    }
-    
-  } catch (error) {
-    console.error('Item cancel error:', error);
-    this.showToast('error', 'Failed to cancel item');
-  } finally {
-    this.hideLoading();
-  }
-}
+      async confirmItemCancel() {
+        const reasonInput = document.getElementById('item-cancel-reason');
+        const errorElement = document.getElementById('item-cancel-reason-error');
+        const reason = reasonInput.value.trim();
+        
+        if (reason.length < 10) {
+          errorElement.classList.remove('hidden');
+          reasonInput.focus();
+          return;
+        }
+        
+        errorElement.classList.add('hidden');
+        
+        try {
+          this.showLoading();
+          
+          const response = await fetch(`/user/api/orders/${this.data.order.id}/items/${this.currentItemId}/cancel`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            this.showToast('success', result.message);
+            this.closeItemCancelModal();
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            this.showToast('error', result.error);
+          }
+          
+        } catch (error) {
+          console.error('Item cancel error:', error);
+          this.showToast('error', 'Failed to cancel item');
+        } finally {
+          this.hideLoading();
+        }
+      }
       async downloadInvoice() {
         try {
           this.showLoading();

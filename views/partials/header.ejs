@@ -7,18 +7,56 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  
   <style>
-    .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 1000; opacity: 0; transform: translateY(-20px); transition: opacity 0.3s, transform 0.3s; display: flex; align-items: center; }
+    /* ... (Toast and custom CSS remains the same for functionality) ... */
+    .toast { 
+      position: fixed; 
+      top: 20px; 
+      right: 20px; 
+      padding: 12px 20px; 
+      border-radius: 8px; 
+      color: white; 
+      font-weight: 500; 
+      z-index: 1000; 
+      opacity: 0; 
+      transform: translateY(-20px); 
+      transition: opacity 0.3s, transform 0.3s; 
+      display: flex; 
+      align-items: center; 
+    }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { background-color: #10B981; }
     .toast.error { background-color: #EF4444; }
     .count-badge { transition: all 0.3s ease; }
     .count-badge.updated { animation: bounce 0.6s ease; }
-    @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+    @keyframes bounce { 
+      0%, 100% { transform: scale(1); } 
+      50% { transform: scale(1.2); } 
+    }
     .modal-open { overflow: hidden; }
     .error-field { border-color: #ef4444 !important; }
+    
+    /* Mobile menu slide animation */
+    /* Set default hidden state using transform */
+    #mobileMenu {
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+      /* Ensure it's off-screen but visible enough to transition */
+      visibility: hidden; /* Added to keep focus state away when closed */
+    }
+    /* Active state overrides the hidden transform and makes it visible */
+    #mobileMenu.active {
+      transform: translateX(0);
+      visibility: visible;
+    }
+    .profile-card {
+        background: linear-gradient(135deg, #1f1f1f 0%, #000000 100%);
+        border: 1px solid #333;
+    }
   </style>
 </head>
+
 <body class="bg-white text-gray-900 font-sans tracking-wide"
       data-logged-in="<%= typeof isLoggedIn !== 'undefined' ? isLoggedIn : false %>"
       data-cart-count="<%= typeof cartCount !== 'undefined' ? cartCount : 0 %>"
@@ -26,67 +64,79 @@
       data-user-avatar="<%= typeof avatar !== 'undefined' ? avatar : '/img/default-avatar.jpg' %>"
       data-user-name="<%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>">
 
-  <!-- Header -->
-  <header class="sticky top-0 z-50 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/90">
-    <nav class="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
-      <!-- Logo -->
-      <a href="/" class="text-2xl font-extrabold tracking-[0.15em] text-white hover:text-gray-300 transition">
+  <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <nav class="mx-auto max-w-7xl flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+      <a href="/" class="text-xl sm:text-2xl font-black tracking-[0.1em] text-black hover:text-gray-700 transition">
         SUPERKICKS
       </a>
 
-      <!-- Desktop Navigation -->
-      <div class="hidden md:flex items-center gap-8">
-        <ul class="flex items-center gap-6 text-sm uppercase font-medium">
-          <li><a href="/" class="text-white hover:text-gray-300 transition">Home</a></li>
-          <li><a href="/user/product/list" class="text-white hover:text-gray-300 transition">Shop</a></li>
-          <li><a href="/user/categories" class="text-white hover:text-gray-300 transition">Categories</a></li>
+      <div class="hidden md:flex items-center gap-10">
+        <ul class="flex items-center gap-8 text-sm uppercase font-semibold">
+          <li><a href="/" class="text-black hover:text-red-600 transition tracking-wider">Home</a></li>
+          <li><a href="/user/product/list" class="text-black hover:text-red-600 transition tracking-wider">Shop</a></li>
+          <li><a href="/user/categories" class="text-black hover:text-red-600 transition tracking-wider">Categories</a></li>
         </ul>
+        
         <div class="flex items-center gap-4">
-          <div id="authSection" class="flex items-center gap-3">
+          <div id="authSection" class="flex items-center gap-4">
             <% if (typeof isLoggedIn !== 'undefined' && !isLoggedIn) { %>
-              <a href="/user/login" class="px-4 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
+              <a href="/user/login" class="px-4 py-2 rounded-lg border-2 border-black text-black hover:bg-black hover:text-white transition font-semibold text-sm shadow-sm hover:shadow-md">
                 Login
               </a>
-              <a href="/user/signup" class="px-4 py-2 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
+              <a href="/user/signup" class="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition font-semibold text-sm shadow-md">
                 Sign Up
               </a>
             <% } else { %>
-              <a href="/user/cart" class="relative text-white hover:text-gray-300 transition p-2 flex items-center">
-                <i class="fas fa-shopping-bag text-xl"></i>
-                <span id="cartCount" class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center count-badge">
-                  <%= typeof cartCount !== 'undefined' ? cartCount : 0 %>
-                </span>
+              <a href="/user/cart" class="relative text-black hover:text-gray-600 transition p-2 flex items-center">
+                <i class="fas fa-shopping-bag text-xl sm:text-2xl"></i>
+                <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                  <span id="cartCount" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center count-badge border-2 border-white">
+                    <%= cartCount > 99 ? '99+' : cartCount %>
+                  </span>
+                <% } %>
               </a>
-              <a href="/user/wishlist" class="relative text-white hover:text-gray-300 transition p-2 flex items-center">
-                <i class="far fa-heart text-xl"></i>
-                <span id="wishCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center count-badge">
-                  <%= typeof wishCount !== 'undefined' ? wishCount : 0 %>
-                </span>
+
+              <a href="/user/wishlist" class="relative text-black hover:text-gray-600 transition p-2 flex items-center">
+                <i class="far fa-heart text-xl sm:text-2xl"></i>
+                <% if (typeof wishCount !== 'undefined' && wishCount > 0) { %>
+                  <span id="wishCount" class="absolute -top-1 -right-1 bg-black text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center count-badge border-2 border-white">
+                    <%= wishCount > 99 ? '99+' : wishCount %>
+                  </span>
+                <% } %>
               </a>
-              <div class="relative">
-                <button id="profileBtn" class="flex items-center gap-2 text-white hover:text-gray-300 transition px-2 py-1">
-                  <div class="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
+
+              <div class="relative ml-2">
+                <button id="profileBtn" class="flex items-center gap-2 text-black hover:text-gray-700 transition px-3 py-1 rounded-full bg-gray-50 border border-gray-300 shadow-inner">
+                  <div class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden border border-black">
                     <img id="userAvatar" src="<%= typeof avatar !== 'undefined' ? avatar : '/img/default-avatar.jpg' %>" alt="Profile" class="w-full h-full object-cover">
                   </div>
-                  <span id="userName" class="hidden lg:inline text-sm">
-                    <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
-                  </span>
                   <i class="fas fa-chevron-down text-xs"></i>
                 </button>
-                <!-- Dropdown Menu -->
-                <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border opacity-0 invisible transition-all duration-200">
+                
+                <div id="profileDropdown" class="absolute right-0 mt-3 w-60 bg-black rounded-xl shadow-2xl border border-gray-800 opacity-0 invisible transition-all duration-300 origin-top-right transform scale-95">
                   <div class="py-2">
-                    <a href="/user/profile" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <i class="fas fa-user w-4"></i>
-                      <span>My Profile</span>
+                    <div class="profile-card p-3 mx-2 my-1 rounded-lg">
+                        <p class="font-bold text-white text-sm truncate" title="<%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>">
+                            <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
+                        </p>
+                        <p class="text-gray-400 text-xs mt-0.5">Member since <span class="font-medium">2023</span></p>
+                    </div>
+
+                    <a href="/user/profile" class="flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-gray-800 font-medium transition">
+                      <i class="fas fa-user w-4 text-base"></i>
+                      <span>Account Settings</span>
                     </a>
-                    <a href="/user/orders" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <i class="fas fa-shopping-bag w-4"></i>
+                    <a href="/user/orders" class="flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-gray-800 font-medium transition">
+                      <i class="fas fa-shopping-bag w-4 text-base"></i>
                       <span>My Orders</span>
                     </a>
-                    <div class="border-t border-gray-100 mt-2 pt-2">
-                      <a href="/user/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                        <i class="fas fa-sign-out-alt w-4"></i>
+                    <a href="/user/wishlist" class="flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-gray-800 font-medium transition">
+                        <i class="far fa-heart w-4 text-base"></i>
+                        <span>Wishlist</span>
+                    </a>
+                    <div class="border-t border-gray-700 mt-2 pt-2">
+                      <a href="/user/logout" class="flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-gray-800 font-medium transition">
+                        <i class="fas fa-sign-out-alt w-4 text-base"></i>
                         <span>Logout</span>
                       </a>
                     </div>
@@ -97,93 +147,152 @@
           </div>
         </div>
       </div>
-      <!-- Mobile Menu Button -->
-      <button id="mobileBtn" class="md:hidden text-white text-2xl">
+      
+      <button id="mobileBtn" class="md:hidden text-black text-2xl p-2 hover:text-gray-700 transition">
         <i class="fas fa-bars"></i>
       </button>
     </nav>
 
-    <!-- Mobile Navigation Drawer -->
-    <div id="mobileMenu" class="fixed inset-0 bg-black/90 backdrop-blur-lg md:hidden opacity-0 invisible z-50 transition-opacity duration-300">
-      <div class="flex flex-col gap-6 pt-24 px-10">
-        <a href="/" class="text-white uppercase font-medium text-lg py-2 border-b border-gray-700">Home</a>
-        <a href="/user/product/list" class="text-white uppercase font-medium text-lg py-2 border-b border-gray-700">Shop</a>
-        <a href="/user/categories" class="text-white uppercase font-medium text-lg py-2 border-b border-gray-700">Categories</a>
-        <div id="mobileAuthSection" class="flex flex-col gap-4 pt-6">
-          <% if (typeof isLoggedIn !== 'undefined' && !isLoggedIn) { %>
-            <a href="/user/login" class="px-4 py-2 rounded border border-white text-white hover:bg-white hover:text-black transition">
-              Login
-            </a>
-            <a href="/user/signup" class="px-4 py-2 rounded bg-white text-black hover:bg-transparent hover:text-white border border-white transition">
-              Sign Up
-            </a>
-          <% } else { %>
-            <a href="/user/cart" class="relative text-white hover:text-gray-300 transition p-2 flex items-center">
-              <i class="fas fa-shopping-bag text-xl"></i>
-              <span id="mobileCartCount" class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center count-badge">
-                <%= typeof cartCount !== 'undefined' ? cartCount : 0 %>
-              </span>
-              <span class="ml-2">Cart</span>
-            </a>
-            <a href="/user/wishlist" class="relative text-white hover:text-gray-300 transition p-2 flex items-center">
-              <i class="far fa-heart text-xl"></i>
-              <span id="mobileWishCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center count-badge">
-                <%= typeof wishCount !== 'undefined' ? wishCount : 0 %>
-              </span>
-              <span class="ml-2">Wishlist</span>
-            </a>
-            <div class="flex items-center gap-3 py-3">
-              <div class="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
-                <img src="<%= typeof avatar !== 'undefined' ? avatar : '/img/default-avatar.jpg' %>" alt="Profile" class="w-full h-full object-cover">
+    <div id="mobileMenu" class="fixed inset-y-0 right-0 w-80 bg-white md:hidden z-50 shadow-2xl border-l border-gray-300 overflow-y-auto">
+      <div class="flex flex-col h-full">
+        <div class="flex justify-between items-center p-5 border-b border-gray-300">
+          <h2 class="text-xl font-black text-black tracking-wider">SUPERKICKS</h2>
+          <button id="mobileMenuClose" class="text-black text-2xl hover:text-gray-700 transition p-1">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="flex flex-col p-5 space-y-2 flex-grow">
+          <a href="/" class="text-black uppercase font-extrabold text-lg py-3 border-b border-gray-200 hover:bg-gray-50 rounded-md px-2 transition">
+            <i class="fas fa-home mr-4 text-xl w-5 text-gray-700"></i> Home
+          </a>
+          <a href="/user/product/list" class="text-black uppercase font-extrabold text-lg py-3 border-b border-gray-200 hover:bg-gray-50 rounded-md px-2 transition">
+            <i class="fas fa-store mr-4 text-xl w-5 text-gray-700"></i> Shop
+          </a>
+          <a href="/user/categories" class="text-black uppercase font-extrabold text-lg py-3 border-b border-gray-200 hover:bg-gray-50 rounded-md px-2 transition">
+            <i class="fas fa-th-large mr-4 text-xl w-5 text-gray-700"></i> Categories
+          </a>
+
+          <div id="mobileAuthSection" class="flex flex-col gap-3 pt-6">
+            <% if (typeof isLoggedIn !== 'undefined' && !isLoggedIn) { %>
+              <a href="/user/login" class="w-full py-3 rounded-lg border-2 border-black text-black text-center hover:bg-black hover:text-white transition font-bold text-lg">
+                Login
+              </a>
+              <a href="/user/signup" class="w-full py-3 rounded-lg bg-black text-white text-center hover:bg-gray-800 transition font-bold text-lg shadow-lg">
+                Sign Up
+              </a>
+            <% } else { %>
+              <a href="/user/profile" class="flex items-center gap-4 py-4 px-3 rounded-lg bg-black text-white border-2 border-black shadow-lg hover:bg-gray-800 transition">
+                <div class="w-12 h-12 rounded-full bg-gray-200 overflow-hidden border-2 border-white">
+                  <img src="<%= typeof avatar !== 'undefined' ? avatar : '/img/default-avatar.jpg' %>" alt="Profile" class="w-full h-full object-cover">
+                </div>
+                <div>
+                  <p class="font-extrabold text-lg leading-tight">
+                    <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
+                  </p>
+                  <p class="text-gray-400 text-sm">View Profile</p>
+                </div>
+                <i class="fas fa-chevron-right ml-auto text-gray-400"></i>
+              </a>
+
+              <div class="space-y-1 pt-2">
+                <a href="/user/orders" class="flex items-center gap-4 text-black hover:text-gray-700 transition py-3 px-2 rounded-md hover:bg-gray-50">
+                  <i class="fas fa-box text-xl w-5 text-gray-600"></i>
+                  <span class="text-base font-medium">My Orders</span>
+                </a>
+
+                <a href="/user/cart" class="flex items-center justify-between text-black hover:text-gray-700 transition py-3 px-2 rounded-md hover:bg-gray-50">
+                  <div class="flex items-center gap-4">
+                    <i class="fas fa-shopping-bag text-xl w-5 text-gray-600"></i>
+                    <span class="text-base font-medium">Shopping Cart</span>
+                  </div>
+                  <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                    <span id="mobileCartCount" class="bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center count-badge border border-white/50">
+                      <%= cartCount > 99 ? '99+' : cartCount %>
+                    </span>
+                  <% } %>
+                </a>
+
+                <a href="/user/wishlist" class="flex items-center justify-between text-black hover:text-gray-700 transition py-3 px-2 rounded-md hover:bg-gray-50">
+                  <div class="flex items-center gap-4">
+                    <i class="far fa-heart text-xl w-5 text-gray-600"></i>
+                    <span class="text-base font-medium">Wishlist</span>
+                  </div>
+                  <% if (typeof wishCount !== 'undefined' && wishCount > 0) { %>
+                    <span id="mobileWishCount" class="bg-black text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center count-badge border border-white/50">
+                      <%= wishCount > 99 ? '99+' : wishCount %>
+                    </span>
+                  <% } %>
+                </a>
               </div>
-              <span class="text-white">
-                <%= typeof user !== 'undefined' && user ? (user.fullName || user.name || 'User') : 'User' %>
-              </span>
-            </div>
-            <a href="/user/profile" class="py-2 text-white hover:text-gray-300">My Profile</a>
-            <a href="/user/orders" class="py-2 text-white hover:text-gray-300">My Orders</a>
-            <a href="/user/logout" class="py-2 text-red-500 hover:text-red-400">Logout</a>
-          <% } %>
+
+              <a href="/user/logout" class="flex items-center gap-4 text-red-600 hover:text-red-800 transition py-3 px-2 mt-4 border-t border-gray-200 rounded-md hover:bg-red-50">
+                <i class="fas fa-sign-out-alt text-xl w-5"></i>
+                <span class="text-base font-medium">Logout</span>
+              </a>
+            <% } %>
+          </div>
         </div>
       </div>
-      <button id="mobileMenuClose" class="absolute top-6 right-6 text-white text-3xl">
-        <i class="fas fa-times"></i>
-      </button>
     </div>
+
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 md:hidden opacity-0 invisible z-40 transition-opacity duration-300"></div>
   </header>
 
   <script>
-    // Mobile menu toggle
     document.addEventListener('DOMContentLoaded', function() {
       const mobileBtn = document.getElementById('mobileBtn');
       const mobileMenu = document.getElementById('mobileMenu');
       const mobileMenuClose = document.getElementById('mobileMenuClose');
-      mobileBtn.addEventListener('click', function() {
-        mobileMenu.classList.remove('opacity-0', 'invisible');
-        mobileMenu.classList.add('opacity-100');
-      });
-      mobileMenuClose.addEventListener('click', function() {
-        mobileMenu.classList.add('opacity-0', 'invisible');
-        mobileMenu.classList.remove('opacity-100');
-      });
-      mobileMenu.addEventListener('click', (e) => {
-        if (e.target === mobileMenu) {
-          mobileMenu.classList.add('opacity-0', 'invisible');
-          mobileMenu.classList.remove('opacity-100');
-        }
-      });
+      const mobileOverlay = document.getElementById('mobileOverlay');
 
-      // Profile dropdown
+      // Open mobile menu
+      if (mobileBtn && mobileMenu) {
+        mobileBtn.addEventListener('click', function() {
+          mobileMenu.classList.add('active');
+          // Overlay visibility toggle
+          mobileOverlay.classList.remove('invisible', 'opacity-0');
+          mobileOverlay.classList.add('opacity-100');
+          document.body.classList.add('modal-open');
+        });
+      }
+
+      // Close mobile menu
+      function closeMobileMenu() {
+        mobileMenu.classList.remove('active');
+        // Overlay visibility toggle
+        mobileOverlay.classList.remove('opacity-100');
+        mobileOverlay.classList.add('invisible', 'opacity-0');
+        document.body.classList.remove('modal-open');
+      }
+
+      if (mobileMenuClose) {
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+      }
+
+      if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', closeMobileMenu);
+      }
+
+      // Desktop Profile Dropdown
       const profileBtn = document.getElementById('profileBtn');
       const profileDropdown = document.getElementById('profileDropdown');
+      
       if (profileBtn && profileDropdown) {
-        profileBtn.addEventListener('click', () => {
+        profileBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // Toggle visibility and scaling for a better transition effect
           profileDropdown.classList.toggle('opacity-0');
           profileDropdown.classList.toggle('invisible');
+          profileDropdown.classList.toggle('scale-95');
+          profileDropdown.classList.toggle('scale-100');
         });
-        document.addEventListener('click', (e) => {
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
           if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-            profileDropdown.classList.add('opacity-0', 'invisible');
+            profileDropdown.classList.remove('scale-100');
+            profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
           }
         });
       }

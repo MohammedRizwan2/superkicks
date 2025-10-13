@@ -1,24 +1,20 @@
 <%- include('../partials/header') %>
 
 <main class="bg-white min-h-screen">
-  <!-- Match header container to keep perfect alignment -->
   <div class="max-w-7xl mx-auto px-4 lg:px-6 py-8">
-    <!-- Flex row: sidebar + main beside each other -->
-    <div class="flex gap-8">
+    <div class="flex flex-col lg:flex-row gap-8">
       
-      <!-- Sidebar -->
-      <aside class="w-64 shrink-0">
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 shadow-sm">
-          <!-- User card -->
-          <div class="bg-black text-white rounded-lg p-4 mb-6">
+      <aside class="w-full lg:w-64 shrink-0">
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 lg:p-6 shadow-sm">
+          <div class="bg-black text-white rounded-lg p-4 mb-4 lg:mb-6">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-full overflow-hidden bg-white border-2 border-white/20">
+              <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden bg-white border-2 border-white/20">
                 <img src="<%= (user.avatarUrl) ? user.avatarUrl: '/images/default-avatar.png' %>" 
                      alt="Avatar" 
                      class="w-full h-full object-cover">
               </div>
               <div>
-                <p class="font-semibold">
+                <p class="font-semibold text-sm lg:text-base">
                   <%= (user && (user.fullName || user.name)) ? (user.fullName || user.name) : 'User' %>
                 </p>
                 <p class="text-white/70 text-xs">Member</p>
@@ -26,97 +22,98 @@
             </div>
           </div>
 
-          <!-- Nav -->
-          <nav class="space-y-2">
+          <nav class="grid grid-cols-2 gap-2 lg:block lg:space-y-2">
             <a href="/profile" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg bg-black text-white font-medium transition">
-              <i class="fas fa-user w-5"></i><span>Account Overview</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg bg-black text-white font-medium text-sm lg:text-base transition">
+              <i class="fas fa-user w-4 lg:w-5"></i><span class="hidden lg:inline">Account Overview</span>
+              <span class="lg:hidden">Account</span>
             </a>
             <a href="/user/orders" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition">
-              <i class="fas fa-bag-shopping w-5"></i><span>My Orders</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition text-sm lg:text-base">
+              <i class="fas fa-bag-shopping w-4 lg:w-5"></i><span class="hidden lg:inline">My Orders</span>
+              <span class="lg:hidden">Orders</span>
             </a>
             <a href="/user/addresses" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition">
-              <i class="fas fa-map-marker-alt w-5"></i><span>Manage Addresses</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition text-sm lg:text-base">
+              <i class="fas fa-map-marker-alt w-4 lg:w-5"></i><span class="hidden lg:inline">Manage Addresses</span>
+              <span class="lg:hidden">Addresses</span>
             </a>
             <a href="/user/wishlist" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition">
-              <i class="far fa-heart w-5"></i><span>Wishlist</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition text-sm lg:text-base">
+              <i class="far fa-heart w-4 lg:w-5"></i><span class="hidden lg:inline">Wishlist</span>
+              <span class="lg:hidden">Wishlist</span>
             </a>
             <a href="/user/cart" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition">
-              <i class="fas fa-shopping-cart w-5"></i><span>Cart</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition text-sm lg:text-base">
+              <i class="fas fa-shopping-cart w-4 lg:w-5"></i><span class="hidden lg:inline">Cart</span>
+              <span class="lg:hidden">Cart</span>
             </a>
             <a href="/user/wallet" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition">
-              <i class="fas fa-wallet w-5"></i><span>Wallet</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-black/70 hover:bg-black/5 hover:text-black transition text-sm lg:text-base">
+              <i class="fas fa-wallet w-4 lg:w-5"></i><span class="hidden lg:inline">Wallet</span>
+              <span class="lg:hidden">Wallet</span>
             </a>
             
             <a href="/user/logout" 
-               class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition">
-              <i class="fas fa-right-from-bracket w-5"></i><span>Logout</span>
+               class="flex items-center justify-center lg:justify-start gap-3 px-2 py-3 lg:px-4 rounded-lg text-red-600 hover:bg-red-50 transition text-sm lg:text-base">
+              <i class="fas fa-right-from-bracket w-4 lg:w-5"></i><span class="hidden lg:inline">Logout</span>
+              <span class="lg:hidden">Logout</span>
             </a>
           </nav>
         </div>
       </aside>
 
-      <!-- Main content -->
-      <section class="flex-1 space-y-8">
-        <!-- Header row with Edit -->
+      <section class="flex-1 space-y-6 lg:space-y-8">
         <div class="flex items-start justify-between">
           <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-black">Profile Overview</h1>
-            <p class="text-black/60 mt-1">Manage your account information and preferences</p>
+            <h1 class="text-xl md:text-3xl font-bold text-black">Profile Overview</h1>
+            <p class="text-black/60 mt-1 text-sm">Manage your account information and preferences</p>
           </div>
           <a href="/user/profile/edit" 
-             class="inline-flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg hover:bg-black/90 transition font-medium">
-            <i class="fas fa-pen"></i><span>Edit Profile</span>
+             class="inline-flex items-center gap-1 lg:gap-2 bg-black text-white px-3 py-2 lg:px-5 lg:py-2.5 rounded-lg hover:bg-black/90 transition font-medium text-sm">
+            <i class="fas fa-pen text-xs lg:text-base"></i><span class="hidden sm:inline">Edit Profile</span>
           </a>
         </div>
 
-        <!-- User Details Card -->
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-black mb-6">Personal Information</h2>
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 lg:p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-black mb-4 lg:mb-6">Personal Information</h2>
           
-          <div class="grid md:grid-cols-[auto,1fr] gap-6 items-start">
-            <!-- Avatar -->
-            <div class="w-28 h-28 rounded-full overflow-hidden bg-black/5 mx-auto md:mx-0 border-4 border-black/10">
+          <div class="flex flex-col md:grid md:grid-cols-[auto,1fr] gap-4 lg:gap-6 items-start">
+            <div class="w-24 h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden bg-black/5 mx-auto md:mx-0 border-4 border-black/10">
               <img src="<%= (user.avatarUrl) ? user.avatarUrl: '/images/default-avatar.png' %>" 
                    alt="Avatar" 
                    class="w-full h-full object-cover">
             </div>
 
-            <!-- Basic info -->
-            <div class="grid sm:grid-cols-2 gap-6 w-full">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full">
               <div>
-                <label class="block text-sm font-medium text-black/70 mb-2">Full Name</label>
-                <div class="px-4 py-3 bg-white/60 rounded-lg border border-black/10">
-                  <p class="text-black font-medium">
+                <label class="block text-xs font-medium text-black/70 mb-1 lg:mb-2">Full Name</label>
+                <div class="px-3 py-2 lg:px-4 lg:py-3 bg-white/60 rounded-lg border border-black/10">
+                  <p class="text-black font-medium text-sm">
                     <%= (user && (user.fullName || user.name)) ? (user.fullName || user.name) : 'Not provided' %>
                   </p>
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-black/70 mb-2">Email</label>
-                <div class="px-4 py-3 bg-white/60 rounded-lg border border-black/10">
-                  <p class="text-black font-medium">
+                <label class="block text-xs font-medium text-black/70 mb-1 lg:mb-2">Email</label>
+                <div class="px-3 py-2 lg:px-4 lg:py-3 bg-white/60 rounded-lg border border-black/10">
+                  <p class="text-black font-medium text-sm">
                     <%= (user && user.email) ? user.email : 'Not provided' %>
                   </p>
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-black/70 mb-2">Phone</label>
-                <div class="px-4 py-3 bg-white/60 rounded-lg border border-black/10">
-                  <p class="text-black font-medium">
+                <label class="block text-xs font-medium text-black/70 mb-1 lg:mb-2">Phone</label>
+                <div class="px-3 py-2 lg:px-4 lg:py-3 bg-white/60 rounded-lg border border-black/10">
+                  <p class="text-black font-medium text-sm">
                     <%= (user && user.phone) ? user.phone : 'Not provided' %>
                   </p>
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-black/70 mb-2">Date of Birth</label>
-                <div class="px-4 py-3 bg-white/60 rounded-lg border border-black/10">
-                  <p class="text-black font-medium">
+                <label class="block text-xs font-medium text-black/70 mb-1 lg:mb-2">Date of Birth</label>
+                <div class="px-3 py-2 lg:px-4 lg:py-3 bg-white/60 rounded-lg border border-black/10">
+                  <p class="text-black font-medium text-sm">
                     <%= user && user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'Not provided' %>
                   </p>
                 </div>
@@ -125,16 +122,15 @@
           </div>
         </div>
 
-        <!-- Addresses -->
-        <div class="bg-ash/40 rounded-xl border border-black/10 p-6 shadow-sm">
-          <div class="flex items-center justify-between mb-6">
+        <div class="bg-ash/40 rounded-xl border border-black/10 p-4 lg:p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4 lg:mb-6">
             <div>
               <h2 class="text-lg font-semibold text-black">Saved Addresses</h2>
               <p class="text-sm text-black/60">Manage your delivery addresses</p>
             </div>
             <a href="/user/addresses" 
-               class="text-black hover:text-black/80 font-medium border border-black/20 px-4 py-2 rounded-lg hover:border-black/40 transition">
-              Manage Addresses
+               class="text-black hover:text-black/80 font-medium border border-black/20 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg hover:border-black/40 transition text-sm">
+              Manage
             </a>
           </div>
 
@@ -146,54 +142,51 @@
           %>
 
           <% if (!addr || addr.length === 0) { %>
-            <div class="p-8 rounded-lg bg-white/60 border border-black/10 text-center">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-black/5 flex items-center justify-center">
-                <i class="fas fa-map-marker-alt text-black/40 text-2xl"></i>
+            <div class="p-4 lg:p-8 rounded-lg bg-white/60 border border-black/10 text-center">
+              <div class="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 lg:mb-4 rounded-full bg-black/5 flex items-center justify-center">
+                <i class="fas fa-map-marker-alt text-black/40 text-xl lg:text-2xl"></i>
               </div>
-              <p class="text-black/70 mb-4">No addresses added yet</p>
+              <p class="text-black/70 mb-3 lg:mb-4 text-sm">No addresses added yet</p>
               <a href="/user/addresses" 
-                 class="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-black/90 transition">
+                 class="inline-flex items-center gap-2 bg-black text-white px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg hover:bg-black/90 transition text-sm">
                 <i class="fas fa-plus"></i>
                 Add Address
               </a>
             </div>
           <% } else { %>
-            <div class="grid md:grid-cols-2 gap-4">
-              <% addr.forEach(a => { %>
-                <div class="border border-black/10 rounded-lg p-4 bg-white/60 hover:border-black/20 transition">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <% addr.slice(0, 2).forEach(a => { %> <div class="border border-black/10 rounded-lg p-4 bg-white/60 hover:border-black/20 transition">
                   <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                      <div class="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center">
-                        <i class="fas fa-<%= a.type === 'home' ? 'home' : (a.type === 'work' ? 'building' : 'map-marker-alt') %> text-black/60 text-sm"></i>
+                      <div class="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-black/10 flex items-center justify-center">
+                        <i class="fas fa-<%= a.type === 'home' ? 'home' : (a.type === 'work' ? 'building' : 'map-marker-alt') %> text-black/60 text-xs lg:text-sm"></i>
                       </div>
-                      <p class="font-medium capitalize text-black">
+                      <p class="font-medium capitalize text-black text-sm">
                         <%= a.type || 'Address' %>
                       </p>
                     </div>
                     <% if (a.isDefault) { %>
-                      <span class="text-xs bg-black text-white px-2 py-1 rounded-full">DEFAULT</span>
+                      <span class="text-xs bg-black text-white px-2 py-0.5 rounded-full">DEFAULT</span>
                     <% } %>
                   </div>
 
-                  <!-- Address Details -->
-                  <div class="space-y-1 mb-4">
+                  <div class="space-y-1 mb-3 lg:mb-4">
                     <p class="text-sm text-black font-medium"><%= a.name %></p>
-                    <p class="text-sm text-black/70"><%= a.address %></p>
+                    <p class="text-xs text-black/70"><%= a.address %></p>
                     <% if (a.landmark) { %>
-                      <p class="text-sm text-black/60">Near <%= a.landmark %></p>
+                      <p class="text-xs text-black/60">Near <%= a.landmark %></p>
                     <% } %>
-                    <p class="text-sm text-black/70"><%= a.state %>, <%= a.country %> - <%= a.pinCode %></p>
+                    <p class="text-xs text-black/70"><%= a.state %>, <%= a.country %> - <%= a.pinCode %></p>
                   </div>
 
-                  <!-- Contact Info -->
                   <div class="flex flex-wrap items-center gap-4 pt-3 mt-3 border-t border-black/10">
                     <% if (a.phone) { %>
-                      <span class="text-sm text-black/60 flex items-center gap-1">
+                      <span class="text-xs text-black/60 flex items-center gap-1">
                         <i class="fas fa-phone text-xs"></i><%= a.phone %>
                       </span>
                     <% } %>
                     <% if (a.email) { %>
-                      <span class="text-sm text-black/60 flex items-center gap-1">
+                      <span class="text-xs text-black/60 flex items-center gap-1">
                         <i class="fas fa-envelope text-xs"></i><%= a.email %>
                       </span>
                     <% } %>
@@ -202,11 +195,10 @@
               <% }) %>
             </div>
 
-            <!-- View All Button -->
             <% if (addr.length > 2) { %>
               <div class="mt-4 text-center">
                 <a href="/user/addresses" 
-                   class="inline-flex items-center gap-2 text-black/70 hover:text-black border border-black/20 px-4 py-2 rounded-lg hover:border-black/40 transition">
+                   class="inline-flex items-center gap-2 text-black/70 hover:text-black border border-black/20 px-4 py-2 rounded-lg hover:border-black/40 transition text-sm">
                   View All Addresses
                   <i class="fas fa-arrow-right text-xs"></i>
                 </a>
@@ -215,81 +207,75 @@
           <% } %>
         </div>
 
-        <!-- Quick Stats -->
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 text-center hover:border-black/20 transition">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-black/10 flex items-center justify-center">
-              <i class="fas fa-shopping-bag text-black/60"></i>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-3 lg:p-4 text-center hover:border-black/20 transition">
+            <div class="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-2 lg:mb-3 rounded-full bg-black/10 flex items-center justify-center">
+              <i class="fas fa-shopping-bag text-black/60 text-base"></i>
             </div>
-            <p class="text-2xl font-bold text-black"><%= user.orderCount %></p>
-            <p class="text-sm text-black/60">Total Orders</p>
+            <p class="text-xl lg:text-2xl font-bold text-black"><%= user.orderCount %></p>
+            <p class="text-xs lg:text-sm text-black/60">Total Orders</p>
           </div>
           
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 text-center hover:border-black/20 transition">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-black/10 flex items-center justify-center">
-              <i class="fas fa-heart text-black/60"></i>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-3 lg:p-4 text-center hover:border-black/20 transition">
+            <div class="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-2 lg:mb-3 rounded-full bg-black/10 flex items-center justify-center">
+              <i class="fas fa-heart text-black/60 text-base"></i>
             </div>
-            <p class="text-2xl font-bold text-black"><%= user.wishCount %></p>
-            <p class="text-sm text-black/60">Wishlist Items</p>
+            <p class="text-xl lg:text-2xl font-bold text-black"><%= user.wishCount %></p>
+            <p class="text-xs lg:text-sm text-black/60">Wishlist Items</p>
           </div>
           
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 text-center hover:border-black/20 transition">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-black/10 flex items-center justify-center">
-              <i class="fas fa-map-marker-alt text-black/60"></i>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-3 lg:p-4 text-center hover:border-black/20 transition">
+            <div class="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-2 lg:mb-3 rounded-full bg-black/10 flex items-center justify-center">
+              <i class="fas fa-map-marker-alt text-black/60 text-base"></i>
             </div>
-            <p class="text-2xl font-bold text-black"><%= addr ? addr.length : 0 %></p>
-            <p class="text-sm text-black/60">Saved Addresses</p>
+            <p class="text-xl lg:text-2xl font-bold text-black"><%= addr ? addr.length : 0 %></p>
+            <p class="text-xs lg:text-sm text-black/60">Saved Addresses</p>
           </div>
           
-          <div class="bg-ash/40 rounded-xl border border-black/10 p-4 text-center hover:border-black/20 transition">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-black/10 flex items-center justify-center">
-              <i class="fas fa-wallet text-black/60"></i>
+          <div class="bg-ash/40 rounded-xl border border-black/10 p-3 lg:p-4 text-center hover:border-black/20 transition">
+            <div class="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-2 lg:mb-3 rounded-full bg-black/10 flex items-center justify-center">
+              <i class="fas fa-wallet text-black/60 text-base"></i>
             </div>
-            <p class="text-2xl font-bold text-black">₹0</p>
-            <p class="text-sm text-black/60">Wallet Balance</p>
+            <p class="text-xl lg:text-2xl font-bold text-black">₹0</p>
+            <p class="text-xs lg:text-sm text-black/60">Wallet Balance</p>
           </div>
         </div>
       </section>
-      <!-- End main -->
+      </div>
     </div>
-    <!-- End flex row -->
-  </div>
-  <!-- End container -->
-</main>
+  </main>
 
-<!-- Footer with black and white theme -->
-<footer class="bg-black text-white mt-16">
-  <div class="max-w-7xl mx-auto px-6 py-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+<footer class="bg-black text-white mt-10 lg:mt-16">
+  <div class="max-w-7xl mx-auto px-6 py-8 lg:py-10 grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6 text-xs lg:text-sm">
     <div class="flex items-center gap-3">
-      <i class="fas fa-shipping-fast text-2xl text-white"></i>
+      <i class="fas fa-shipping-fast text-xl lg:text-2xl text-white"></i>
       <div>
         <p class="font-semibold">Express Shipping</p>
         <p class="text-white/70">Ships in 24 hours</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <i class="fas fa-location-dot text-2xl text-white"></i>
+      <i class="fas fa-location-dot text-xl lg:text-2xl text-white"></i>
       <div>
         <p class="font-semibold">Shipping Tracking</p>
         <p class="text-white/70">Track your orders</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <i class="fas fa-shield-halved text-2xl text-white"></i>
+      <i class="fas fa-shield-halved text-xl lg:text-2xl text-white"></i>
       <div>
         <p class="font-semibold">Buy Safely</p>
         <p class="text-white/70">Secure checkout</p>
       </div>
     </div>
-    <div class="flex items-center gap-3">
-      <i class="fab fa-cc-visa text-2xl text-white/80"></i>
-      <i class="fab fa-cc-mastercard text-2xl text-white/80"></i>
-      <i class="fab fa-paypal text-2xl text-white/80"></i>
+    <div class="col-span-2 md:col-span-1 flex items-center justify-start md:justify-end gap-3">
+      <i class="fab fa-cc-visa text-xl lg:text-2xl text-white/80"></i>
+      <i class="fab fa-cc-mastercard text-xl lg:text-2xl text-white/80"></i>
+      <i class="fab fa-paypal text-xl lg:text-2xl text-white/80"></i>
     </div>
   </div>
 </footer>
 
-<!-- Add Tailwind config for ash color -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
