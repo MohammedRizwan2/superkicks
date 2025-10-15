@@ -38,6 +38,11 @@ router.post('/products/:id/edit-image',
   uploadProductImages.single('image'),
   productController.uploadProductImage
 );
+router.post(
+    '/products/upload-temp-image',
+    uploadProductImages.single('image'), // 'image' must match the formData key sent by Axios
+    productController.uploadProductImage
+);
 
 
 // Category

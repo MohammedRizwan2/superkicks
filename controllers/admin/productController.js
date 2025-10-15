@@ -12,6 +12,10 @@ const { uploadBufferToCloudinary } = require('../../helper/cloudinaryUploadHelpe
 
 
 
+
+
+
+
 exports.getProducts = async (req, res) => {
   try {
     const productJustAdded = req.session.productAdded?req.session.productAdded:false;
@@ -241,6 +245,7 @@ exports.getEditProduct = async (req, res) => {
 };
 
 
+
 exports.postEditProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -251,12 +256,14 @@ exports.postEditProduct = async (req, res) => {
       description,
       offer,
       isListed,
+      existingImages = '[]',
       deletedImages = '[]',
       newImages = '[]',
-      variants, 
+      variants,
       deletedVariants = '[]'
     } = req.body;
 
+    const parsedExistingImages = JSON.parse(existingImages);
     const parsedDeletedImages = JSON.parse(deletedImages);
     const parsedNewImages = Array.isArray(newImages) ? newImages : JSON.parse(newImages);
 
@@ -265,19 +272,16 @@ exports.postEditProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // --- Image Handling ---
-    let finalImages = currentProduct.images.filter(img => {
-      if (typeof img === 'string') {
-        return !parsedDeletedImages.includes(img);
-      } else {
-        return !parsedDeletedImages.includes(img.publicId);
-      }
+    // Image Handling
+    let finalImages = parsedExistingImages.filter(img => {
+      const imgId = typeof img === 'string' ? img : img.publicId || img.url;
+      return !parsedDeletedImages.includes(imgId);
     });
 
     if (parsedNewImages.length > 0) {
       finalImages = [...finalImages, ...parsedNewImages];
     }
-    
+
     if (req.files && req.files.length > 0) {
       const uploads = await Promise.all(
         req.files.map(file => uploadBufferToCloudinary(file.buffer, 'superkicks/products'))
@@ -300,7 +304,6 @@ exports.postEditProduct = async (req, res) => {
       parsedDeletedImages.map(async identifier => {
         if (!identifier) return;
         try {
-        
           await cloudinary.uploader.destroy(identifier);
         } catch (err) {
           console.error('Cloudinary delete failed:', identifier, err.message);
@@ -308,7 +311,7 @@ exports.postEditProduct = async (req, res) => {
       })
     );
 
- 
+    // Validation
     const errors = [];
     if (!productName || !productName.trim()) errors.push('Product name is required.');
     if (!brand || !brand.trim()) errors.push('Brand is required.');
@@ -320,7 +323,6 @@ exports.postEditProduct = async (req, res) => {
       errors.push('Offer must be a number between 0 and 100.');
     }
 
-   
     const parsedVariants = variants || [];
     if (parsedVariants.length === 0) {
       errors.push('At least one variant is required.');
@@ -340,7 +342,7 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
-   
+    // Handle deleted variants
     const parsedDeletedVariants = Array.isArray(deletedVariants) ? deletedVariants : JSON.parse(deletedVariants || '[]');
     if (parsedDeletedVariants.length > 0) {
       await Variant.deleteMany({
@@ -349,6 +351,7 @@ exports.postEditProduct = async (req, res) => {
       });
     }
 
+    // Update or create variants
     const finalVariantIds = [];
     for (const v of parsedVariants) {
       if (v._id) {
@@ -374,7 +377,7 @@ exports.postEditProduct = async (req, res) => {
       }
     }
 
-    
+    // Update product with ordered images
     const updateData = {
       productName: productName.trim(),
       brand: brand.trim().toUpperCase(),
@@ -389,7 +392,6 @@ exports.postEditProduct = async (req, res) => {
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
     await updatedProduct.calculateAndUpdatePrices();
     
- 
     req.session.productEdited = true;
     req.session.save(err => {
       if (err) console.error("Error saving session:", err);
@@ -409,7 +411,6 @@ exports.postEditProduct = async (req, res) => {
     });
   }
 };
-
 
 exports.uploadProductImage = async (req, res) => {
   try {
