@@ -135,7 +135,7 @@ exports.addToWishlist = async (req, res) => {
 // DELETE /api/user/wishlist/:variantId - Remove variant from wishlist
 exports.removeFromWishlist = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.session.user?.id;
     const { variantId } = req.params;
 
     const wishlist = await Wish.findOne({ userId });
@@ -154,14 +154,13 @@ exports.removeFromWishlist = async (req, res) => {
     
     await wishlist.save();
 
-    return res.json({
+    return res.json({ 
       success: true,
       message: 'Product removed from wishlist',
       data: {
         totalItems: wishlist.items.length
       }
     });
-
   } catch (error) {
     console.error('Remove from wishlist error:', error);
     return res.status(500).json({
@@ -174,7 +173,7 @@ exports.removeFromWishlist = async (req, res) => {
 // DELETE /api/user/wishlist/clear - Clear entire wishlist
 exports.clearWishlist = async (req, res) => {
   try {
-    const userId = req.user.id;
+   const userId = req.session.user?.id;
 
     await Wish.findOneAndUpdate(
       { userId },
@@ -203,7 +202,7 @@ exports.clearWishlist = async (req, res) => {
 exports.checkWishlistStatus = async (req, res) => {
   try {
     console.log("hello");
-    const userId = req.user.id;
+    const userId = req.session.user?.id;
     const { variantId } = req.params;
 
     const wishlist = await Wish.findOne({ 
