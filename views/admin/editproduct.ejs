@@ -34,6 +34,19 @@
       border-radius: 4px;
       font-size: 10px;
     }
+    .draggable {
+      cursor: move;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+    .drag-over {
+      border: 2px dashed #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+    }
   </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -124,7 +137,7 @@
         <div>
           <label class="block text-gray-600 font-medium mb-1">Product Images <span class="text-red-500">*</span></label>
           <p class="text-sm text-gray-500 mb-3">
-            Current images: <span id="image-count">0</span>
+            Current images: <span id="image-count">0</span> (Drag to reorder)
           </p>
           
           <input type="file" id="file-input" name="images" accept="image/*" style="display: none;" multiple>
@@ -166,7 +179,7 @@
           <div id="image-data" data-images='<%= JSON.stringify(product.images) %>' style="display: none;"></div>
         </div>
 
-        <!-- CORRECTED Variants Section -->
+        <!-- Variants Section -->
         <div>
           <label class="block text-gray-600 font-medium mb-2">Variants (Size, Price, Stock)</label>
           <div id="variants-area">
@@ -181,7 +194,6 @@
                 <input type="number" min="0" name="variants[<%= i %>][stock]" placeholder="Stock"
                   value="<%= variant.stock %>"
                   class="w-1/4 px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500">
-                <!-- FIXED: Changed from [id] to [_id] -->
                 <input type="hidden" name="variants[<%= i %>][_id]" value="<%= variant._id %>">
                 <button type="button" onclick="removeVariantRow(this)" class="bg-red-500 text-white px-2 rounded hover:bg-red-700 font-bold">-</button>
               </div>
@@ -189,7 +201,6 @@
           </div>
           <button type="button" id="add-variant-btn" class="mt-1 px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Variant</button>
           
-          <!-- FIXED: Moved outside the loop -->
           <input type="hidden" name="deletedVariants" id="deleted-variants" value="[]">
         </div>
 
@@ -215,14 +226,14 @@
     const existingImages = JSON.parse(document.getElementById('image-data').dataset.images || '[]');
     const deletedImages = [];
     const newImages = [];
-    let deletedVariants = []; // Global variable for tracking deleted variants
+    let deletedVariants = [];
 
     // Helper functions for image type detection
     function isCloudinaryImage(img) {
       if (typeof img === 'string') {
         return img.includes('cloudinary.com') || img.includes('res.cloudinary.com');
       }
-      return img && img.publicId; // Object with publicId = Cloudinary
+      return img && img.publicId;
     }
 
     function getImageUrl(img) {
@@ -231,9 +242,9 @@
 
     function getImageId(img) {
       if (typeof img === 'string') {
-        return img; // Legacy: use URL as ID
+        return img;
       }
-      return img.publicId || img.url; // Cloudinary: prefer publicId, fallback to url
+      return img.publicId || img.url;
     }
 
     function getImageType(img) {
@@ -242,11 +253,18 @@
 
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', () => {
+      // Check if drag and drop is supported
+      if (!('draggable' in document.createElement('div'))) {
+        console.warn('Drag and Drop API not supported in this browser.');
+        document.getElementById('image-count').textContent += ' (Drag not supported)';
+      }
+
       // Load existing images
       existingImages.forEach(img => {
         addImageToPreview(img, false);
       });
       updateImageCount();
+      setupDragAndDrop();
 
       // File input handler
       document.getElementById('file-input').addEventListener('change', function(e) {
@@ -264,7 +282,8 @@
       const imageType = getImageType(imgData);
       
       const previewDiv = document.createElement('div');
-      previewDiv.className = 'relative';
+      previewDiv.className = 'relative draggable';
+      previewDiv.draggable = true;
       previewDiv.dataset.image = imageId;
       previewDiv.dataset.type = imageType;
       if (isNew) previewDiv.classList.add('new-image');
@@ -299,17 +318,103 @@
     }
 
     function updateHiddenInputs() {
-      // Update existing images (exclude deleted ones)
-      const remaining = existingImages.filter(img => {
-        const imgId = getImageId(img);
-        return !deletedImages.includes(imgId);
+      console.log('Updating hidden inputs...');
+      const allImages = [];
+      const previews = document.querySelectorAll('#image-previews .draggable');
+      previews.forEach(preview => {
+        const imageId = preview.dataset.image;
+        const isNew = preview.classList.contains('new-image');
+        if (isNew) {
+          const img = newImages.find(i => getImageId(i) === imageId);
+          if (img && !allImages.some(i => getImageId(i) === imageId)) {
+            allImages.push(img);
+            console.log('Added new image to order:', imageId);
+          }
+        } else {
+          const img = existingImages.find(i => getImageId(i) === imageId);
+          if (img && !deletedImages.includes(imageId) && !allImages.some(i => getImageId(i) === imageId)) {
+            allImages.push(img);
+            console.log('Added existing image to order:', imageId);
+          }
+        }
       });
-      document.getElementById('existing-images').value = JSON.stringify(remaining);
+      
+      document.getElementById('existing-images').value = JSON.stringify(allImages.filter(img => !newImages.some(ni => getImageId(ni) === getImageId(img))));
       document.getElementById('deleted-images').value = JSON.stringify(deletedImages);
+      console.log('Updated existing-images:', document.getElementById('existing-images').value);
+      console.log('Updated deleted-images:', document.getElementById('deleted-images').value);
     }
 
     function updateNewImagesInput() {
       document.getElementById('new-images').value = JSON.stringify(newImages);
+      console.log('Updated new-images:', document.getElementById('new-images').value);
+    }
+
+    // Drag and Drop functionality
+    function setupDragAndDrop() {
+      const previews = document.getElementById('image-previews');
+      
+      previews.addEventListener('dragstart', (e) => {
+        const draggable = e.target.closest('.draggable');
+        if (draggable) {
+          console.log('Drag start:', draggable.dataset.image);
+          e.dataTransfer.setData('text/plain', draggable.dataset.image);
+          draggable.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        }
+      });
+
+      previews.addEventListener('dragend', (e) => {
+        const draggable = e.target.closest('.draggable');
+        if (draggable) {
+          console.log('Drag end:', draggable.dataset.image);
+          draggable.classList.remove('dragging');
+          updateHiddenInputs();
+        }
+      });
+
+      previews.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      previews.addEventListener('dragenter', (e) => {
+        const target = e.target.closest('.draggable');
+        if (target && !target.classList.contains('dragging')) {
+          console.log('Drag enter:', target.dataset.image);
+          target.classList.add('drag-over');
+        }
+      });
+
+      previews.addEventListener('dragleave', (e) => {
+        const target = e.target.closest('.draggable');
+        if (target) {
+          console.log('Drag leave:', target.dataset.image);
+          target.classList.remove('drag-over');
+        }
+      });
+
+      previews.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const draggedElement = previews.querySelector(`[data-image="${draggedId}"]`);
+        const target = e.target.closest('.draggable');
+        
+        if (draggedElement && target && draggedElement !== target) {
+          console.log('Dropped:', draggedId, 'onto', target.dataset.image);
+          const allPreviews = Array.from(previews.querySelectorAll('.draggable'));
+          const draggedIndex = allPreviews.indexOf(draggedElement);
+          const targetIndex = allPreviews.indexOf(target);
+          
+          if (draggedIndex < targetIndex) {
+            target.after(draggedElement);
+          } else {
+            target.before(draggedElement);
+          }
+          target.classList.remove('drag-over');
+          updateHiddenInputs();
+        }
+      });
     }
 
     // Image cropper functions
@@ -369,7 +474,6 @@
 
           document.getElementById(loadingId).remove();
           
-          // Create Cloudinary image object
           const cloudinaryImg = {
             url: response.data.url,
             publicId: response.data.publicId
@@ -391,7 +495,6 @@
       const imageType = container.dataset.type;
       
       if (container.classList.contains('new-image')) {
-        // Remove from new images array
         const index = newImages.findIndex(img => getImageId(img) === imageId);
         if (index > -1) {
           newImages.splice(index, 1);
@@ -403,7 +506,6 @@
             .catch(err => console.warn('Cleanup failed:', err));
         }
       } else {
-        // Mark existing image for deletion
         if (!deletedImages.includes(imageId)) {
           deletedImages.push(imageId);
         }
@@ -414,7 +516,7 @@
       updateImageCount();
     }
 
-    // CORRECTED Variant management
+    // Variant management
     document.getElementById('add-variant-btn').addEventListener('click', function() {
       const area = document.getElementById('variants-area');
       const index = area.querySelectorAll('.variant-row').length;
@@ -432,49 +534,35 @@
       area.appendChild(row);
     });
 
-    // CORRECTED: Track variant deletion properly
     function removeVariantRow(btn) {
       const row = btn.closest('.variant-row');
       const variantIdInput = row.querySelector('[name*="[_id]"]');
       const variantId = variantIdInput ? variantIdInput.value : null;
       
-      // If this is an existing variant (has valid ID), track it for deletion
       if (variantId && variantId.trim() !== '' && variantId.length === 24) {
-        console.log('Adding variant to delete list:', variantId);
         deletedVariants.push(variantId);
-        
-        // Update hidden input
-        const deletedVariantsInput = document.getElementById('deleted-variants');
-        if (deletedVariantsInput) {
-          deletedVariantsInput.value = JSON.stringify(deletedVariants);
-          console.log('Updated deletedVariants:', deletedVariants);
-        }
+        document.getElementById('deleted-variants').value = JSON.stringify(deletedVariants);
       }
       
       row.remove();
     }
 
-    // CORRECTED Form submission
+    // Form submission
     document.getElementById('edit-product-form').addEventListener('submit', async function(e) {
       e.preventDefault();
       const form = e.target;
       const submitBtn = document.getElementById('submit-btn');
       const originalBtnText = submitBtn.innerHTML;
       
-      // Validate at least one image
       if (document.getElementById('image-previews').children.length === 0) {
         alert('Please add at least one product image');
         return;
       }
       
-      // Update all hidden inputs before submission
       updateHiddenInputs();
       updateNewImagesInput();
-      
-      // Update deletedVariants hidden input
       document.getElementById('deleted-variants').value = JSON.stringify(deletedVariants);
       
-      // Validate variants
       const variantRows = document.querySelectorAll('.variant-row');
       let variantError = null;
       
@@ -503,16 +591,11 @@
         return;
       }
       
-      // Update button state
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
       
       try {
         const formData = new FormData(form);
-        
-        // Debug log
-        console.log('Submitting with deletedVariants:', deletedVariants);
-        console.log('Form deletedVariants value:', formData.get('deletedVariants'));
         
         const response = await axios.post(form.action, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }

@@ -4,22 +4,25 @@
   <meta charset="UTF-8" />
   <title>OTP Verification | Superkicks</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 </head>
 <body class="min-h-screen flex items-center justify-center bg-white">
   <div class="flex w-full max-w-5xl shadow-lg rounded-xl overflow-hidden border border-gray-200">
 
-    <!-- Left side -->
     <div class="w-1/2 bg-white flex flex-col items-center justify-center p-8">
       <h1 class="text-4xl font-extrabold mb-6 text-black tracking-wide">SUPERKICKS</h1>
       <img src="/img/shoe-removebg-preview.png"alt="Sneaker" class="w-80 h-auto object-contain" />
     </div>
 
-    <!-- Right side -->
     <div class="w-1/2 bg-gray-100 p-10 flex flex-col justify-center">
       <h2 class="text-2xl font-bold mb-2 text-center">OTP Verification</h2>
       <p class="text-sm text-gray-600 text-center mb-4">
         Enter OTP sent to <span class="font-medium"><%= email %></span>
       </p>
+
+      <div class="text-center text-sm mb-4">
+        OTP expires in: <span id="otpTimer" class="font-bold text-red-600">05:00</span>
+      </div>
 
       <form id="otpForm" method="post" action="/user/verify-otp" class="flex flex-col items-center space-y-6">
         <input type="hidden" name="email" value="<%= email %>" />
@@ -52,7 +55,6 @@
         </button>
       </form>
 
-      <!-- Display error or success messages -->
       <% if (isError && message) { %>
         <p class="text-red-600 text-center mb-2"><%= message %></p>
       <% } else if (!isError && message) { %>
@@ -63,7 +65,15 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   const otpInputs = document.querySelectorAll('input[name="otp[]"]');
+  const countdownElement = document.getElementById('countdown');
+  const resendForm = document.getElementById('resendForm');
+  const otpTimerElement = document.getElementById('otpTimer'); // NEW: OTP Timer element
 
+  let cooldownTimer;
+  let otpExpiryTimer; // NEW: OTP Expiration Timer variable
+  const OTP_EXPIRY_DURATION_SECONDS = 300; // 5 minutes
+
+  // --- OTP Input Handling (Unchanged) ---
   otpInputs.forEach((input, index) => {
     // Normal typing behavior
     input.addEventListener("input", (e) => {
@@ -91,18 +101,14 @@
           box.value = pasteData[i] || "";
         });
 
-        // Focus the last filled input
         const lastFilledIndex = Math.min(pasteData.length, otpInputs.length) - 1;
         if (lastFilledIndex >= 0) otpInputs[lastFilledIndex].focus();
       }
     });
   });
-</script>
 
-<script>
-
-
-    otpInputs.forEach((input, index) => {
+  // Second loop cleanup (removes duplicate listeners from the original code)
+  otpInputs.forEach((input, index) => {
       input.addEventListener('input', (e) => {
         if (e.target.value.length === 1 && index < otpInputs.length - 1) {
           otpInputs[index + 1].focus();
@@ -112,52 +118,111 @@
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Backspace' && !e.target.value && index > 0) {
           otpInputs[index - 1].focus();
-
-        }})
+        }
       })
+  });
+  
+  // --- RESEND COOLDOWN LOGIC (Adjusted to use modern timer functions) ---
 
-  const countdownElement = document.getElementById('countdown');
-  const resendForm = document.getElementById('resendForm');
-
-  let cooldownTimer;
-
-  function startCooldown(seconds) {
+  function startResendCooldown(seconds) {
     const endTime = Date.now() + seconds * 1000;
     localStorage.setItem('resendCooldownEnd', endTime);
 
-    updateTimer();
-    cooldownTimer = setInterval(updateTimer, 1000);
+    updateResendTimer();
+    // Clear previous timer and set new one
+    if (cooldownTimer) clearInterval(cooldownTimer);
+    cooldownTimer = setInterval(updateResendTimer, 1000);
   }
 
-  function updateTimer() {
+  function updateResendTimer() {
     const endTime = parseInt(localStorage.getItem('resendCooldownEnd'), 10);
     const remaining = Math.floor((endTime - Date.now()) / 1000);
+    const resendBtn = document.getElementById('resendBtn');
 
     if (remaining > 0) {
       const m = String(Math.floor(remaining / 60)).padStart(2, '0');
       const s = String(remaining % 60).padStart(2, '0');
       countdownElement.textContent = ` (${m}:${s})`;
+      resendBtn.disabled = true;
+      resendBtn.classList.remove('hover:underline', 'text-blue-600');
+      resendBtn.classList.add('disabled:text-gray-400');
     } else {
       clearInterval(cooldownTimer);
       countdownElement.textContent = '';
+      resendBtn.disabled = false;
+      resendBtn.classList.add('hover:underline', 'text-blue-600');
+      resendBtn.classList.remove('disabled:text-gray-400');
       localStorage.removeItem('resendCooldownEnd');
     }
   }
 
-  // Check on page load if cooldown is active
-  document.addEventListener('DOMContentLoaded', () => {
-    const endTime = parseInt(localStorage.getItem('resendCooldownEnd'), 10);
-    if (endTime && endTime > Date.now()) {
-      cooldownTimer = setInterval(updateTimer, 1000);
-      updateTimer();
+  // --- NEW: OTP EXPIRATION TIMER LOGIC ---
+
+  function startOTPExpirationTimer() {
+    // 1. Get the current expiry time or set a new one if none exists
+    let expiryEnd = localStorage.getItem('otpExpiryEnd');
+    if (!expiryEnd) {
+      // Set 5 minutes from now if the timer is being started fresh (e.g., first visit)
+      expiryEnd = Date.now() + OTP_EXPIRY_DURATION_SECONDS * 1000;
+      localStorage.setItem('otpExpiryEnd', expiryEnd);
+    } else {
+      expiryEnd = parseInt(expiryEnd, 10);
     }
+    
+    // 2. Start the timer interval
+    updateOTPExpirationTimer(expiryEnd);
+    if (otpExpiryTimer) clearInterval(otpExpiryTimer);
+    otpExpiryTimer = setInterval(() => updateOTPExpirationTimer(expiryEnd), 1000);
+  }
+
+  function updateOTPExpirationTimer(endTime) {
+    const remaining = Math.floor((endTime - Date.now()) / 1000);
+
+    if (remaining > 0) {
+      const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+      const s = String(remaining % 60).padStart(2, '0');
+      otpTimerElement.textContent = `${m}:${s}`;
+    } else {
+      clearInterval(otpExpiryTimer);
+      otpTimerElement.textContent = `00:00`;
+      
+      // Notify the user via SweetAlert that the OTP is invalid
+      Swal.fire({
+          icon: 'error',
+          title: 'OTP Expired',
+          text: 'The current One-Time Password has expired. Please resend a new one.',
+          showConfirmButton: true
+      });
+      
+      // Disable the confirmation button
+      document.querySelector('#otpForm button[type="submit"]').disabled = true;
+      localStorage.removeItem('otpExpiryEnd');
+    }
+  }
+
+  // --- INITIALIZATION ON PAGE LOAD ---
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check and run Resend Cooldown Timer
+    const resendEndTime = parseInt(localStorage.getItem('resendCooldownEnd'), 10);
+    if (resendEndTime && resendEndTime > Date.now()) {
+      startResendCooldown(Math.floor((resendEndTime - Date.now()) / 1000));
+    } else {
+      // Ensure button is active if no cooldown is stored
+      document.getElementById('resendBtn').disabled = false;
+    }
+    
+    // Start the main 5-minute OTP Expiration Timer
+    startOTPExpirationTimer();
   });
+
+  // --- RESEND FORM SUBMISSION (Updated to restart both timers) ---
 
   resendForm.addEventListener('submit', function (event) {
     const endTime = parseInt(localStorage.getItem('resendCooldownEnd'), 10);
     if (endTime && endTime > Date.now()) {
       event.preventDefault();
-      return; // still cooling
+      return; 
     }
 
     event.preventDefault();
@@ -168,11 +233,18 @@
       timer: 1500,
       showConfirmButton: false
     }).then(() => {
-      startCooldown(60); // start 60s cooldown
+      // 1. Restart the main 5-minute OTP Expiration Timer
+      localStorage.removeItem('otpExpiryEnd'); // Clear old timer
+      startOTPExpirationTimer(); // Start new 5-minute timer
+      document.querySelector('#otpForm button[type="submit"]').disabled = false; // Re-enable submit button
+      
+      // 2. Start the 60-second Resend Cooldown
+      startResendCooldown(60); 
+      
+      // 3. Submit the form to the server to send the new email
       HTMLFormElement.prototype.submit.call(resendForm);
     });
   });
-
-  </script>
+</script>
 </body>
 </html>
